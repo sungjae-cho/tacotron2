@@ -278,7 +278,7 @@ if __name__ == '__main__':
                         required=False, help='comma separated name=value pairs')
     parser.add_argument('--run_name', type=str,
                         help='give a distinct name for this running')
-    parser.add_argument('--prj_name', type=str, defualt='tts-tacotron2',
+    parser.add_argument('--prj_name', type=str, default='tts-tacotron2',
                         help='give a project name for this running')
 
     args = parser.parse_args()
