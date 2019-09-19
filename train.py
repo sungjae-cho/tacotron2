@@ -59,12 +59,14 @@ def prepare_dataloaders(hparams):
     return train_loader, valset, collate_fn
 
 
-def prepare_directories_and_logger(output_directory, log_directory, rank):
+def prepare_directories_and_logger(output_directory, log_directory, rank,
+                                   run_name, prj_name):
     if rank == 0:
         if not os.path.isdir(output_directory):
             os.makedirs(output_directory)
             os.chmod(output_directory, 0o775)
-        logger = Tacotron2Logger(os.path.join(output_directory, log_directory))
+        logger = Tacotron2Logger(run_name, prj_name,
+            os.path.join(output_directory, log_directory))
     else:
         logger = None
     return logger
@@ -147,7 +149,7 @@ def validate(model, criterion, valset, iteration, batch_size, n_gpus,
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
-          rank, group_name, hparams):
+          rank, group_name, hparams, run_name, prj_name):
     """Training and validation logging results to tensorboard and stdout
 
     Params
@@ -181,7 +183,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     criterion = Tacotron2Loss()
 
     logger = prepare_directories_and_logger(
-        output_directory, log_directory, rank)
+        output_directory, log_directory, rank, run_name, prj_name)
 
     train_loader, valset, collate_fn = prepare_dataloaders(hparams)
 
@@ -273,6 +275,10 @@ if __name__ == '__main__':
                         required=False, help='Distributed group name')
     parser.add_argument('--hparams', type=str,
                         required=False, help='comma separated name=value pairs')
+    parser.add_argument('--run_name', type=str,
+                        help='give a distinct name for this running')
+    parser.add_argument('--prj_name', type=str, defualt='tts-tacotron2',
+                        help='give a project name for this running')
 
     args = parser.parse_args()
     hparams = create_hparams(args.hparams)
@@ -287,4 +293,5 @@ if __name__ == '__main__':
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
-          args.warm_start, args.n_gpus, args.rank, args.group_name, hparams)
+          args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
+          args.run_name, args.prj_name)
