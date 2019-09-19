@@ -19,6 +19,13 @@ class Tacotron2Logger(SummaryWriter):
             self.add_scalar("learning.rate", learning_rate, iteration)
             self.add_scalar("duration", duration, iteration)
 
+            # wandb log
+            wandb.log({"epoch": epoch,
+                       "training.loss": reduced_loss,
+                       "grad.norm": grad_norm,
+                       "learning.rate": learning_rate,
+                       "duration": duration})
+
     def log_validation(self, reduced_loss, model, y, y_pred, iteration, epoch):
         self.add_scalar("validation.loss", reduced_loss, iteration)
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -31,21 +38,36 @@ class Tacotron2Logger(SummaryWriter):
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
+
+        np_alignment = plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T)
         self.add_image(
             "alignment",
-            plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T),
+            np_alignment,
             iteration, dataformats='HWC')
+
+        np_mel_target = plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy())
         self.add_image(
             "mel_target",
-            plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy()),
+            np_mel_target,
             iteration, dataformats='HWC')
+
+        np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy())
         self.add_image(
             "mel_predicted",
-            plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy()),
+            np_mel_predicted,
             iteration, dataformats='HWC')
+
+        np_gate = plot_gate_outputs_to_numpy(
+            gate_targets[idx].data.cpu().numpy(),
+            torch.sigmoid(gate_outputs[idx]).data.cpu().numpy())
         self.add_image(
             "gate",
-            plot_gate_outputs_to_numpy(
-                gate_targets[idx].data.cpu().numpy(),
-                torch.sigmoid(gate_outputs[idx]).data.cpu().numpy()),
+            np_gate,
             iteration, dataformats='HWC')
+
+        # wandb log
+        wandb.log({"epoch": epoch, "val.loss": reduced_loss})
+        wandb.log({"val.alignment": [wandb.Image(np_alignment)]})
+        wandb.log({"val.mel_target": [wandb.Image(np_mel_target)]})
+        wandb.log({"val.mel_predicted": [wandb.Image(np_mel_predicted)]})
+        wandb.log({"val.gate": [wandb.Image(np_gate)]})
