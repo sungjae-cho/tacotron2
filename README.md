@@ -1,7 +1,7 @@
 # Tacotron 2 (without wavenet)
 
 PyTorch implementation of [Natural TTS Synthesis By Conditioning
-Wavenet On Mel Spectrogram Predictions](https://arxiv.org/pdf/1712.05884.pdf). 
+Wavenet On Mel Spectrogram Predictions](https://arxiv.org/pdf/1712.05884.pdf).
 
 This implementation includes **distributed** and **automatic mixed precision** support
 and uses the [LJSpeech dataset](https://keithito.com/LJ-Speech-Dataset/).
@@ -18,20 +18,24 @@ Visit our [website] for audio samples using our published [Tacotron 2] and
 1. NVIDIA GPU + CUDA cuDNN
 
 ## Setup
-1. Download and extract the [LJ Speech dataset](https://keithito.com/LJ-Speech-Dataset/)
-2. Clone this repo: `git clone https://github.com/NVIDIA/tacotron2.git`
+1. Download and extract the [LJ Speech dataset ver. 1.1](https://keithito.com/LJ-Speech-Dataset/)
+    - The extracted directory `LJSpeech-1.1` would have the `wavs` directory that contains speech wav files. The path of the `wavs` directory will be used in Step 5.
+2. Clone this repo: `git clone https://github.com/sungjae-cho/tacotron2.git`
 3. CD into this repo: `cd tacotron2`
 4. Initialize submodule: `git submodule init; git submodule update`
-5. Update .wav paths: `sed -i -- 's,DUMMY,ljs_dataset_folder/wavs,g' filelists/*.txt`
-    - Alternatively, set `load_mel_from_disk=True` in `hparams.py` and update mel-spectrogram paths 
+5. Update .wav paths: `sed -i -- 's,DUMMY,<ljs_dataset_folder/wavs>,g' filelists/*.txt`
+    - `<ljs_dataset_folder/wavs>` is the the `wavs` directory found in Step 1.
+    - Alternatively, set `load_mel_from_disk=True` in `hparams.py` and update mel-spectrogram paths
 6. Install [PyTorch 1.0]
 7. Install [Apex]
-8. Install python requirements or build docker image 
-    - Install python requirements: `pip install -r requirements.txt`
+8. Install python requirements or build docker image
+    - Install python requirements: `pip3 install -r requirements.txt`
 
 ## Training
-1. `python train.py --output_directory=outdir --log_directory=logdir`
+1. `python3 train.py --output_directory=outdir --log_directory=logdir`
 2. (OPTIONAL) `tensorboard --logdir=outdir/logdir`
+
+===== What I have executed to here. =====
 
 ## Training using a pre-trained model
 Training using a pre-trained model can lead to faster convergence  
@@ -47,10 +51,10 @@ By default, the dataset dependent text embedding layers are [ignored]
 1. Download our published [Tacotron 2] model
 2. Download our published [WaveGlow] model
 3. `jupyter notebook --ip=127.0.0.1 --port=31337`
-4. Load inference.ipynb 
+4. Load inference.ipynb
 
 N.b.  When performing Mel-Spectrogram to Audio synthesis, make sure Tacotron 2
-and the Mel decoder were trained on the same mel-spectrogram representation. 
+and the Mel decoder were trained on the same mel-spectrogram representation.
 
 
 ## Related repos
