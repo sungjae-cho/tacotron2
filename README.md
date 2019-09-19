@@ -31,8 +31,10 @@ Visit our [website] for audio samples using our published [Tacotron 2] and
 8. Install python requirements or build docker image
     - Install python requirements: `pip3 install -r requirements.txt`
 
-## Training
+## Training (Single GPU)
+If you want to use the second GPU device with device number 1, then enter `export CUDA_VISIBLE_DEVICES=1`. If there are 4 GPU devices, then you can use 0, 1, 2, and 3 as a device number.
 1. `python3 train.py --output_directory=outdir --log_directory=logdir`
+    - If you get an error message saying, for example, `RuntimeError: CUDA out of memory. Tried to allocate 106.38 MiB (GPU 0; 11.91 GiB total capacity; 10.26 GiB already allocated; 53.06 MiB free; 56.48 MiB cached)`, then reduce the batch size. You can reduce the size on the command in this way: `python3 train.py --output_directory=outdir --log_directory=logdir --hparams=batch_size=32`. Or, change `batch_size` in `hparams.py`. 
 2. (OPTIONAL) `tensorboard --logdir=outdir/logdir`
 
 ===== What I have executed to here. =====
