@@ -1,12 +1,15 @@
 import random
 import torch
+import wandb
 from tensorboardX import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
 
 
 class Tacotron2Logger(SummaryWriter):
-    def __init__(self, logdir):
+    def __init__(self, run_name, prj_name, logdir):
+        self.run_name = run_name
+        wandb.init(name=run_name, project=prj_name)
         super(Tacotron2Logger, self).__init__(logdir)
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
