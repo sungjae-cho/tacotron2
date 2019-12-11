@@ -34,36 +34,36 @@ class Tacotron2Logger(SummaryWriter):
         # plot distribution of parameters
         for tag, value in model.named_parameters():
             tag = tag.replace('.', '/')
-            self.add_histogram(tag, value.data.cpu().numpy(), iteration)
+            '''self.add_histogram(tag, value.data.cpu().numpy(), iteration)'''
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
 
         np_alignment = plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T)
-        self.add_image(
+        '''self.add_image(
             "alignment",
             np_alignment,
-            iteration, dataformats='HWC')
+            iteration, dataformats='HWC')'''
 
         np_mel_target = plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy())
-        self.add_image(
+        '''self.add_image(
             "mel_target",
             np_mel_target,
-            iteration, dataformats='HWC')
+            iteration, dataformats='HWC')'''
 
         np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy())
-        self.add_image(
+        '''self.add_image(
             "mel_predicted",
             np_mel_predicted,
-            iteration, dataformats='HWC')
+            iteration, dataformats='HWC')'''
 
         np_gate = plot_gate_outputs_to_numpy(
             gate_targets[idx].data.cpu().numpy(),
             torch.sigmoid(gate_outputs[idx]).data.cpu().numpy())
-        self.add_image(
+        '''self.add_image(
             "gate",
             np_gate,
-            iteration, dataformats='HWC')
+            iteration, dataformats='HWC')'''
 
         # wandb log
         wandb.log({"epoch": epoch, "val.loss": reduced_loss})
