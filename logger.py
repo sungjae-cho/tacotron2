@@ -4,6 +4,7 @@ import wandb
 from tensorboardX import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
+from measures import forward_attention_ratio
 
 
 class Tacotron2Logger(SummaryWriter):
@@ -27,6 +28,15 @@ class Tacotron2Logger(SummaryWriter):
                        "duration": duration})
 
             _, mel_outputs, gate_outputs, alignments = y_pred
+
+            hop_list = [10, 20, 50, 100]
+            for hop_size in hop_list:
+                mean_far, batch_far = forward_attention_ratio(alignments, hop_size)
+                log_name = "mean_forward_attention_ratio(hop_size={})".format(hop_size)
+                wandb.log({log_name:mean_far})
+                log_name = "forward_attention_ratio(hop_size={})".format(hop_size)
+                wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})
+
 
     def log_validation(self, reduced_loss, model, y, y_pred, iteration, epoch):
         self.add_scalar("validation.loss", reduced_loss, iteration)
@@ -74,3 +84,12 @@ class Tacotron2Logger(SummaryWriter):
         wandb.log({"val.mel_target": [wandb.Image(np_mel_target)]})
         wandb.log({"val.mel_predicted": [wandb.Image(np_mel_predicted)]})
         wandb.log({"val.gate": [wandb.Image(np_gate)]})
+
+        # foward attention ratio
+        hop_list = [10, 20, 50, 100]
+        for hop_size in hop_list:
+            mean_far, batch_far = forward_attention_ratio(alignments, hop_size)
+            log_name = "val.mean_forward_attention_ratio(hop_size={})".format(hop_size)
+            wandb.log({log_name:mean_far})
+            log_name = "val.forward_attention_ratio(hop_size={})".format(hop_size)
+            wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})
