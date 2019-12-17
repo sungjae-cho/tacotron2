@@ -53,6 +53,10 @@ By default, the dataset dependent text embedding layers are [ignored]
 ## Inference demo
 1. Download our published [Tacotron 2] model
 2. Download our published [WaveGlow] model
+```
+wget --no-check-certificate 'https://drive.google.com/uc?id=1WsibBTsuRg_SF2Z6L6NFRTT-NjEy1oTx&export=download' -O waveglow_256channels.ptwget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1WsibBTsuRg_SF2Z6L6NFRTT-NjEy1oTx' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1WsibBTsuRg_SF2Z6L6NFRTT-NjEy1oTx" -O waveglow_256channels.pt && rm -rf /tmp/cookies.txt
+
+```
 3. `jupyter notebook --ip=127.0.0.1 --port=31337`
 4. Load inference.ipynb
 
