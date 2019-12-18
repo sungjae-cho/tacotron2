@@ -1,10 +1,17 @@
 import random
 import torch
+import numpy as np
 import wandb
+import sys
+sys.path.append('waveglow/')
+import warnings
+warnings.filterwarnings('ignore')
 from tensorboardX import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
 from measures import forward_attention_ratio
+from text import sequence_to_text
+from denoiser import Denoiser
 
 
 class Tacotron2Logger(SummaryWriter):
@@ -12,6 +19,29 @@ class Tacotron2Logger(SummaryWriter):
         self.run_name = run_name
         wandb.init(name=run_name, project=prj_name, resume=resume)
         super(Tacotron2Logger, self).__init__(logdir)
+        self.waveglow = self.load_waveglow('/data2/sungjaecho/pretrained/waveglow_256channels_ljs_v2.pt')
+
+    def load_waveglow(self, waveglow_path):
+        waveglow = torch.load(waveglow_path)['model']
+        waveglow.cuda().eval().half()
+        for k in waveglow.convinv:
+            k.float()
+
+        return waveglow
+
+    def mel2wav(self, mel_outputs_postnet, with_denoiser=False):
+        with torch.no_grad():
+            print(mel_outputs_postnet.size())
+            print(mel_outputs_postnet.type())
+
+            audio = self.waveglow.infer(mel_outputs_postnet, sigma=0.666)
+        if with_denoiser:
+            np_wav = denoiser(audio, strength=0.01)[:, 0].cpu().numpy()
+        else:
+            np_wav = audio[0].data.cpu().numpy()
+
+        return np_wav
+
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
                      y_pred, iteration, epoch):
@@ -38,7 +68,10 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})
 
 
-    def log_validation(self, reduced_loss, model, x, y, y_pred, iteration, epoch):
+    def log_validation(self,
+        reduced_loss, model, x, y, y_pred, iteration, epoch, sample_rate):
+        text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+
         self.add_scalar("validation.loss", reduced_loss, iteration)
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
@@ -51,6 +84,8 @@ class Tacotron2Logger(SummaryWriter):
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
+        text_string = sequence_to_text(text_padded[idx].tolist())
+        np_wav = self.mel2wav(mel_outputs[idx:idx+1].type('torch.cuda.HalfTensor'))
 
         np_alignment = plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T)
         '''self.add_image(
@@ -80,7 +115,8 @@ class Tacotron2Logger(SummaryWriter):
 
         # wandb log
         wandb.log({"epoch": epoch, "val.loss": reduced_loss})
-        wandb.log({"val.alignment": [wandb.Image(np_alignment)]})
+        wandb.log({"val.alignment": [wandb.Image(np_alignment, caption=text_string)]})
+        wandb.log({"val.audio": [wandb.Audio(np_wav.astype(np.float32), caption=text_string, sample_rate=sample_rate)]})
         wandb.log({"val.mel_target": [wandb.Image(np_mel_target)]})
         wandb.log({"val.mel_predicted": [wandb.Image(np_mel_predicted)]})
         wandb.log({"val.gate": [wandb.Image(np_gate)]})
