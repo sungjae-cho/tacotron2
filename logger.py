@@ -8,9 +8,9 @@ from measures import forward_attention_ratio
 
 
 class Tacotron2Logger(SummaryWriter):
-    def __init__(self, run_name, prj_name, logdir):
+    def __init__(self, run_name, prj_name, logdir, resume):
         self.run_name = run_name
-        wandb.init(name=run_name, project=prj_name)
+        wandb.init(name=run_name, project=prj_name, resume=resume)
         super(Tacotron2Logger, self).__init__(logdir)
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
@@ -38,7 +38,7 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})
 
 
-    def log_validation(self, reduced_loss, model, y, y_pred, iteration, epoch):
+    def log_validation(self, reduced_loss, model, x, y, y_pred, iteration, epoch):
         self.add_scalar("validation.loss", reduced_loss, iteration)
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
