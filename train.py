@@ -60,13 +60,13 @@ def prepare_dataloaders(hparams):
 
 
 def prepare_directories_and_logger(output_directory, log_directory, rank,
-                                   run_name, prj_name):
+                                   run_name, prj_name, resume):
     if rank == 0:
         if not os.path.isdir(output_directory):
             os.makedirs(output_directory)
             os.chmod(output_directory, 0o775)
         logger = Tacotron2Logger(run_name, prj_name,
-            os.path.join(output_directory, log_directory))
+            os.path.join(output_directory, log_directory), resume)
     else:
         logger = None
     return logger
@@ -149,7 +149,7 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
-          rank, group_name, hparams, run_name, prj_name):
+          rank, group_name, hparams, run_name, prj_name, resume):
     """Training and validation logging results to tensorboard and stdout
 
     Params
@@ -183,7 +183,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     criterion = Tacotron2Loss()
 
     logger = prepare_directories_and_logger(
-        output_directory, log_directory, rank, run_name, prj_name)
+        output_directory, log_directory, rank, run_name, prj_name, resume)
 
     train_loader, valset, collate_fn = prepare_dataloaders(hparams)
 
@@ -293,6 +293,9 @@ if __name__ == '__main__':
     print("cuDNN Enabled:", hparams.cudnn_enabled)
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
 
+    if args.checkpoint_path != None:
+        resume = True
+
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
-          args.run_name, args.prj_name)
+          args.run_name, args.prj_name, resume)
