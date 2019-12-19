@@ -74,9 +74,6 @@ def create_hparams(hparams_string=None, verbose=False):
         postnet_kernel_size=5,
         postnet_n_convolutions=5,
 
-        # Vocoder parameters
-        sample_rates=22050,
-
         ################################
         # Optimization Hyperparameters #
         ################################
