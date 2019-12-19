@@ -31,9 +31,6 @@ class Tacotron2Logger(SummaryWriter):
 
     def mel2wav(self, mel_outputs_postnet, with_denoiser=False):
         with torch.no_grad():
-            print(mel_outputs_postnet.size())
-            print(mel_outputs_postnet.type())
-
             audio = self.waveglow.infer(mel_outputs_postnet, sigma=0.666)
         if with_denoiser:
             np_wav = denoiser(audio, strength=0.01)[:, 0].cpu().numpy()
@@ -84,8 +81,14 @@ class Tacotron2Logger(SummaryWriter):
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
-        text_string = sequence_to_text(text_padded[idx].tolist())
-        np_wav = self.mel2wav(mel_outputs[idx:idx+1].type('torch.cuda.HalfTensor'))
+        text_len = input_lengths[idx].item()
+        text_string = sequence_to_text(text_padded[idx].tolist())[:text_len]
+        mel_len = torch.max(torch.argmax(alignments[idx,:,text_len-5:text_len],dim=0)) # alignments.size(): [batch_size, mel_steps, txt_steps
+        print("mel_len: {}".format(mel_len))
+
+        mel = mel_outputs[idx:idx+1,:,:mel_len]
+
+        np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
 
         np_alignment = plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T)
         '''self.add_image(
