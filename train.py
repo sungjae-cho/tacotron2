@@ -243,7 +243,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 print("Train loss {} {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
                     iteration, reduced_loss, grad_norm, duration))
                 logger.log_training(
-                    reduced_loss, grad_norm, learning_rate, duration, y_pred,
+                    reduced_loss, grad_norm, learning_rate, duration, x, y_pred,
                     iteration, epoch)
 
             if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):

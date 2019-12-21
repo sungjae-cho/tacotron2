@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 from tensorboardX import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
-from measures import forward_attention_ratio
+from measures import forward_attention_ratio, get_mel_length
 from text import sequence_to_text
 from denoiser import Denoiser
 
@@ -41,7 +41,9 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
-                     y_pred, iteration, epoch):
+                     x, y_pred, iteration, epoch):
+            text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+
             self.add_scalar("training.loss", reduced_loss, iteration)
             self.add_scalar("grad.norm", grad_norm, iteration)
             self.add_scalar("learning.rate", learning_rate, iteration)
@@ -49,19 +51,19 @@ class Tacotron2Logger(SummaryWriter):
 
             # wandb log
             wandb.log({"epoch": epoch,
-                       "training.loss": reduced_loss,
-                       "grad.norm": grad_norm,
-                       "learning.rate": learning_rate,
-                       "duration": duration})
+                       "train/loss": reduced_loss,
+                       "train/grad_norm": grad_norm,
+                       "train/learning_rate": learning_rate,
+                       "train/iter_duration": duration})
 
             _, mel_outputs, gate_outputs, alignments = y_pred
 
             hop_list = [10, 20, 50, 100]
             for hop_size in hop_list:
-                mean_far, batch_far = forward_attention_ratio(alignments, hop_size)
-                log_name = "mean_forward_attention_ratio(hop_size={})".format(hop_size)
+                mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
+                log_name = "mean_forward_attention_ratio.train/hop_size={}".format(hop_size)
                 wandb.log({log_name:mean_far})
-                log_name = "forward_attention_ratio(hop_size={})".format(hop_size)
+                log_name = "forward_attention_ratio.train/hop_size={}".format(hop_size)
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})
 
 
@@ -81,16 +83,18 @@ class Tacotron2Logger(SummaryWriter):
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
+
         text_len = input_lengths[idx].item()
         text_string = sequence_to_text(text_padded[idx].tolist())[:text_len]
-        mel_len = torch.max(torch.argmax(alignments[idx,:,text_len-5:text_len],dim=0)) # alignments.size(): [batch_size, mel_steps, txt_steps
-        print("mel_len: {}".format(mel_len))
 
+        mel_len = get_mel_length(alignments, idx, text_len)
         mel = mel_outputs[idx:idx+1,:,:mel_len]
 
         np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
 
-        np_alignment = plot_alignment_to_numpy(alignments[idx].data.cpu().numpy().T)
+        np_alignment = plot_alignment_to_numpy(
+            alignments[idx].data.cpu().numpy().T,
+            decoding_len=mel_len)
         '''self.add_image(
             "alignment",
             np_alignment,
@@ -117,18 +121,18 @@ class Tacotron2Logger(SummaryWriter):
             iteration, dataformats='HWC')'''
 
         # wandb log
-        wandb.log({"epoch": epoch, "val.loss": reduced_loss})
-        wandb.log({"val.alignment": [wandb.Image(np_alignment, caption=text_string)]})
-        wandb.log({"val.audio": [wandb.Audio(np_wav.astype(np.float32), caption=text_string, sample_rate=sample_rate)]})
-        wandb.log({"val.mel_target": [wandb.Image(np_mel_target)]})
-        wandb.log({"val.mel_predicted": [wandb.Image(np_mel_predicted)]})
-        wandb.log({"val.gate": [wandb.Image(np_gate)]})
+        wandb.log({"epoch": epoch, "val/loss": reduced_loss})
+        wandb.log({"val/alignment": [wandb.Image(np_alignment, caption=text_string)]})
+        wandb.log({"val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=text_string, sample_rate=sample_rate)]})
+        wandb.log({"val/mel_target": [wandb.Image(np_mel_target)]})
+        wandb.log({"val/mel_predicted": [wandb.Image(np_mel_predicted)]})
+        wandb.log({"val/gate": [wandb.Image(np_gate)]})
 
         # foward attention ratio
         hop_list = [10, 20, 50, 100]
         for hop_size in hop_list:
-            mean_far, batch_far = forward_attention_ratio(alignments, hop_size)
-            log_name = "val.mean_forward_attention_ratio(hop_size={})".format(hop_size)
+            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
+            log_name = "mean_forward_attention_ratio.val/hop_size={}".format(hop_size)
             wandb.log({log_name:mean_far})
-            log_name = "val.forward_attention_ratio(hop_size={})".format(hop_size)
+            log_name = "forward_attention_ratio.val/hop_size={}".format(hop_size)
             wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy())})

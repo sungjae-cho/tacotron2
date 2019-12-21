@@ -11,11 +11,26 @@ def save_figure_to_numpy(fig):
     return data
 
 
-def plot_alignment_to_numpy(alignment, info=None):
+def plot_alignment_to_numpy(alignment, decoding_len=None, info=None):
+    # alignment.size == [batch_size, mel_steps, txt_steps]
+
+    '''
+    max_mel_len = alignment.size(1)
+    list_xticks = sorted(list(range(0, max_mel_len+1, step=100)) + [decoding_len])
+    plt.xticks(ticks=x, rotation=45)
+    '''
     fig, ax = plt.subplots(figsize=(6, 4))
     im = ax.imshow(alignment, aspect='auto', origin='lower',
                    interpolation='none')
+
+    if decoding_len is not None:
+        plt.axvline(x=decoding_len, color='r')
     fig.colorbar(im, ax=ax)
+
+    max_mel_len = alignment.shape[1]
+    list_xticks = sorted(list(range(0, max_mel_len+1, 100)) + [decoding_len.item()])
+    plt.xticks(ticks=list_xticks, rotation=45)
+
     xlabel = 'Decoder timestep'
     if info is not None:
         xlabel += '\n\n' + info
