@@ -296,6 +296,8 @@ if __name__ == '__main__':
 
     if args.checkpoint_path != None:
         resume = True
+    else:
+        resume = False
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
