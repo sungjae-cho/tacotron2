@@ -28,7 +28,7 @@ def plot_alignment_to_numpy(alignment, decoding_len=None, info=None):
     fig.colorbar(im, ax=ax)
 
     max_mel_len = alignment.shape[1]
-    list_xticks = sorted(list(range(0, max_mel_len+1, 100)) + [decoding_len.item()])
+    list_xticks = sorted(list(range(0, max_mel_len+1, 100)) + [decoding_len])
     plt.xticks(ticks=list_xticks, rotation=45)
 
     xlabel = 'Decoder timestep'

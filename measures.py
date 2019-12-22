@@ -7,6 +7,7 @@ def get_mel_length(alignments, batch_i, text_length, last_steps=5):
     - mel_length: int. Size == [batch_size].
     '''
     mel_length = torch.max(torch.argmax(alignments[batch_i,:,text_length-last_steps:text_length],dim=0))
+    mel_length = mel_length.item()
 
     return mel_length
 
