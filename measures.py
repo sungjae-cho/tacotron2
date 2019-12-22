@@ -38,7 +38,10 @@ def forward_attention_ratio(alignments, text_lengths, hop_size=5):
     for i in range(batch_size):
         text_length = text_lengths[i]
         mel_len = get_mel_length(alignments, i, text_length)
-        forward_attention_ratio = torch.mean(is_increment[i,:mel_len-hop_size]).item()
+        if mel_len-hop_size > 0:
+            forward_attention_ratio = torch.mean(is_increment[i,:mel_len-hop_size]).item()
+        else:
+            forward_attention_ratio = 0
         batch_forward_attention_ratio[i] = forward_attention_ratio
 
     mean_forward_attention_ratio = torch.mean(batch_forward_attention_ratio).item()
