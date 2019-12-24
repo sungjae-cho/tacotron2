@@ -533,7 +533,7 @@ class ResidualEncoder(nn.Module):
     '''
     Reference: https://github.com/pytorch/examples/blob/master/vae/main.py
     '''
-    def __init__(self, hparams):
+    def __init__(self):
         super(ResidualEncoder, self).__init__()
         self.out_dim = 16
         self.lstm_hidden_size = 256
@@ -589,6 +589,7 @@ class ResidualEncoder(nn.Module):
         z = mu + eps*std
 
         return z
+
 
 class SpeakerEncoder(nn.Module):
     def __init__(self):
