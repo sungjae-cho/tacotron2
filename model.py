@@ -615,3 +615,16 @@ class EmotionEncoder(nn.Module):
         emotion_embeddings = self.linear_projection(inputs)
 
         return emotion_embeddings
+
+
+class LanguageEncoder(nn.Module):
+    def __init__(self):
+        super(LanguageEncoder, self).__init__()
+        self.out_dim = 3
+        self.n_languages = 2
+        self.linear_projection = torch.nn.Linear(in_features=self.n_languages, out_features=self.out_dim, bias=False)
+
+    def forward(self, inputs):
+        language_embeddings = self.linear_projection(inputs)
+
+        return language_embeddings
