@@ -205,13 +205,20 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
     model.train()
     is_overflow = False
+    for param_group in optimizer.param_groups:
+        param_group['initial_lr'] = learning_rate
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(
+        optimizer,
+        0.5**(1 / (125000 * (64 / hparams.batch_size))),
+        last_epoch=-1
+    )
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
         for i, batch in enumerate(train_loader):
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
-                param_group['lr'] = learning_rate
+                param_group['lr'] = scheduler.get_lr()[0]
 
             model.zero_grad()
             x, y = model.parse_batch(batch)
@@ -236,6 +243,8 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), hparams.grad_clip_thresh)
 
+            learning_rate = scheduler.get_lr()[0]
+            print("learning_rate:", learning_rate)
             optimizer.step()
 
             if not is_overflow and rank == 0:
@@ -255,6 +264,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                         output_directory, "checkpoint_{}".format(iteration))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     checkpoint_path)
+
+            if iteration > round(50000 * (64 / hparams.batch_size)):
+                scheduler.step()
 
             iteration += 1
 
