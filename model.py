@@ -527,3 +527,59 @@ class Tacotron2(nn.Module):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
 
         return outputs
+
+
+class ResidualEncoder(nn.Module):
+    '''
+    Reference: https://github.com/pytorch/examples/blob/master/vae/main.py
+    '''
+    def __init(self, hparams):
+        super(ResidualEncoder, self).__init__()
+        self.out_dim = 16
+        self.lstm_hidden_size = 256
+        self.conv2d_1 = torch.nn.Conv2d(in_channels=1, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
+        self.conv2d_2 = torch.nn.Conv2d(in_channels=2*self.lstm_hidden_size, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
+        self.bi_lstm = torch.nn.LSTM(hidden_size=self.lstm_hidden_size, num_layers=2, bidirectional=True)
+        self.linear_proj_mean = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
+        self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
+
+    def forward(self, inputs):
+        """ Residual Encoder
+        PARAMS
+        ------
+        inputs: torch.Tensor. size == [batch_size, freq_len, time_len]. Mel spectrograms of mini-batch samples.
+
+        RETURNS
+        -------
+        z: torch.Tensor. size == [batch_size, 16]. Gaussin-sampled latent vectors of a variational autoencoder.
+        """
+        h_conv = self.conv2d_1(inputs)
+        out_conv = self.conv2d_2(h_conv) # out_conv.shape == [batch_size, 512, freq, t]
+        out_conv = out_conv.view(out_conv.size(0), -1, out_conv.size(3)) # out_conv.shape == [batch_size, 512*freq, t]
+        out_conv = out_conv.permute(2, 0, 1) # out_conv.shape == [t, batch_size, 512*freq]
+        out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero.
+        # out_lstm.shape == [t, batch, 2*256 == 2*hidden_size]
+        avg_pooled = torch.mean(out_lstm, dim=0) # avg_pooled.shape == [batch, 2*256 == 2*hidden_size]
+        mu = self.linear_proj_mean(avg_pooled)
+        logvar = self.linear_proj_logvar(avg_pooled)
+        residual_encoding = self.reparameterize(mu, logvar)
+
+        return residual_encoding
+
+    def reparameterize(self, mu, logvar):
+        ''' Reparameterization trick in VAE
+        Reference: https://github.com/pytorch/examples/blob/master/vae/main.py
+        PARAMS
+        ------
+        mu: mean vectors
+        logvar: log variance vectors
+
+        RETURNS
+        -------
+        z: latent vectors sampled from simple Gaussian distributions
+        '''
+        std = torch.exp(0.5*logvar)
+        eps = torch.randn_like(std)
+        z = mu + eps*std
+
+        return z
