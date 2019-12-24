@@ -44,10 +44,11 @@ class Tacotron2Logger(SummaryWriter):
                      x, y_pred, iteration, epoch):
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
 
-            self.add_scalar("training.loss", reduced_loss, iteration)
-            self.add_scalar("grad.norm", grad_norm, iteration)
-            self.add_scalar("learning.rate", learning_rate, iteration)
-            self.add_scalar("duration", duration, iteration)
+            # Tensorbard log
+            #self.add_scalar("training.loss", reduced_loss, iteration)
+            #self.add_scalar("grad.norm", grad_norm, iteration)
+            #self.add_scalar("learning.rate", learning_rate, iteration)
+            #self.add_scalar("duration", duration, iteration)
 
             # wandb log
             wandb.log({"epoch": epoch,
@@ -71,14 +72,14 @@ class Tacotron2Logger(SummaryWriter):
         reduced_loss, model, x, y, y_pred, iteration, epoch, sample_rate):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
 
-        self.add_scalar("validation.loss", reduced_loss, iteration)
+        #self.add_scalar("validation.loss", reduced_loss, iteration) # Tensorboard log
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
 
         # plot distribution of parameters
         for tag, value in model.named_parameters():
             tag = tag.replace('.', '/')
-            '''self.add_histogram(tag, value.data.cpu().numpy(), iteration)'''
+            # self.add_histogram(tag, value.data.cpu().numpy(), iteration) # Tensorboard log
             wandb.log({tag:wandb.Histogram(value.data.cpu().numpy())})
 
         # plot alignment, mel target and predicted, gate target and predicted
