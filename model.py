@@ -3,6 +3,7 @@ import torch
 from torch.autograd import Variable
 from torch import nn
 from torch.nn import functional as F
+from pytorch_revgrad import RevGrad
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 
@@ -628,3 +629,24 @@ class LanguageEncoder(nn.Module):
         language_embeddings = self.linear_projection(inputs)
 
         return language_embeddings
+
+
+class SpeakerClassifier(nn.Module):
+    def __init__(self):
+        super(SpeakerClassifier, self).__init__()
+
+        self.text_embedding_size = 512 # TODO: Put this parameter to hparams.py.
+        self.n_hidden_units = 256
+        self.n_speakers = 92 # TODO: Put this parameter to hparams.py.
+
+        self.revgrad_layer = RevGrad()
+        self.linear_1 = torch.nn.Linear(in_features=self.text_embedding_size, out_features=self.n_hidden_units)
+        self.linear_2 = torch.nn.Linear(in_features=self.n_hidden_units, out_features=self.n_speakers)
+
+    def forward(self, inputs):
+        revgrad_inputs = self.revgrad_layer(inputs)
+        h = F.relu(self.linear_1(revgrad_inputs))
+        prob_speakers = F.softmax(self.linear_2(h), dim=1)
+        speakers = torch.argmax(prob_speakers, dim=1)
+
+        return prob_speakers, speakers
