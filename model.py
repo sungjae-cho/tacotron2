@@ -601,3 +601,16 @@ class SpeakerEncoder(nn.Module):
         speaker_embeddings = self.linear_projection(inputs)
 
         return speaker_embeddings
+
+
+class EmotionEncoder(nn.Module):
+    def __init__(self):
+        super(EmotionEncoder, self).__init__()
+        self.out_dim = 3
+        self.n_emotions = 5
+        self.linear_projection = torch.nn.Linear(in_features=self.n_emotions, out_features=self.out_dim, bias=False)
+
+    def forward(self, inputs):
+        emotion_embeddings = self.linear_projection(inputs)
+
+        return emotion_embeddings
