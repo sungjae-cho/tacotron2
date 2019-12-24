@@ -48,22 +48,25 @@ def create_hparams(hparams_string=None, verbose=False):
         n_symbols=len(symbols),
         symbols_embedding_dim=512,
 
-        # Text Encoder parameters
+        # (Text) Encoder parameters
         encoder_kernel_size=5,
         encoder_n_convolutions=3,
         encoder_embedding_dim=512,
 
-        # Speaker Encoder parameters
+        # SpeakerEncoder parameters
         n_speakers=92,
         speaker_embedding_dim=64,
 
-        # Language Encoder parameters
+        # LanguageEncoder parameters
+        n_languages=2,
         lang_embedding_dim=3,
 
-        # Emotion Encoder parameters
+        # EmotionEncoder parameters
         n_emotions=5,
         emotion_embedding_dim=3,
 
+        # SpeakerClassifier parameters
+        n_hidden_units=256,
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported

@@ -593,10 +593,10 @@ class ResidualEncoder(nn.Module):
 
 
 class SpeakerEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, hparams):
         super(SpeakerEncoder, self).__init__()
-        self.out_dim = 64
-        self.n_speakers = 92
+        self.out_dim = hparams.speaker_embedding_dim
+        self.n_speakers = hparams.n_speakers
         self.linear_projection = torch.nn.Linear(in_features=self.n_speakers, out_features=self.out_dim, bias=False)
 
     def forward(self, inputs):
@@ -606,10 +606,10 @@ class SpeakerEncoder(nn.Module):
 
 
 class EmotionEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, hparams):
         super(EmotionEncoder, self).__init__()
-        self.out_dim = 3
-        self.n_emotions = 5
+        self.out_dim = hparams.emotion_embedding_dim
+        self.n_emotions = hparams.n_emotions
         self.linear_projection = torch.nn.Linear(in_features=self.n_emotions, out_features=self.out_dim, bias=False)
 
     def forward(self, inputs):
@@ -619,10 +619,10 @@ class EmotionEncoder(nn.Module):
 
 
 class LanguageEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, hparams):
         super(LanguageEncoder, self).__init__()
-        self.out_dim = 3
-        self.n_languages = 2
+        self.out_dim = hparams.lang_embedding_dim
+        self.n_languages = hparams.n_languages
         self.linear_projection = torch.nn.Linear(in_features=self.n_languages, out_features=self.out_dim, bias=False)
 
     def forward(self, inputs):
@@ -632,12 +632,12 @@ class LanguageEncoder(nn.Module):
 
 
 class SpeakerClassifier(nn.Module):
-    def __init__(self):
+    def __init__(self, hparams):
         super(SpeakerClassifier, self).__init__()
 
-        self.text_embedding_size = 512 # TODO: Put this parameter to hparams.py.
-        self.n_hidden_units = 256
-        self.n_speakers = 92 # TODO: Put this parameter to hparams.py.
+        self.text_embedding_size = hparams.encoder_embedding_dim
+        self.n_hidden_units = hparams.n_hidden_units
+        self.n_speakers = hparams.n_speakers
 
         self.revgrad_layer = RevGrad()
         self.linear_1 = torch.nn.Linear(in_features=self.text_embedding_size, out_features=self.n_hidden_units)
