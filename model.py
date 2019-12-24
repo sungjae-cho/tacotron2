@@ -543,7 +543,7 @@ class ResidualEncoder(nn.Module):
         self.linear_proj_mean = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
         self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
 
-    def forward(self, inputs):
+    def forward(self, inputs, is_inference=False):
         """ Residual Encoder
         PARAMS
         ------
@@ -553,6 +553,12 @@ class ResidualEncoder(nn.Module):
         -------
         z: torch.Tensor. size == [batch_size, 16]. Gaussin-sampled latent vectors of a variational autoencoder.
         """
+        if is_inference:
+            batch_size = inputs.size(0)
+            residual_encoding = torch.zeros(batch_size, self.out_dim)
+
+            return residual_encoding
+
         h_conv = self.conv2d_1(inputs)
         out_conv = self.conv2d_2(h_conv) # out_conv.shape == [batch_size, 512, freq, t]
         out_conv = out_conv.view(out_conv.size(0), -1, out_conv.size(3)) # out_conv.shape == [batch_size, 512*freq, t]
