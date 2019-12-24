@@ -62,11 +62,11 @@ def prepare_dataloaders(hparams):
 def prepare_directories_and_logger(output_directory, log_directory, rank,
                                    run_name, prj_name, resume):
     if rank == 0:
-        if not os.path.isdir(output_directory):
-            os.makedirs(output_directory)
-            os.chmod(output_directory, 0o775)
+        if not os.path.isdir(os.path.join(output_directory, prj_name, run_name)):
+            os.makedirs(os.path.join(output_directory, prj_name, run_name))
+            os.chmod(os.path.join(output_directory, prj_name, run_name), 0o775)
         logger = Tacotron2Logger(run_name, prj_name,
-            os.path.join(output_directory, log_directory), resume)
+            os.path.join(log_directory, prj_name, run_name), resume)
     else:
         logger = None
     return logger
@@ -261,7 +261,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                          hparams.distributed_run, rank, hparams.sampling_rate)
                 if rank == 0:
                     checkpoint_path = os.path.join(
-                        output_directory, "checkpoint_{}".format(iteration))
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}".format(iteration))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     checkpoint_path)
 
