@@ -589,3 +589,15 @@ class ResidualEncoder(nn.Module):
         z = mu + eps*std
 
         return z
+
+class SpeakerEncoder(nn.Module):
+    def __init__(self):
+        super(SpeakerEncoder, self).__init__()
+        self.out_dim = 64
+        self.n_speakers = 92
+        self.linear_projection = torch.nn.Linear(in_features=self.n_speakers, out_features=self.out_dim, bias=False)
+
+    def forward(self, inputs):
+        speaker_embeddings = self.linear_projection(inputs)
+
+        return speaker_embeddings
