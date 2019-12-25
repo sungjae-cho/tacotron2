@@ -182,6 +182,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
         model = apply_gradient_allreduce(model)
 
     criterion = Tacotron2Loss()
+    criterion_dom = torch.nn.CrossEntropyLoss()
 
     logger = prepare_directories_and_logger(
         output_directory, log_directory, rank, run_name, prj_name, resume)
