@@ -68,6 +68,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # SpeakerClassifier parameters
         n_hidden_units=256,
         revgrad_lambda=1.0,
+        revgrad_max_grad_norm=0.5,
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported
