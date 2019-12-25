@@ -3,7 +3,6 @@ import torch
 from torch.autograd import Variable
 from torch import nn
 from torch.nn import functional as F
-from pytorch_revgrad import RevGrad
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 
@@ -638,15 +637,31 @@ class SpeakerClassifier(nn.Module):
         self.text_embedding_size = hparams.encoder_embedding_dim
         self.n_hidden_units = hparams.n_hidden_units
         self.n_speakers = hparams.n_speakers
+        self.revgrad_lambda = hparams.revgrad_lambda
 
-        self.revgrad_layer = RevGrad()
         self.linear_1 = torch.nn.Linear(in_features=self.text_embedding_size, out_features=self.n_hidden_units)
         self.linear_2 = torch.nn.Linear(in_features=self.n_hidden_units, out_features=self.n_speakers)
 
     def forward(self, inputs):
-        revgrad_inputs = self.revgrad_layer(inputs)
+        revgrad_inputs = self.revgrad_layer(inputs, self.revgrad_lambda)
         h = F.relu(self.linear_1(revgrad_inputs))
         prob_speakers = F.softmax(self.linear_2(h), dim=1)
         speakers = torch.argmax(prob_speakers, dim=1)
 
         return prob_speakers, speakers
+
+    # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
+    def revgrad_layer(x, scale=1.0):
+        GradientReverse.scale = scale
+        return GradientReverse.apply(x)
+
+# From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
+class GradientReverse(torch.autograd.Function):
+    scale = 1.0
+    @staticmethod
+    def forward(ctx, x):
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        return GradientReverse.scale * grad_output.neg()
