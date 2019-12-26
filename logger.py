@@ -17,7 +17,10 @@ from denoiser import Denoiser
 class Tacotron2Logger(SummaryWriter):
     def __init__(self, run_name, prj_name, logdir, resume):
         self.run_name = run_name
-        wandb.init(name=run_name, project=prj_name, resume=resume)
+        if resume:
+            wandb.init(project=prj_name, resume=run_name)
+        else:
+            wandb.init(name=run_name, project=prj_name, resume=resume)
         super(Tacotron2Logger, self).__init__(logdir)
         self.waveglow = self.load_waveglow('/data2/sungjaecho/pretrained/waveglow_256channels_ljs_v2.pt')
 
