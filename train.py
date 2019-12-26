@@ -217,6 +217,8 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
         for i, batch in enumerate(train_loader):
+            batches_per_epoch = len(train_loader)
+            float_epoch = iteration / batches_per_epoch
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
                 param_group['lr'] = scheduler.get_lr()[0]
@@ -254,10 +256,10 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     iteration, reduced_loss, grad_norm, duration))
                 logger.log_training(
                     reduced_loss, grad_norm, learning_rate, duration, x, y_pred,
-                    iteration, epoch)
+                    iteration, float_epoch)
 
             if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
-                validate(model, criterion, valset, iteration, epoch,
+                validate(model, criterion, valset, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams.sampling_rate)
                 if rank == 0:
