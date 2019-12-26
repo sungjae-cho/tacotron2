@@ -286,6 +286,8 @@ if __name__ == '__main__':
                         required=False, help='number of gpus')
     parser.add_argument('--rank', type=int, default=0,
                         required=False, help='rank of current gpu')
+    parser.add_argument('--visible_gpus', type=str, default="0",
+                        required=False, help='CUDA visible GPUs')
     parser.add_argument('--group_name', type=str, default='group_name',
                         required=False, help='Distributed group name')
     parser.add_argument('--hparams', type=str,
@@ -300,12 +302,14 @@ if __name__ == '__main__':
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
     print("FP16 Run:", hparams.fp16_run)
     print("Dynamic Loss Scaling:", hparams.dynamic_loss_scaling)
     print("Distributed Run:", hparams.distributed_run)
     print("cuDNN Enabled:", hparams.cudnn_enabled)
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
+    print("Visible GPU IDs:", args.visible_gpus)
 
     if args.checkpoint_path != None:
         resume = True
