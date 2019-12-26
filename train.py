@@ -258,13 +258,18 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     reduced_loss, grad_norm, learning_rate, duration, x, y_pred,
                     iteration, float_epoch)
 
-            if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
+            if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 validate(model, criterion, valset, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams.sampling_rate)
-                if rank == 0:
+                if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
                     checkpoint_path = os.path.join(
-                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}".format(iteration))
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
+                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                                    checkpoint_path)
+                if rank == 0 and (i+1 == batches_per_epoch):
+                    checkpoint_path = os.path.join(
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     checkpoint_path)
 
