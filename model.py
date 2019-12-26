@@ -559,8 +559,8 @@ class ResidualEncoder(nn.Module):
 
             return residual_encoding
 
-        h_conv = self.conv2d_1(inputs)
-        out_conv = self.conv2d_2(h_conv) # out_conv.shape == [batch_size, 512, freq, t]
+        h_conv = F.relu(self.conv2d_1(inputs))
+        out_conv = F.relu(self.conv2d_2(h_conv)) # out_conv.shape == [batch_size, 512, freq, t]
         out_conv = out_conv.view(out_conv.size(0), -1, out_conv.size(3)) # out_conv.shape == [batch_size, 512*freq, t]
         out_conv = out_conv.permute(2, 0, 1) # out_conv.shape == [t, batch_size, 512*freq]
         out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero.
