@@ -287,6 +287,8 @@ if __name__ == '__main__':
                         help='directory to save tensorboard logs')
     parser.add_argument('-c', '--checkpoint_path', type=str, default=None,
                         required=False, help='checkpoint path')
+    parser.add_argument('-r', '--resume', type=bool, default=False,
+                        required=False, help='whether to resume logging')
     parser.add_argument('--warm_start', action='store_true',
                         help='load model weights only, ignore specified layers')
     parser.add_argument('--n_gpus', type=int, default=1,
@@ -318,11 +320,6 @@ if __name__ == '__main__':
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
     print("Visible GPU IDs:", args.visible_gpus)
 
-    if args.checkpoint_path != None:
-        resume = True
-    else:
-        resume = False
-
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
-          args.run_name, args.prj_name, resume)
+          args.run_name, args.prj_name, args.resume)
