@@ -59,7 +59,8 @@ class Tacotron2Logger(SummaryWriter):
                        "train/learning_rate": learning_rate,
                        "train/iter_duration": duration,
                        "epoch": epoch,
-                       "iteration":iteration})
+                       "iteration":iteration}
+                       , step=iteration)
 
             _, mel_outputs, gate_outputs, alignments = y_pred
 
@@ -67,9 +68,9 @@ class Tacotron2Logger(SummaryWriter):
             for hop_size in hop_list:
                 mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
                 log_name = "mean_forward_attention_ratio.train/hop_size={}".format(hop_size)
-                wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration})
+                wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration}, step=iteration)
                 log_name = "forward_attention_ratio.train/hop_size={}".format(hop_size)
-                wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration})
+                wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
 
     def log_validation(self,
@@ -84,7 +85,7 @@ class Tacotron2Logger(SummaryWriter):
         for tag, value in model.named_parameters():
             tag = tag.replace('.', '/')
             # self.add_histogram(tag, value.data.cpu().numpy(), iteration) # Tensorboard log
-            wandb.log({tag:wandb.Histogram(value.data.cpu().numpy()), "epoch": epoch, "iteration":iteration})
+            wandb.log({tag:wandb.Histogram(value.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
@@ -133,13 +134,14 @@ class Tacotron2Logger(SummaryWriter):
                    "val/mel_predicted": [wandb.Image(np_mel_predicted)],
                    "val/gate": [wandb.Image(np_gate)],
                    "epoch": epoch,
-                   "iteration":iteration})
+                   "iteration":iteration}
+                   , step=iteration)
 
         # foward attention ratio
         hop_list = [10, 20, 50, 100]
         for hop_size in hop_list:
             mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
             log_name = "mean_forward_attention_ratio.val/hop_size={}".format(hop_size)
-            wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration})
+            wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration}, step=iteration)
             log_name = "forward_attention_ratio.val/hop_size={}".format(hop_size)
-            wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration})
+            wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
