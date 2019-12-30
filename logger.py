@@ -64,7 +64,7 @@ class Tacotron2Logger(SummaryWriter):
 
             _, mel_outputs, gate_outputs, alignments = y_pred
 
-            hop_list = [10, 20, 50, 100]
+            hop_list = [1]
             for hop_size in hop_list:
                 mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
                 log_name = "mean_forward_attention_ratio.train/hop_size={}".format(hop_size)
@@ -138,7 +138,7 @@ class Tacotron2Logger(SummaryWriter):
                    , step=iteration)
 
         # foward attention ratio
-        hop_list = [10, 20, 50, 100]
+        hop_list = [1]
         for hop_size in hop_list:
             mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
             log_name = "mean_forward_attention_ratio.val/hop_size={}".format(hop_size)
