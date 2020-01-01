@@ -12,7 +12,7 @@ def get_mel_length(alignments, batch_i, text_length, last_steps=5):
     return mel_length
 
 
-def forward_attention_ratio(alignments, text_lengths, hop_size=5):
+def forward_attention_ratio(alignments, text_lengths, hop_size=1):
     '''
     Params
     -----
