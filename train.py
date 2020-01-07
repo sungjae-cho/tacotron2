@@ -12,9 +12,10 @@ from torch.utils.data import DataLoader
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
-from loss_function import Tacotron2Loss
+from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
+from measures import forward_attention_ratio
 
 
 def reduce_tensor(tensor, n_gpus):
@@ -226,8 +227,21 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             model.zero_grad()
             x, y = model.parse_batch(batch)
             y_pred = model(x)
-
             loss = criterion(y_pred, y)
+
+            if prj_name == "forward_attention_loss":
+                input_lengths = x[1]
+                alignments = y_pred[3]
+                mean_far, _ = forward_attention_ratio(alignments, input_lengths)
+                if mean_far > 0.95:
+                    fa_loss = forward_attention_loss(alignments, input_lengths)
+                    loss += fa_loss
+                    float_fa_loss = fa_loss.item()
+                else:
+                    float_fa_loss = None
+            else:
+                float_fa_loss = None
+
             if hparams.distributed_run:
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
@@ -256,7 +270,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     iteration, reduced_loss, grad_norm, duration))
                 logger.log_training(
                     reduced_loss, grad_norm, learning_rate, duration, x, y_pred,
-                    iteration, float_epoch)
+                    iteration, float_epoch, float_fa_loss)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 validate(model, criterion, valset, iteration, float_epoch,

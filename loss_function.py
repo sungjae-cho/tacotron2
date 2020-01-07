@@ -1,4 +1,6 @@
+import torch
 from torch import nn
+from measures import forward_attention_ratio
 
 
 class Tacotron2Loss(nn.Module):
@@ -17,3 +19,24 @@ class Tacotron2Loss(nn.Module):
             nn.MSELoss()(mel_out_postnet, mel_target)
         gate_loss = nn.BCEWithLogitsLoss()(gate_out, gate_target)
         return mel_loss + gate_loss
+
+
+def forward_attention_loss(alignments, text_lengths, hop_size=1):
+    '''
+    Params
+    -----
+    alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps]
+    text_lengths: torch.Tensor. a 1-D tensor that keeps input text lengths.
+    hop_size: int. hopping size to determine increment.
+
+    Returns
+    -----
+    mean_forward_attention_ratio: float. torch.mean(batch_forward_attention_ratio).
+    - The value is the mean of the forward attention ratio of all batch samples.
+    batch_forward_attention_ratio: torch.Tensor((batch_size),dtype=torch.float).
+    - Each element is the forward attention ratio of each batch sample.
+    '''
+    _, batch_forward_attention_ratio = forward_attention_ratio(alignments, text_lengths, hop_size)
+    mean_forward_attention_loss = torch.mean(-torch.log(batch_forward_attention_ratio))
+
+    return mean_forward_attention_loss

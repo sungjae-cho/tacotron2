@@ -44,7 +44,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
-                     x, y_pred, iteration, epoch):
+                     x, y_pred, iteration, epoch, forward_attention_loss=None):
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
 
             # Tensorbard log
@@ -61,7 +61,9 @@ class Tacotron2Logger(SummaryWriter):
                        "epoch": epoch,
                        "iteration":iteration}
                        , step=iteration)
-
+            if forward_attention_loss is not None:
+                wandb.log({"train/forward_attention_loss": forward_attention_loss}
+                           , step=iteration)
             _, mel_outputs, gate_outputs, alignments = y_pred
 
             hop_list = [1]
