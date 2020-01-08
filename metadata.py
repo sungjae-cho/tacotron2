@@ -41,17 +41,21 @@ class MetaData:
         split_ratio: dict. e.g., {'train':0.8, 'val':0.1, 'test':0.1}
         '''
         if self.db == "ljspeech":
+            self.df['database'] = 'LJ-Speech-1.1'
             self.df['wav_path'] = self.df.id.apply(self.get_wav_path)
             self.df['speaker'] = ['ljs-w'] * len(self.df)
             self.df['emotion'] = ['neutral'] * len(self.df)
             self.df['sex'] = ['w'] * len(self.df)
             self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
+            self.df = self.df[['database','split','id','wav_path','text_raw','text','speaker','sex','emotion','lang']]
+
 
         if self.db == "emovdb":
             self.df['sex'] = self.df.speaker.apply(self.get_sex)
             self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
+            self.df = self.df[['database','split','id','wav_path','duration','text','speaker','sex','emotion','lang']]
 
     def get_split_labels(self, split_ratio):
         df_len = len(self.df)
