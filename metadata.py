@@ -115,13 +115,13 @@ class MetaData:
         df = pd.read_csv(csv_path)
         print(self.db)
 
-        print(df.groupby(['split']).size())
+        print(df.groupby(['split']).size().to_frame('size'))
         csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split.csv'.format(self.db))
-        df.groupby(['split']).size().to_csv(csv_path)
+        df.groupby(['split']).size().to_frame('size').to_csv(csv_path)
 
-        print(df.groupby(['split', 'speaker', 'emotion']).size())
+        print(df.groupby(['split', 'speaker', 'emotion']).size().to_frame('size'))
         csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split_speaker_emotion.csv'.format(self.db))
-        df.groupby(['split', 'speaker', 'emotion']).size().to_csv(csv_path)
+        df.groupby(['split', 'speaker', 'emotion']).size().to_frame('size').to_csv(csv_path)
 
 
 def save_csv_db():

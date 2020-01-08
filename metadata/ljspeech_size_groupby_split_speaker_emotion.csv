@@ -1,3 +1,4 @@
+split,speaker,emotion,size
 test,ljs-w,neutral,66
 train,ljs-w,neutral,12969
 val,ljs-w,neutral,65
