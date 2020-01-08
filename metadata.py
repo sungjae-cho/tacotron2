@@ -45,10 +45,12 @@ class MetaData:
             self.df['speaker'] = ['ljs-w'] * len(self.df)
             self.df['emotion'] = ['neutral'] * len(self.df)
             self.df['sex'] = ['w'] * len(self.df)
+            self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
 
         if self.db == "emovdb":
             self.df['sex'] = self.df.speaker.apply(self.get_sex)
+            self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
 
     def get_split_labels(self, split_ratio):
