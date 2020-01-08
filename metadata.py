@@ -110,22 +110,44 @@ class MetaData:
             print("Saved! {}".format(csv_path))
 
 
+    def print_data_stat(self):
+        csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
+        df = pd.read_csv(csv_path)
+        print(self.db)
+
+        print(df.groupby(['split']).size())
+        csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split.csv'.format(self.db))
+        df.groupby(['split']).size().to_csv(csv_path)
+
+        print(df.groupby(['split', 'speaker', 'emotion']).size())
+        csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split_speaker_emotion.csv'.format(self.db))
+        df.groupby(['split', 'speaker', 'emotion']).size().to_csv(csv_path)
 
 
 def save_csv_db():
     db = "ljspeech"
-    split_ratio = {'train':0.9, 'val':0.05, 'test':0.05}
+    split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
     md = MetaData(db)
     md.make_new_db(split_ratio)
 
     db = "emovdb"
-    split_ratio = {'train':0.95, 'val':0.01, 'test':0.04}
+    split_ratio = {'train':0.95, 'val':0.025, 'test':0.025}
     md = MetaData(db)
     md.make_new_db(split_ratio)
+
+def print_data_stat():
+    db = "ljspeech"
+    md = MetaData(db)
+    md.print_data_stat()
+
+    db = "emovdb"
+    md = MetaData(db)
+    md.print_data_stat()
 
 
 def main():
     save_csv_db()
+    print_data_stat()
 
 if __name__ == "__main__":
     main()
