@@ -4,7 +4,8 @@ import torch
 import torch.utils.data
 
 import layers
-from utils import load_wav_to_torch, load_filepaths_and_text
+from utils import load_wav_to_torch, load_filepaths_and_text, \
+    load_wavpath_text_speaker_sex_emotion_lang, one_hot_encoding
 from text import text_to_sequence
 
 
@@ -14,8 +15,15 @@ class TextMelLoader(torch.utils.data.Dataset):
         2) normalizes text and converts them to sequences of one-hot vectors
         3) computes mel-spectrograms from audio files.
     """
-    def __init__(self, audiopaths_and_text, hparams):
+    def __init__(self, audiopaths_and_text, hparams, split):
         self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
+        loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(audiopaths_and_text, split)
+        self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
+        self.speaker_list = loaded_tuple[1]
+        self.sex_list = loaded_tuple[2]
+        self.emotion_list = loaded_tuple[3]
+        self.lang_list = loaded_tuple[4]
+        self.neutral_zero_vector = hparams.neutral_zero_vector
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
         self.sampling_rate = hparams.sampling_rate
@@ -33,6 +41,12 @@ class TextMelLoader(torch.utils.data.Dataset):
         text = self.get_text(text)
         mel = self.get_mel(audiopath)
         return (text, mel)
+
+    def get_mel_text_etc_tuple(self, wavpath_text_speaker_sex_emotion_lang):
+        wavpath, text, speaker, sex, emotion, lang = wavpath_text_speaker_sex_emotion_lang
+        text = self.get_text(text)
+        mel = self.get_mel(wavpath)
+        return (text, mel, speaker, sex, emotion, lang)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -57,11 +71,84 @@ class TextMelLoader(torch.utils.data.Dataset):
         text_norm = torch.IntTensor(text_to_sequence(text, self.text_cleaners))
         return text_norm
 
+    def get_speaker(self, speaker):
+        speaker_tensor = torch.IntTensor(self.speaker2int(speaker))
+        return speaker_tensor
+
+    def get_sex(self, sex):
+        sex_tensor = torch.IntTensor(self.sex2int(sex))
+        return sex_tensor
+
+    def get_emotion(self, emotion):
+        if self.neutral_zero_vector:
+            one_hot_vector_size = get_emotion_size() - 1
+            if emotion == 'neutral':
+                emotion_tensor = torch.zeros(one_hot_vector_size)
+            elif emotion == 'amused':
+                emotion_tensor = torch.eye(one_hot_vector_size)[0]
+            elif emotion == 'angry':
+                emotion_tensor = torch.eye(one_hot_vector_size)[1]
+            elif emotion == 'disgusted':
+                emotion_tensor = torch.eye(one_hot_vector_size)[2]
+            elif emotion == 'sleepy':
+                emotion_tensor = torch.eye(one_hot_vector_size)[3]
+        else:
+            emotion_tensor = one_hot_encoding(
+                self.emotion2int(emotion), self.get_emotion_size())
+
+        return emotion_tensor
+
+    def get_lang(self, lang):
+        lang_tensor = torch.IntTensor(self.lang2int(sex))
+        return lang_tensor
+
+    def get_speaker_size(self):
+        return len(self.speaker_list)
+
+    def get_sex_size(self):
+        return len(self.sex_list)
+
+    def get_emotion_size(self):
+        return len(self.emotion_list)
+
+    def get_lang_size(self):
+        return len(self.lang_list)
+
+    def get_lang(self, lang):
+        lang_tensor = torch.IntTensor(self.lang2int(lang))
+        return lang_tensor
+
+    def speaker2int(self, speaker):
+        return self.speaker_list.index(speaker)
+
+    def int2speaker(self, integer):
+        return self.speaker_list[integer]
+
+    def sex2int(self, sex):
+        return self.sex_list.index(sex)
+
+    def int2sex(self, integer):
+        return self.sex_list[integer]
+
+    def emotion2int(self, emotion):
+        return self.emotion_list.index(emotion)
+
+    def int2emotion(self, integer):
+        return self.emotion_list[integer]
+
+    def lang2int(self, lang):
+        return self.lang_list.index(lang)
+
+    def int2lang(self, integer):
+        return self.lang_list[integer]
+
     def __getitem__(self, index):
-        return self.get_mel_text_pair(self.audiopaths_and_text[index])
+        #return self.get_mel_text_pair(self.audiopaths_and_text[index])
+        return self.get_mel_text_etc_tuple(self.wavpath_text_speaker_sex_emotion_lang[index])
 
     def __len__(self):
-        return len(self.audiopaths_and_text)
+        #return len(self.audiopaths_and_text)
+        return len(self.wavpath_text_speaker_sex_emotion_lang)
 
 
 class TextMelCollate():
