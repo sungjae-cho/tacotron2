@@ -38,21 +38,27 @@ def load_filepaths_and_text(filename, split="|"):
     return filepaths_and_text
 
 
-def load_wavpath_text_speaker_sex_emotion_lang(csv_path, split):
+def load_wavpath_text_speaker_sex_emotion_lang(csv_paths, split):
     '''
     split in {'train', 'val', 'test'}
     '''
-    df = pd.read_csv(csv_path)
-    df = df[df.split == split]
-    columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
-    df = df[columns]
-    df_list = df.values.tolist()
+    df_list = list()
+    for csv_path in csv_paths:
+        df = pd.read_csv(csv_path)
+        df = df[df.split == split]
+        columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
+        df = df[columns]
+        df_list.append(df)
+
+    df = pd.concat(df_list, ignore_index=True)
+
+    row_list = df.values.tolist()
     speaker_list = df.speaker.unique().tolist()
     sex_list = df.sex.unique().tolist()
     emotion_list = df.emotion.unique().tolist()
     lang_list = df.lang.unique().tolist()
 
-    return df_list, speaker_list, sex_list, emotion_list, lang_list
+    return row_list, speaker_list, sex_list, emotion_list, lang_list
 
 
 def to_gpu(x):
