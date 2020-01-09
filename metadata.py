@@ -23,8 +23,18 @@ class MetaData:
     def load_original_db(self):
         if self.db == "ljspeech":
             csv_path = os.path.join(self.ljs_path, 'metadata.csv')
-            self.df = pd.read_csv(csv_path, sep='|', header=None, encoding='utf-8')
-            self.df = self.df.rename(columns={0:"id", 1:"text_raw", 2:"text"})
+
+            if True:
+                with open(csv_path, encoding='utf-8') as f:
+                    wavpath_rawtext_text = [line.strip().split("|") for line in f]
+                self.df = pd.DataFrame(columns=['id','text_raw','text'])
+                for i in range(len(wavpath_rawtext_text)):
+                    # the length of row is 3
+                    row = wavpath_rawtext_text[i]
+                    self.df.loc[i] = row
+            else:
+                self.df = pd.read_csv(csv_path, sep='|', header=None, encoding='utf-8', quoting=3)
+                self.df = self.df.rename(columns={0:"id", 1:"text_raw", 2:"text"})
 
         if self.db == "emovdb":
             csv_path = os.path.join(self.emovdb_path, 'emov_db.csv')
@@ -75,7 +85,7 @@ class MetaData:
 
     def get_wav_path(self, id, speaker=None, emotion=None):
         if self.db == "ljspeech":
-            wav_path = os.path.join(self.ljs_path, "{}.wav".format(id))
+            wav_path = os.path.join(self.ljs_path, 'wavs', "{}.wav".format(id))
 
             return wav_path
 
@@ -150,10 +160,22 @@ def print_data_stat():
     md = MetaData(db)
     md.print_data_stat()
 
+def debug():
+    db = "ljspeech"
+    split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
+    md = MetaData(db)
+    md.load_original_db()
+    md.add_columns(split_ratio)
+    row = md.df[md.df.wav_path == "/data2/sungjaecho/data_tts/LJSpeech-1.1/wavs/LJ005-0030.wav"]
+
+
+    print(row.values.tolist())
+
 
 def main():
     save_csv_db()
     print_data_stat()
+    #debug()
 
 if __name__ == "__main__":
     main()
