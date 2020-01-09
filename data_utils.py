@@ -34,6 +34,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.mel_fmax)
         random.seed(1234)
         random.shuffle(self.audiopaths_and_text)
+        random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
 
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
