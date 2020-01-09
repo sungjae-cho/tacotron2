@@ -46,7 +46,11 @@ class TextMelLoader(torch.utils.data.Dataset):
         wavpath, text, speaker, sex, emotion, lang = wavpath_text_speaker_sex_emotion_lang
         text = self.get_text(text)
         mel = self.get_mel(wavpath)
-        return (text, mel, speaker, sex, emotion, lang)
+        speaker = self.get_speaker(speaker)
+        sex = self.get_sex(sex)
+        emotion_vec = self.get_emotion(emotion)
+        lang = self.get_lang(lang)
+        return (text, mel, speaker, sex, emotion_vec, lang)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -162,6 +166,7 @@ class TextMelCollate():
         PARAMS
         ------
         batch: [text_normalized, mel_normalized]
+        batch: [text_normalized, mel_normalized, speaker, sex, emotion_vec, lang]
         """
         # Right zero-pad all one-hot text sequences to max input length
         input_lengths, ids_sorted_decreasing = torch.sort(
@@ -188,11 +193,26 @@ class TextMelCollate():
         gate_padded = torch.FloatTensor(len(batch), max_target_len)
         gate_padded.zero_()
         output_lengths = torch.LongTensor(len(batch))
+
+        # incldue speakers, sex, emotion vectors, and language.
+        speakers = torch.LongTensor(len(batch))
+        sex = torch.LongTensor(len(batch))
+        emotion_vec_dim = batch[0][4].size(0)
+        emotion_vectors = torch.LongTensor(len(batch), emotion_vec_dim)
+        lang = torch.LongTensor(len(batch))
+
         for i in range(len(ids_sorted_decreasing)):
             mel = batch[ids_sorted_decreasing[i]][1]
             mel_padded[i, :, :mel.size(1)] = mel
             gate_padded[i, mel.size(1)-1:] = 1
             output_lengths[i] = mel.size(1)
 
-        return text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths
+            speakers[i] = batch[ids_sorted_decreasing[i]][2]
+            sex[i] = batch[ids_sorted_decreasing[i]][3]
+            emotion_vectors[i,:] = batch[ids_sorted_decreasing[i]][4]
+            lang = batch[ids_sorted_decreasing[i]][5]
+
+
+
+        return text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
+            speakers, sex, emotion_vectors, lang

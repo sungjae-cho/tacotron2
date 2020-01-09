@@ -133,7 +133,8 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
 
         val_loss = 0.0
         for i, batch in enumerate(val_loader):
-            x, y = model.parse_batch(batch)
+            x, y, etc = model.parse_batch(batch)
+            speakers, sex, emotion_vectors, lang = etc
             y_pred = model(x)
             loss = criterion(y_pred, y)
             if distributed_run:
@@ -225,7 +226,8 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 param_group['lr'] = scheduler.get_lr()[0]
 
             model.zero_grad()
-            x, y = model.parse_batch(batch)
+            x, y, etc = model.parse_batch(batch)
+            speakers, sex, emotion_vectors, lang = etc
             y_pred = model(x)
             loss = criterion(y_pred, y)
 
