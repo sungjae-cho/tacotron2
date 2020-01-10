@@ -1,6 +1,9 @@
 import pandas as pd
 import os
 import random
+from scipy.io.wavfile import read as read_wav
+from tqdm import tqdm
+from ffmpy import FFmpeg
 
 class MetaData:
     def __init__(self, db):
@@ -20,6 +23,11 @@ class MetaData:
         elif split == 'test':
             return self.df[self.df.split == 'test']
 
+    def load_from_csv(self):
+        csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
+        self.df = pd.read_csv(csv_path)
+
+
     def load_original_db(self):
         if self.db == "ljspeech":
             csv_path = os.path.join(self.ljs_path, 'metadata.csv')
@@ -28,7 +36,7 @@ class MetaData:
                 with open(csv_path, encoding='utf-8') as f:
                     wavpath_rawtext_text = [line.strip().split("|") for line in f]
                 self.df = pd.DataFrame(columns=['id','text_raw','text'])
-                for i in range(len(wavpath_rawtext_text)):
+                for i in tqdm(range(len(wavpath_rawtext_text))):
                     # the length of row is 3
                     row = wavpath_rawtext_text[i]
                     self.df.loc[i] = row
@@ -125,7 +133,6 @@ class MetaData:
             df.to_csv(csv_path, index=False)
             print("Saved! {}".format(csv_path))
 
-
     def print_data_stat(self):
         csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
         df = pd.read_csv(csv_path)
@@ -172,10 +179,45 @@ def debug():
     print(row.values.tolist())
 
 
+def make_one_sample_rate(db, sample_rate=22050):
+    md = MetaData(db)
+    md.load_from_csv()
+    df = md.get_df()
+
+    print("Start to encode wav files of {} to have {} sample rate.".format(db, sample_rate))
+
+    for i, row in tqdm(df.iterrows(), total=len(df)):
+        src_wav = row.wav_path
+        change_sample_rate(src_wav, src_wav, sample_rate)
+
+
+def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
+    frame_rate, _  = read_wav(src_wav)
+    #print("Original sample rate:", frame_rate)
+
+    if frame_rate == sample_rate:
+        return
+
+    ff = FFmpeg(
+        inputs={src_wav: None},
+        outputs={dst_wav: "-ar {} -y -loglevel quiet".format(sample_rate)}
+    )
+
+    ff.run()
+
+    #frame_rate, _  = read_wav(dst_wav)
+    #print("New sample rate:", frame_rate)
+
+
+
+
+
+
 def main():
-    save_csv_db()
-    print_data_stat()
+    #save_csv_db()
+    #print_data_stat()
     #debug()
+    make_one_sample_rate(db = "emovdb", sample_rate=22050)
 
 if __name__ == "__main__":
     main()
