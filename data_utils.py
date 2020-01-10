@@ -36,6 +36,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         random.shuffle(self.audiopaths_and_text)
         random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
 
+
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
@@ -77,16 +78,16 @@ class TextMelLoader(torch.utils.data.Dataset):
         return text_norm
 
     def get_speaker(self, speaker):
-        speaker_tensor = torch.IntTensor(self.speaker2int(speaker))
+        speaker_tensor = self.speaker2int(speaker)
         return speaker_tensor
 
     def get_sex(self, sex):
-        sex_tensor = torch.IntTensor(self.sex2int(sex))
+        sex_tensor = self.sex2int(sex)
         return sex_tensor
 
     def get_emotion(self, emotion):
         if self.neutral_zero_vector:
-            one_hot_vector_size = get_emotion_size() - 1
+            one_hot_vector_size = self.get_emotion_size() - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
             elif emotion == 'amused':
@@ -104,7 +105,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return emotion_tensor
 
     def get_lang(self, lang):
-        lang_tensor = torch.IntTensor(self.lang2int(sex))
+        lang_tensor = self.lang2int(sex)
         return lang_tensor
 
     def get_speaker_size(self):
