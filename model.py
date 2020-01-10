@@ -229,7 +229,8 @@ class Decoder(nn.Module):
             hparams.attention_location_kernel_size)
 
         self.decoder_rnn = nn.LSTMCell(
-            hparams.attention_rnn_dim + hparams.encoder_embedding_dim,
+            (hparams.attention_rnn_dim + hparams.encoder_embedding_dim +
+             hparams.emotion_embedding_dim + hparams.speaker_embedding_dim),
             hparams.decoder_rnn_dim, 1)
 
         self.linear_projection = LinearNorm(
@@ -337,7 +338,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def decode(self, decoder_input):
+    def decode(self, decoder_input, speaker_embedding, emotion_embedding):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -364,7 +365,7 @@ class Decoder(nn.Module):
 
         self.attention_weights_cum += self.attention_weights
         decoder_input = torch.cat(
-            (self.attention_hidden, self.attention_context), -1)
+            (self.attention_hidden, self.attention_context, speaker_embedding, emotion_embedding), -1)
         self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
             decoder_input, (self.decoder_hidden, self.decoder_cell))
         self.decoder_hidden = F.dropout(
@@ -378,7 +379,8 @@ class Decoder(nn.Module):
         gate_prediction = self.gate_layer(decoder_hidden_attention_context)
         return decoder_output, gate_prediction, self.attention_weights
 
-    def forward(self, memory, decoder_inputs, memory_lengths):
+    def forward(self, memory, decoder_inputs, memory_lengths,
+        speaker_embeddings, emotion_embeddings):
         """ Decoder forward pass for training
         PARAMS
         ------
@@ -405,7 +407,7 @@ class Decoder(nn.Module):
         while len(mel_outputs) < decoder_inputs.size(0) - 1:
             decoder_input = decoder_inputs[len(mel_outputs)]
             mel_output, gate_output, attention_weights = self.decode(
-                decoder_input)
+                decoder_input, speaker_embeddings, emotion_embeddings)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [attention_weights]
@@ -415,7 +417,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def inference(self, memory):
+    def inference(self, memory, speaker_embeddings, emotion_embeddings):
         """ Decoder inference
         PARAMS
         ------
@@ -434,7 +436,8 @@ class Decoder(nn.Module):
         mel_outputs, gate_outputs, alignments = [], [], []
         while True:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment = self.decode(decoder_input)
+            mel_output, gate_output, alignment = self.decode(decoder_input,
+                speaker_embeddings, emotion_embeddings)
 
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
@@ -469,6 +472,8 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
+        self.speaker_embedding_layer = SpeakerEncoder(hparams)
+        self.emotion_embedding_layer = EmotionEncoder(hparams)
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -479,6 +484,10 @@ class Tacotron2(nn.Module):
         mel_padded = to_gpu(mel_padded).float()
         gate_padded = to_gpu(gate_padded).float()
         output_lengths = to_gpu(output_lengths).long()
+        speakers = to_gpu(speakers).long()
+        sex = to_gpu(sex).long()
+        emotion_vectors = to_gpu(emotion_vectors).float()
+        lang = to_gpu(lang).long()
 
         return (
             (text_padded, input_lengths, mel_padded, max_len, output_lengths),
@@ -497,7 +506,7 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def forward(self, inputs):
+    def forward(self, inputs, speakers, emotion_vectors):
         text_inputs, text_lengths, mels, max_len, output_lengths = inputs
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
 
@@ -505,8 +514,12 @@ class Tacotron2(nn.Module):
 
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
 
+        speaker_embeddings = self.speaker_embedding_layer(speakers)
+        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+
         mel_outputs, gate_outputs, alignments = self.decoder(
-            encoder_outputs, mels, memory_lengths=text_lengths)
+            encoder_outputs, mels, text_lengths,
+            speaker_embeddings, emotion_embeddings)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -515,11 +528,13 @@ class Tacotron2(nn.Module):
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths)
 
-    def inference(self, inputs):
+    def inference(self, inputs, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
+        speaker_embeddings = self.speaker_embedding_layer(speakers)
+        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
-            encoder_outputs)
+            encoder_outputs, speaker_embeddings, emotion_embeddings)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet

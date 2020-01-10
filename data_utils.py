@@ -19,6 +19,8 @@ class TextMelLoader(torch.utils.data.Dataset):
         #self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(audiopaths_and_text, split)
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
+        self.n_emotions = hparams.n_emotions
+        self.n_speakers = hparams.n_speakers
         self.speaker_list = loaded_tuple[1]
         self.sex_list = loaded_tuple[2]
         self.emotion_list = loaded_tuple[3]
@@ -78,7 +80,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return text_norm
 
     def get_speaker(self, speaker):
-        speaker_tensor = self.speaker2int(speaker)
+        speaker_tensor = torch.IntTensor([self.speaker2int(speaker)])
         return speaker_tensor
 
     def get_sex(self, sex):
@@ -87,7 +89,7 @@ class TextMelLoader(torch.utils.data.Dataset):
 
     def get_emotion(self, emotion):
         if self.neutral_zero_vector:
-            one_hot_vector_size = self.get_emotion_size() - 1
+            one_hot_vector_size = self.n_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
             elif emotion == 'amused':
@@ -100,7 +102,7 @@ class TextMelLoader(torch.utils.data.Dataset):
                 emotion_tensor = torch.eye(one_hot_vector_size)[3]
         else:
             emotion_tensor = one_hot_encoding(
-                self.emotion2int(emotion), self.get_emotion_size())
+                self.emotion2int(emotion), self.n_emotions)
 
         return emotion_tensor
 
@@ -200,7 +202,7 @@ class TextMelCollate():
         speakers = torch.LongTensor(len(batch))
         sex = torch.LongTensor(len(batch))
         emotion_vec_dim = batch[0][4].size(0)
-        emotion_vectors = torch.LongTensor(len(batch), emotion_vec_dim)
+        emotion_vectors = torch.FloatTensor(len(batch), emotion_vec_dim)
         lang = torch.LongTensor(len(batch))
 
         for i in range(len(ids_sorted_decreasing)):
@@ -213,7 +215,6 @@ class TextMelCollate():
             sex[i] = batch[ids_sorted_decreasing[i]][3]
             emotion_vectors[i,:] = batch[ids_sorted_decreasing[i]][4]
             lang = batch[ids_sorted_decreasing[i]][5]
-
 
 
         return text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \

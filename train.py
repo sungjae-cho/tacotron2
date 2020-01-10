@@ -135,7 +135,7 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
         for i, batch in enumerate(val_loader):
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
-            y_pred = model(x)
+            y_pred = model(x, speakers, emotion_vectors)
             loss = criterion(y_pred, y)
             if distributed_run:
                 reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
@@ -228,7 +228,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             model.zero_grad()
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
-            y_pred = model(x)
+            y_pred = model(x, speakers, emotion_vectors)
             loss = criterion(y_pred, y)
 
             if prj_name == "forward_attention_loss":
