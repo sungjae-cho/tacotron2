@@ -27,7 +27,9 @@ def create_hparams(hparams_string=None, verbose=False):
         load_mel_from_disk=False,
         training_files='filelists/ljs_audio_text_train_filelist.txt',
         validation_files='filelists/ljs_audio_text_val_filelist.txt',
-        csv_data_paths=['metadata/ljspeech.csv'],
+        csv_data_paths=['metadata/emovdb.csv'],
+        #csv_data_paths=['metadata/ljspeech.csv'],
+        #csv_data_paths=['metadata/emovdb.csv', 'metadata/ljspeech.csv'],
         text_cleaners=['english_cleaners'],
 
         ################################
@@ -55,7 +57,7 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_embedding_dim=512,
 
         # SpeakerEncoder parameters
-        n_speakers=92,
+        n_speakers=16,
         speaker_embedding_dim=64,
 
         # LanguageEncoder parameters
