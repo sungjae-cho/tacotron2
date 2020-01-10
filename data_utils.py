@@ -16,7 +16,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         3) computes mel-spectrograms from audio files.
     """
     def __init__(self, audiopaths_and_text, hparams, split):
-        self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
+        #self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(audiopaths_and_text, split)
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
         self.speaker_list = loaded_tuple[1]
@@ -33,7 +33,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
         random.seed(1234)
-        random.shuffle(self.audiopaths_and_text)
+        #random.shuffle(self.audiopaths_and_text)
         random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
 
 
