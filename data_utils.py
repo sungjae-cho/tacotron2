@@ -21,10 +21,10 @@ class TextMelLoader(torch.utils.data.Dataset):
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
         self.n_emotions = hparams.n_emotions
         self.n_speakers = hparams.n_speakers
-        self.speaker_list = loaded_tuple[1]
-        self.sex_list = loaded_tuple[2]
-        self.emotion_list = loaded_tuple[3]
-        self.lang_list = loaded_tuple[4]
+        self.speaker_list = sorted(loaded_tuple[1])
+        self.sex_list = sorted(loaded_tuple[2])
+        self.emotion_list = sorted(loaded_tuple[3])
+        self.lang_list = sorted(loaded_tuple[4])
         self.neutral_zero_vector = hparams.neutral_zero_vector
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
