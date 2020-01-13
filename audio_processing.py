@@ -76,6 +76,7 @@ def griffin_lim(magnitudes, stft_fn, n_iters=30):
 
 
 def dynamic_range_compression(x, C=1, clip_val=1e-5):
+#def dynamic_range_compression(x, C=1, clip_val=0):
     """
     PARAMS
     ------
