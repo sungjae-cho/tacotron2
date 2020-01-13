@@ -136,6 +136,25 @@ class TextMelLoader(torch.utils.data.Dataset):
         lang_tensor = torch.IntTensor(self.lang2int(lang))
         return lang_tensor
 
+    def emotion_tensor2str_emotion(self, emotion_tensor):
+        if self.neutral_zero_vector:
+            if torch.sum(emotion_tensor).item() == 0:
+                str_emotion = 'neutral'
+            else:
+                int_emotion = torch.argmax(emotion_tensor).item()
+                if int_emotion == 0:
+                    str_emotion = 'amused'
+                elif int_emotion == 1:
+                    str_emotion = 'angry'
+                elif int_emotion == 2:
+                    str_emotion = 'disgusted'
+                elif int_emotion == 3:
+                    str_emotion = 'sleepy'
+        else:
+            str_emotion = self.int2emotion(torch.argmax(emotion_tensor).item())
+
+        return str_emotion
+
     def speaker2int(self, speaker):
         return self.speaker_list.index(speaker)
 
