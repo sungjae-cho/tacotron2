@@ -62,7 +62,17 @@ class TextMelLoader(torch.utils.data.Dataset):
             if sampling_rate != self.stft.sampling_rate:
                 raise ValueError("{} {} SR doesn't match target {} SR".format(
                     sampling_rate, self.stft.sampling_rate))
-            audio_norm = audio / self.max_wav_value
+            #audio_norm = audio / self.max_wav_value
+            max_wav_value = audio.abs().max()
+            audio_norm = audio / max_wav_value * 0.99
+            '''max_wav_value = audio.abs().max()
+            audio_norm = audio / max_wav_value * 0.95'''
+            '''absmean_wav_value = audio.abs().mean()
+            audio_norm = audio / absmean_wav_value * 0.5'''
+            '''if audio.max() <= 1.0 and audio.min() >= -1.0:
+                audio_norm = audio
+            else:
+                audio_norm = audio / self.max_wav_value'''
             audio_norm = audio_norm.unsqueeze(0)
             audio_norm = torch.autograd.Variable(audio_norm, requires_grad=False)
             melspec = self.stft.mel_spectrogram(audio_norm)
