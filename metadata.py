@@ -187,8 +187,10 @@ def make_one_sample_rate(db, sample_rate=22050):
     print("Start to encode wav files of {} to have {} sample rate.".format(db, sample_rate))
 
     for i, row in tqdm(df.iterrows(), total=len(df)):
-        src_wav = row.wav_path
-        change_sample_rate(src_wav, src_wav, sample_rate)
+        dst_wav = row.wav_path
+        src_wav = dst_wav.replace(os.path.join('EmoV-DB', 'EmoV-DB'), os.path.join('EmoV-DB', 'EmoV-DB-copy'))
+
+        change_sample_rate(src_wav, dst_wav, sample_rate)
 
 
 def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
@@ -200,7 +202,7 @@ def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
 
     ff = FFmpeg(
         inputs={src_wav: None},
-        outputs={dst_wav: "-ar {} -y -loglevel quiet".format(sample_rate)}
+        outputs={dst_wav: "-ar {} -y".format(sample_rate)}
     )
 
     ff.run()
