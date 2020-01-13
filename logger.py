@@ -12,6 +12,8 @@ from plotting_utils import plot_gate_outputs_to_numpy
 from measures import forward_attention_ratio, get_mel_length
 from text import sequence_to_text
 from denoiser import Denoiser
+from text import text_to_sequence
+from utils import to_gpu
 
 
 class Tacotron2Logger(SummaryWriter):
@@ -74,7 +76,7 @@ class Tacotron2Logger(SummaryWriter):
                 log_name = "forward_attention_ratio.train/hop_size={}".format(hop_size)
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
-
+    #TODO: add hparams indead of sample_rate
     def log_validation(self, valset,
         reduced_loss,  far_pair,
         model, x, y, etc, y_pred, iteration, epoch, sample_rate):
@@ -135,7 +137,7 @@ class Tacotron2Logger(SummaryWriter):
             iteration, dataformats='HWC')'''
 
         # wandb log
-        caption_string = '[{speaker}/{emotion}] {text}'.format(
+        caption_string = '[{speaker}|{emotion}] {text}'.format(
             speaker=speaker,
             emotion=str_emotion,
             text=text_string
@@ -155,3 +157,29 @@ class Tacotron2Logger(SummaryWriter):
         wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration}, step=iteration)
         log_name = "forward_attention_ratio.val"
         wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
+
+
+        text = "KAIST is a national research university located in Daedeok Innopolis, Daejeon, South Korea."
+        for speaker in valset.speaker_list:
+            for emotion in valset.emotion_list:
+                sequence = np.array(text_to_sequence(text, ['english_cleaners']))[None, :]
+                sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
+                speaker_int = valset.speaker2int(speaker)
+                emotion_vector = valset.get_emotion(emotion)
+                speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
+                emotion_tensor = to_gpu(torch.tensor(emotion_vector).view(1,-1)).float()
+
+                _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_tensor)
+
+                np_wav = self.mel2wav(mel_outputs_postnet.type('torch.cuda.HalfTensor'))
+                np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T)
+                np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].data.cpu().numpy())
+
+                group_log_name = "Inference_test/{speaker}_{emotion}/".format(
+                    speaker=speaker, emotion=emotion
+                )
+                wandb.log({
+                    "{}wav".format(group_log_name): [wandb.Audio(np_wav.astype(np.float32), caption=text, sample_rate=sample_rate)],
+                    "{}alignment".format(group_log_name): [wandb.Image(np_alignment)],
+                    "{}mel_predicted".format(group_log_name): [wandb.Image(np_mel_predicted)]
+                }, step=iteration)
