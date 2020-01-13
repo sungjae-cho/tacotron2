@@ -132,23 +132,34 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
                                 pin_memory=False, collate_fn=collate_fn)
 
         val_loss = 0.0
+        mean_far_sum = 0.0
+        batch_far_list = list()
         for i, batch in enumerate(val_loader):
             x, y, etc = model.parse_batch(batch)
+            input_lengths = x[1]
             speakers, sex, emotion_vectors, lang = etc
             y_pred = model(x, speakers, emotion_vectors)
+            alignments = y_pred[3]
             loss = criterion(y_pred, y)
             if distributed_run:
                 reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
                 reduced_val_loss = loss.item()
             val_loss += reduced_val_loss
+            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths)
+            mean_far_sum += mean_far
+            batch_far_list.append(batch_far)
         val_loss = val_loss / (i + 1)
+        val_mean_far = mean_far_sum / (i + 1)
+        val_batch_far = torch.cat(batch_far_list)
+        far_pair = (val_mean_far, val_batch_far)
 
     model.train()
     if rank == 0:
         print("Validation loss {}: {:9f}  ".format(iteration, reduced_val_loss))
         logger.log_validation(valset,
-            reduced_val_loss, model, x, y, etc, y_pred, iteration, epoch, sample_rate)
+            reduced_val_loss, far_pair,
+            model, x, y, etc, y_pred, iteration, epoch, sample_rate)
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,

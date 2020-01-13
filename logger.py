@@ -76,13 +76,15 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_validation(self, valset,
-        reduced_loss, model, x, y, etc, y_pred, iteration, epoch, sample_rate):
+        reduced_loss,  far_pair,
+        model, x, y, etc, y_pred, iteration, epoch, sample_rate):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
         #self.add_scalar("validation.loss", reduced_loss, iteration) # Tensorboard log
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
+        mean_far, batch_far = far_pair
 
         # plot distribution of parameters
         for tag, value in model.named_parameters():
@@ -149,10 +151,7 @@ class Tacotron2Logger(SummaryWriter):
                    , step=iteration)
 
         # foward attention ratio
-        hop_list = [1]
-        for hop_size in hop_list:
-            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
-            log_name = "mean_forward_attention_ratio.val/hop_size={}".format(hop_size)
-            wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration}, step=iteration)
-            log_name = "forward_attention_ratio.val/hop_size={}".format(hop_size)
-            wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
+        log_name = "mean_forward_attention_ratio.val"
+        wandb.log({log_name:mean_far, "epoch": epoch, "iteration":iteration}, step=iteration)
+        log_name = "forward_attention_ratio.val"
+        wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
