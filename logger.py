@@ -44,7 +44,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
-                     x, y_pred, iteration, epoch, forward_attention_loss=None):
+                     x, etc, y_pred, iteration, epoch, forward_attention_loss=None):
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
 
             # Tensorbard log
@@ -75,9 +75,10 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
 
-    def log_validation(self,
-        reduced_loss, model, x, y, y_pred, iteration, epoch, sample_rate):
+    def log_validation(self, valset,
+        reduced_loss, model, x, y, etc, y_pred, iteration, epoch, sample_rate):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+        speakers, sex, emotion_vectors, lang = etc
 
         #self.add_scalar("validation.loss", reduced_loss, iteration) # Tensorboard log
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -91,6 +92,9 @@ class Tacotron2Logger(SummaryWriter):
 
         # plot alignment, mel target and predicted, gate target and predicted
         idx = random.randint(0, alignments.size(0) - 1)
+
+        speaker = valset.int2speaker(speakers[idx].item())
+        str_emotion = valset.emotion_tensor2str_emotion(emotion_vectors[idx])
 
         text_len = input_lengths[idx].item()
         text_string = sequence_to_text(text_padded[idx].tolist())[:text_len]
@@ -129,9 +133,14 @@ class Tacotron2Logger(SummaryWriter):
             iteration, dataformats='HWC')'''
 
         # wandb log
+        caption_string = '[{speaker}/{emotion}] {text}'.format(
+            speaker=speaker,
+            emotion=str_emotion,
+            text=text_string
+        )
         wandb.log({"val/loss": reduced_loss,
-                   "val/alignment": [wandb.Image(np_alignment, caption=text_string)],
-                   "val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=text_string, sample_rate=sample_rate)],
+                   "val/alignment": [wandb.Image(np_alignment, caption=caption_string)],
+                   "val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=sample_rate)],
                    "val/mel_target": [wandb.Image(np_mel_target)],
                    "val/mel_predicted": [wandb.Image(np_mel_predicted)],
                    "val/gate": [wandb.Image(np_gate)],

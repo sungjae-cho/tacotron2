@@ -147,8 +147,8 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
     model.train()
     if rank == 0:
         print("Validation loss {}: {:9f}  ".format(iteration, reduced_val_loss))
-        logger.log_validation(
-            reduced_val_loss, model, x, y, y_pred, iteration, epoch, sample_rate)
+        logger.log_validation(valset,
+            reduced_val_loss, model, x, y, etc, y_pred, iteration, epoch, sample_rate)
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
@@ -271,7 +271,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 print("Train loss {} {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
                     iteration, reduced_loss, grad_norm, duration))
                 logger.log_training(
-                    reduced_loss, grad_norm, learning_rate, duration, x, y_pred,
+                    reduced_loss, grad_norm, learning_rate, duration, x, etc, y_pred,
                     iteration, float_epoch, float_fa_loss)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
