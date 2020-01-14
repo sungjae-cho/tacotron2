@@ -57,15 +57,15 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_embedding_dim=512,
 
         # SpeakerEncoder parameters
-        n_speakers=16,
+        max_speakers=16,
         speaker_embedding_dim=64,
 
         # LanguageEncoder parameters
-        n_languages=2,
+        max_languages=2,
         lang_embedding_dim=3,
 
         # EmotionEncoder parameters
-        n_emotions=5,
+        max_emotions=5,
         emotion_embedding_dim=3,
         neutral_zero_vector=True,
 

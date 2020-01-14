@@ -19,8 +19,8 @@ class TextMelLoader(torch.utils.data.Dataset):
         #self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
         loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(audiopaths_and_text, split)
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
-        self.n_emotions = hparams.n_emotions
-        self.n_speakers = hparams.n_speakers
+        self.max_emotions = hparams.max_emotions
+        self.max_speakers = hparams.max_speakers
         self.speaker_list = sorted(loaded_tuple[1])
         self.sex_list = sorted(loaded_tuple[2])
         self.emotion_list = sorted(loaded_tuple[3])
@@ -99,7 +99,7 @@ class TextMelLoader(torch.utils.data.Dataset):
 
     def get_emotion(self, emotion):
         if self.neutral_zero_vector:
-            one_hot_vector_size = self.n_emotions - 1
+            one_hot_vector_size = self.max_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
             elif emotion == 'amused':
@@ -112,7 +112,7 @@ class TextMelLoader(torch.utils.data.Dataset):
                 emotion_tensor = torch.eye(one_hot_vector_size)[3]
         else:
             emotion_tensor = one_hot_encoding(
-                self.emotion2int(emotion), self.n_emotions)
+                self.emotion2int(emotion), self.max_emotions)
 
         return emotion_tensor
 

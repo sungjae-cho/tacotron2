@@ -617,9 +617,9 @@ class SpeakerEncoder(nn.Module):
     def __init__(self, hparams):
         super(SpeakerEncoder, self).__init__()
         self.out_dim = hparams.speaker_embedding_dim
-        self.n_speakers = hparams.n_speakers
-        #self.linear_projection = torch.nn.Linear(in_features=self.n_speakers, out_features=self.out_dim, bias=False)
-        self.linear_projection = nn.Embedding(self.n_speakers, self.out_dim)
+        self.max_speakers = hparams.max_speakers
+        #self.linear_projection = torch.nn.Linear(in_features=self.max_speakers, out_features=self.out_dim, bias=False)
+        self.linear_projection = nn.Embedding(self.max_speakers, self.out_dim)
 
     def forward(self, inputs):
         speaker_embeddings = self.linear_projection(inputs)
@@ -631,11 +631,11 @@ class EmotionEncoder(nn.Module):
     def __init__(self, hparams):
         super(EmotionEncoder, self).__init__()
         self.out_dim = hparams.emotion_embedding_dim
-        self.n_emotions = hparams.n_emotions
+        self.max_emotions = hparams.max_emotions
         if hparams.neutral_zero_vector:
-            self.linear_projection = torch.nn.Linear(in_features=self.n_emotions-1, out_features=self.out_dim, bias=False)
+            self.linear_projection = torch.nn.Linear(in_features=self.max_emotions-1, out_features=self.out_dim, bias=False)
         else:
-            self.linear_projection = torch.nn.Linear(in_features=self.n_emotions, out_features=self.out_dim, bias=False)
+            self.linear_projection = torch.nn.Linear(in_features=self.max_emotions, out_features=self.out_dim, bias=False)
 
 
     def forward(self, inputs):
@@ -648,9 +648,9 @@ class LanguageEncoder(nn.Module):
     def __init__(self, hparams):
         super(LanguageEncoder, self).__init__()
         self.out_dim = hparams.lang_embedding_dim
-        self.n_languages = hparams.n_languages
-        #self.linear_projection = torch.nn.Linear(in_features=self.n_languages, out_features=self.out_dim, bias=False)
-        self.linear_projection = nn.Embedding(self.n_languages, self.out_dim)
+        self.max_languages = hparams.max_languages
+        #self.linear_projection = torch.nn.Linear(in_features=self.max_languages, out_features=self.out_dim, bias=False)
+        self.linear_projection = nn.Embedding(self.max_languages, self.out_dim)
 
     def forward(self, inputs):
         language_embeddings = self.linear_projection(inputs)
@@ -664,12 +664,12 @@ class SpeakerClassifier(nn.Module):
 
         self.text_embedding_size = hparams.encoder_embedding_dim
         self.n_hidden_units = hparams.n_hidden_units
-        self.n_speakers = hparams.n_speakers
+        self.max_speakers = hparams.max_speakers
         self.revgrad_lambda = hparams.revgrad_lambda
         self.revgrad_max_grad_norm = hparams.revgrad_max_grad_norm
 
         self.linear_1 = torch.nn.Linear(in_features=self.text_embedding_size, out_features=self.n_hidden_units)
-        self.linear_2 = torch.nn.Linear(in_features=self.n_hidden_units, out_features=self.n_speakers)
+        self.linear_2 = torch.nn.Linear(in_features=self.n_hidden_units, out_features=self.max_speakers)
 
     def forward(self, inputs):
         revgrad_inputs = self.revgrad_layer(inputs, self.revgrad_lambda, self.revgrad_max_grad_norm)
