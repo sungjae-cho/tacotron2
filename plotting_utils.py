@@ -2,6 +2,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pylab as plt
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
 
 
 def save_figure_to_numpy(fig):
@@ -71,6 +73,33 @@ def plot_gate_outputs_to_numpy(gate_targets, gate_outputs):
 
     plt.xlabel("Frames (Green target, Red predicted)")
     plt.ylabel("Gate State")
+    plt.tight_layout()
+
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+    return data
+
+
+
+def plot_embeddings_to_numpy(labels, label_embeddings):
+    tsne = TSNE(n_components=2, n_iter=100000)
+    X_2d = tsne.fit_transform(label_embeddings)
+
+    fig, ax = plt.subplots(figsize=(4, 4))
+
+    plt.scatter(X_2d[:,0], X_2d[:,1], c=list(range(len(labels))), cmap='rainbow')
+
+    for i in range(len(labels)):
+        label = labels[i]
+        plt.annotate(
+            label,
+            xy=(X_2d[i,0], X_2d[i,1]), xytext=(0, 30),
+            textcoords='offset points', ha='left', va='top',
+            bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.6),
+            arrowprops=dict(arrowstyle = '-', connectionstyle='arc3,rad=0'),
+            annotation_clip=None
+        )
     plt.tight_layout()
 
     fig.canvas.draw()

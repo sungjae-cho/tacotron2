@@ -7,7 +7,8 @@ sys.path.append('waveglow/')
 import warnings
 warnings.filterwarnings('ignore')
 from tensorboardX import SummaryWriter
-from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy
+from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
+    plot_embeddings_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
 from measures import forward_attention_ratio, get_mel_length
 from text import sequence_to_text
@@ -43,6 +44,28 @@ class Tacotron2Logger(SummaryWriter):
             np_wav = audio[0].data.cpu().numpy()
 
         return np_wav
+
+    def get_embeddings(self, valset, model):
+        speaker_list = list()
+        for speaker in valset.speaker_list:
+            speaker_int = valset.speaker2int(speaker)
+            speaker_list.append(speaker_int)
+        speaker_tensors = torch.tensor(speaker_list)
+
+        emotion_vectors = list()
+        for emotion in valset.emotion_list:
+            emotion_vector = valset.get_emotion(emotion)
+            emotion_vectors.append(emotion_vector)
+        emotion_tensors = torch.stack(emotion_vectors)
+
+        speaker_tensors = to_gpu(speaker_tensors).long()
+        emotion_tensors = to_gpu(emotion_tensors).float()
+        print("speaker_tensors.size()",speaker_tensors.size())
+        print("emotion_tensors.size()",emotion_tensors.size())
+
+        speaker_embeddings, emotion_embeddings = model.get_embeddings(speaker_tensors, emotion_tensors)
+
+        return speaker_embeddings, emotion_embeddings
 
 
     def log_training(self, reduced_loss, grad_norm, learning_rate, duration,
@@ -158,6 +181,13 @@ class Tacotron2Logger(SummaryWriter):
         log_name = "forward_attention_ratio.val"
         wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
+        speaker_embeddings, emotion_embeddings = self.get_embeddings(valset, model)
+        np_plot_speaker_embeddings = plot_embeddings_to_numpy(valset.speaker_list, speaker_embeddings.data.cpu().numpy())
+        np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.data.cpu().numpy())
+
+        wandb.log({"speaker_embeddings": [wandb.Image(np_plot_speaker_embeddings)],
+                   "emotion_embeddings": [wandb.Image(np_plot_emotion_embeddings)]}
+                   , step=iteration)
 
         text = "KAIST is a national research university located in Daedeok Innopolis, Daejeon, South Korea."
         for speaker in valset.speaker_list:

@@ -544,6 +544,12 @@ class Tacotron2(nn.Module):
 
         return outputs
 
+    def get_embeddings(self, speakers, emotion_vectors):
+        speaker_embeddings = self.speaker_embedding_layer(speakers)
+        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+
+        return speaker_embeddings, emotion_embeddings
+
 
 class ResidualEncoder(nn.Module):
     '''
