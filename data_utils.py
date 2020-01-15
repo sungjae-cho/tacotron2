@@ -15,9 +15,8 @@ class TextMelLoader(torch.utils.data.Dataset):
         2) normalizes text and converts them to sequences of one-hot vectors
         3) computes mel-spectrograms from audio files.
     """
-    def __init__(self, audiopaths_and_text, hparams, split):
-        #self.audiopaths_and_text = load_filepaths_and_text(audiopaths_and_text)
-        loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(audiopaths_and_text, split)
+    def __init__(self, hparams, split):
+        loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(hparams, split)
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
         self.max_emotions = hparams.max_emotions
         self.max_speakers = hparams.max_speakers
@@ -35,7 +34,6 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
         random.seed(1234)
-        #random.shuffle(self.audiopaths_and_text)
         random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
 
 
@@ -180,11 +178,9 @@ class TextMelLoader(torch.utils.data.Dataset):
         return self.lang_list[integer]
 
     def __getitem__(self, index):
-        #return self.get_mel_text_pair(self.audiopaths_and_text[index])
         return self.get_mel_text_etc_tuple(self.wavpath_text_speaker_sex_emotion_lang[index])
 
     def __len__(self):
-        #return len(self.audiopaths_and_text)
         return len(self.wavpath_text_speaker_sex_emotion_lang)
 
 

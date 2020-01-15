@@ -27,9 +27,11 @@ def create_hparams(hparams_string=None, verbose=False):
         load_mel_from_disk=False,
         training_files='filelists/ljs_audio_text_train_filelist.txt',
         validation_files='filelists/ljs_audio_text_val_filelist.txt',
-        csv_data_paths=['metadata/emovdb.csv'],
-        #csv_data_paths=['metadata/ljspeech.csv'],
-        #csv_data_paths=['metadata/emovdb.csv', 'metadata/ljspeech.csv'],
+        csv_data_paths={
+            'ljspeech':'metadata/ljspeech.csv',
+            'emovdb':'metadata/emovdb.csv'
+        },
+        dbs = ['ljspeech', 'emovdb'],
         text_cleaners=['english_cleaners'],
 
         ################################

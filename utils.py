@@ -38,25 +38,38 @@ def load_filepaths_and_text(filename, split="|"):
     return filepaths_and_text
 
 
-def load_wavpath_text_speaker_sex_emotion_lang(csv_paths, split):
+def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
     '''
     split in {'train', 'val', 'test'}
     '''
+    columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
     df_list = list()
-    for csv_path in csv_paths:
+    all_csv_paths = hparams.csv_data_paths.values()
+    for csv_path in all_csv_paths:
         df = pd.read_csv(csv_path)
         df = df[df.split == split]
-        columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
         df = df[columns]
         df_list.append(df)
-
     df = pd.concat(df_list, ignore_index=True)
 
-    row_list = df.values.tolist()
     speaker_list = df.speaker.unique().tolist()
     sex_list = df.sex.unique().tolist()
     emotion_list = df.emotion.unique().tolist()
     lang_list = df.lang.unique().tolist()
+
+    # all_dbs != selected_dbs
+    all_dbs = hparams.csv_data_paths.items()
+    selected_dbs = hparams.dbs
+    if sorted(all_dbs) != sorted(selected_dbs):
+        df_list = list()
+        for csv_path in all_csv_paths:
+            df = pd.read_csv(csv_path)
+            df = df[df.split == split]
+            df = df[columns]
+            df_list.append(df)
+        df = pd.concat(df_list, ignore_index=True)
+
+    row_list = df.values.tolist()
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 

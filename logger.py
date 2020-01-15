@@ -60,8 +60,6 @@ class Tacotron2Logger(SummaryWriter):
 
         speaker_tensors = to_gpu(speaker_tensors).long()
         emotion_tensors = to_gpu(emotion_tensors).float()
-        print("speaker_tensors.size()",speaker_tensors.size())
-        print("emotion_tensors.size()",emotion_tensors.size())
 
         speaker_embeddings, emotion_embeddings = model.get_embeddings(speaker_tensors, emotion_tensors)
 

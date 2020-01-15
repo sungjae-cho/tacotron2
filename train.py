@@ -42,8 +42,8 @@ def init_distributed(hparams, n_gpus, rank, group_name):
 
 def prepare_dataloaders(hparams):
     # Get data, data loaders and collate function ready
-    trainset = TextMelLoader(hparams.csv_data_paths, hparams, 'train')
-    valset = TextMelLoader(hparams.csv_data_paths, hparams, 'val')
+    trainset = TextMelLoader(hparams, 'train')
+    valset = TextMelLoader(hparams, 'val')
     collate_fn = TextMelCollate(hparams.n_frames_per_step)
 
     if hparams.distributed_run:
