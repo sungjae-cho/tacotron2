@@ -61,8 +61,8 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_embedding_dim=512,
 
         # SpeakerEncoder parameters
-        max_speakers=16,
-        speaker_embedding_dim=64,
+        max_speakers=6,
+        speaker_embedding_dim=6,
 
         # LanguageEncoder parameters
         max_languages=2,
@@ -70,7 +70,7 @@ def create_hparams(hparams_string=None, verbose=False):
 
         # EmotionEncoder parameters
         max_emotions=5,
-        emotion_embedding_dim=3,
+        emotion_embedding_dim=5,
         neutral_zero_vector=True,
 
         # SpeakerClassifier parameters
