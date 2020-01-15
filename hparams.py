@@ -72,7 +72,7 @@ def create_hparams(hparams_string=None, verbose=False):
 
         # EmotionEncoder parameters
         max_emotions=5,
-        emotion_embedding_dim=5,
+        emotion_embedding_dim=3,
         neutral_zero_vector=True,
 
         # SpeakerClassifier parameters
