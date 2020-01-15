@@ -99,10 +99,9 @@ class Tacotron2Logger(SummaryWriter):
                 log_name = "forward_attention_ratio.train/hop_size={}".format(hop_size)
                 wandb.log({log_name:wandb.Histogram(batch_far.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
-    #TODO: add hparams indead of sample_rate
     def log_validation(self, valset,
         reduced_loss,  far_pair,
-        model, x, y, etc, y_pred, iteration, epoch, sample_rate):
+        model, x, y, etc, y_pred, iteration, epoch, hparams):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
@@ -167,7 +166,7 @@ class Tacotron2Logger(SummaryWriter):
         )
         wandb.log({"val/loss": reduced_loss,
                    "val/alignment": [wandb.Image(np_alignment, caption=caption_string)],
-                   "val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=sample_rate)],
+                   "val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                    "val/mel_target": [wandb.Image(np_mel_target)],
                    "val/mel_predicted": [wandb.Image(np_mel_predicted)],
                    "val/gate": [wandb.Image(np_gate)],
@@ -209,7 +208,7 @@ class Tacotron2Logger(SummaryWriter):
                     speaker=speaker, emotion=emotion
                 )
                 wandb.log({
-                    "{}wav".format(group_log_name): [wandb.Audio(np_wav.astype(np.float32), caption=text, sample_rate=sample_rate)],
+                    "{}wav".format(group_log_name): [wandb.Audio(np_wav.astype(np.float32), caption=text, sample_rate=hparams.sampling_rate)],
                     "{}alignment".format(group_log_name): [wandb.Image(np_alignment)],
                     "{}mel_predicted".format(group_log_name): [wandb.Image(np_mel_predicted)]
                 }, step=iteration)
