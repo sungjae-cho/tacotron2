@@ -138,7 +138,7 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
             x, y, etc = model.parse_batch(batch)
             input_lengths = x[1]
             speakers, sex, emotion_vectors, lang = etc
-            y_pred = model(x, speakers, emotion_vectors)
+            y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
             alignments = y_pred[3]
             loss = criterion(y_pred, y)
             if distributed_run:
@@ -239,8 +239,13 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             model.zero_grad()
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
-            y_pred = model(x, speakers, emotion_vectors)
-            loss = criterion(y_pred, y)
+            y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
+            prob_speakers, pred_speakers = y_pred_speakers
+
+            if hparams.speaker_adversarial_training:
+                loss = criterion(y_pred, y) + hparams.speaker_adv_weight * criterion_dom(prob_speakers, speakers)
+            else:
+                loss = criterion(y_pred, y)
 
             if prj_name == "forward_attention_loss":
                 input_lengths = x[1]

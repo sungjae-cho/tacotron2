@@ -460,6 +460,7 @@ class Decoder(nn.Module):
 class Tacotron2(nn.Module):
     def __init__(self, hparams):
         super(Tacotron2, self).__init__()
+        self.speaker_adversarial_training = hparams.speaker_adversarial_training
         self.mask_padding = hparams.mask_padding
         self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels
@@ -474,6 +475,8 @@ class Tacotron2(nn.Module):
         self.postnet = Postnet(hparams)
         self.speaker_embedding_layer = SpeakerEncoder(hparams)
         self.emotion_embedding_layer = EmotionEncoder(hparams)
+        if hparams.speaker_adversarial_training:
+            self.speaker_adversarial_training_layers = SpeakerClassifier(hparams)
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -513,6 +516,16 @@ class Tacotron2(nn.Module):
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
 
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+        #print("encoder_outputs.size()", encoder_outputs.size())
+        if self.speaker_adversarial_training:
+            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(encoder_outputs)
+            print("prob_speakers.size()", prob_speakers.size())
+            print("speakers.size()", speakers.size())
+            print("text_lengths", text_lengths)
+            print("text_lengths.max()", text_lengths.max())
+            exit()
+        else:
+            prob_speakers, pred_speakers = None, None
 
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
@@ -526,7 +539,7 @@ class Tacotron2(nn.Module):
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
-            output_lengths)
+            output_lengths), (prob_speakers, pred_speakers)
 
     def inference(self, inputs, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
@@ -680,7 +693,7 @@ class SpeakerClassifier(nn.Module):
         return prob_speakers, speakers
 
     # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
-    def revgrad_layer(x, scale=1.0, max_grad_norm=0.5):
+    def revgrad_layer(self, x, scale=1.0, max_grad_norm=0.5):
         GradientReverse.scale = scale
         GradientReverse.max_grad_norm = max_grad_norm
         return GradientReverse.apply(x)

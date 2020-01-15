@@ -51,6 +51,10 @@ def create_hparams(hparams_string=None, verbose=False):
         n_symbols=len(symbols),
         symbols_embedding_dim=512,
 
+        # With modules
+        speaker_adversarial_training=False,
+        residual_encoder=False,
+
         # (Text) Encoder parameters
         encoder_kernel_size=5,
         encoder_n_convolutions=3,
@@ -95,6 +99,11 @@ def create_hparams(hparams_string=None, verbose=False):
         postnet_embedding_dim=512,
         postnet_kernel_size=5,
         postnet_n_convolutions=5,
+
+        # Adversarial training with the speaker classfier
+        speaker_adv_weight=0.02,
+        speaker_gradrev_lambda=1,
+        speaker_gradrev_grad_max_norm=0.5,
 
         ################################
         # Optimization Hyperparameters #
