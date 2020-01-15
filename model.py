@@ -220,7 +220,8 @@ class Decoder(nn.Module):
             [hparams.prenet_dim, hparams.prenet_dim])
 
         self.attention_rnn = nn.LSTMCell(
-            hparams.prenet_dim + hparams.encoder_embedding_dim,
+            (hparams.prenet_dim + hparams.encoder_embedding_dim +
+             hparams.emotion_embedding_dim + hparams.speaker_embedding_dim),
             hparams.attention_rnn_dim)
 
         self.attention_layer = Attention(
@@ -350,7 +351,8 @@ class Decoder(nn.Module):
         gate_output: gate output energies
         attention_weights:
         """
-        cell_input = torch.cat((decoder_input, self.attention_context), -1)
+        cell_input = torch.cat((decoder_input, self.attention_context,
+            speaker_embedding, emotion_embedding), -1)
         self.attention_hidden, self.attention_cell = self.attention_rnn(
             cell_input, (self.attention_hidden, self.attention_cell))
         self.attention_hidden = F.dropout(
