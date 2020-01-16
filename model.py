@@ -419,7 +419,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def inference(self, memory, speaker_embeddings, emotion_embeddings):
+    def inference(self, memory, speaker_indices, emotion_vectors):
         """ Decoder inference
         PARAMS
         ------
@@ -439,7 +439,7 @@ class Decoder(nn.Module):
         while True:
             decoder_input = self.prenet(decoder_input)
             mel_output, gate_output, alignment = self.decode(decoder_input,
-                speaker_embeddings, emotion_embeddings)
+                speaker_indices, emotion_vectors)
 
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
