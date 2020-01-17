@@ -216,14 +216,20 @@ class Decoder(nn.Module):
         self.gate_threshold = hparams.gate_threshold
         self.p_attention_dropout = hparams.p_attention_dropout
         self.p_decoder_dropout = hparams.p_decoder_dropout
+        self.has_style_token_lstm_1 = hparams.has_style_token_lstm_1
+        if self.has_style_token_lstm_1:
+            self.attention_rnn_input_dim = (hparams.prenet_dim
+                + hparams.encoder_embedding_dim
+                + hparams.emotion_embedding_dim + hparams.speaker_embedding_dim)
+        else:
+            self.attention_rnn_input_dim = hparams.prenet_dim + hparams.encoder_embedding_dim
 
         self.prenet = Prenet(
             hparams.n_mel_channels * hparams.n_frames_per_step,
             [hparams.prenet_dim, hparams.prenet_dim])
 
         self.attention_rnn = nn.LSTMCell(
-            (hparams.prenet_dim + hparams.encoder_embedding_dim +
-             hparams.emotion_embedding_dim + hparams.speaker_embedding_dim),
+            self.attention_rnn_input_dim,
             hparams.attention_rnn_dim)
 
         self.attention_layer = Attention(
@@ -356,8 +362,12 @@ class Decoder(nn.Module):
         gate_output: gate output energies
         attention_weights:
         """
-        cell_input = torch.cat((decoder_input, self.attention_context,
-            speaker_embedding, emotion_embedding), -1)
+        if self.has_style_token_lstm_1:
+            cell_input = torch.cat((decoder_input, self.attention_context,
+                speaker_embedding, emotion_embedding), -1)
+        else:
+            cell_input = torch.cat((decoder_input, self.attention_context), -1)
+
         self.attention_hidden, self.attention_cell = self.attention_rnn(
             cell_input, (self.attention_hidden, self.attention_cell))
         self.attention_hidden = F.dropout(
@@ -542,7 +552,7 @@ class Tacotron2(nn.Module):
             spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
             logit_outputs, prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(spk_adv_batch)
         else:
-            prob_speakers, pred_speakers = None, None
+            logit_outputs, prob_speakers, pred_speakers = None, None, None
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],

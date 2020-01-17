@@ -83,21 +83,26 @@ class Tacotron2Logger(SummaryWriter):
             #self.add_scalar("learning.rate", learning_rate, iteration)
             #self.add_scalar("duration", duration, iteration)
             # Calculate accuracy of the speaker adversarial training module.
-            np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
-            np_pred_speakers = pred_speakers.cpu().numpy()
-            spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
 
             # wandb log
             wandb.log({"train/loss": reduced_loss,
                        "train/loss_mel": reduced_loss_mel,
-                       "train/loss_spk_adv": reduced_loss_spk_adv,
-                       "train/spk_adv_accuracy": spk_adv_accuracy,
                        "train/grad_norm": grad_norm,
                        "train/learning_rate": learning_rate,
                        "train/iter_duration": duration,
                        "epoch": epoch,
                        "iteration":iteration}
                        , step=iteration)
+
+            if self.hparams.speaker_adversarial_training:
+                np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
+                np_pred_speakers = pred_speakers.cpu().numpy()
+                spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+
+                wandb.log({"train/loss_spk_adv": reduced_loss_spk_adv,
+                           "train/spk_adv_accuracy": spk_adv_accuracy}
+                           , step=iteration)
+
 
             if forward_attention_loss is not None:
                 wandb.log({"train/forward_attention_loss": forward_attention_loss}
@@ -124,11 +129,6 @@ class Tacotron2Logger(SummaryWriter):
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
         mean_far, batch_far = far_pair
-
-        # Calculate accuracy of the speaker adversarial training module.
-        np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
-        np_pred_speakers = pred_speakers.cpu().numpy()
-        val_spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
 
         # plot distribution of parameters
         for tag, value in model.named_parameters():
@@ -186,8 +186,6 @@ class Tacotron2Logger(SummaryWriter):
         )
         wandb.log({"val/loss": reduced_loss,
                    "val/loss_mel": reduced_loss_mel,
-                   "val/loss_spk_adv": reduced_loss_spk_adv,
-                   "val/spk_adv_accuracy": val_spk_adv_accuracy,
                    "val/alignment": [wandb.Image(np_alignment, caption=caption_string)],
                    "val/audio": [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                    "val/mel_target": [wandb.Image(np_mel_target)],
@@ -196,6 +194,16 @@ class Tacotron2Logger(SummaryWriter):
                    "epoch": epoch,
                    "iteration":iteration}
                    , step=iteration)
+
+        if self.hparams.speaker_adversarial_training:
+            # Calculate accuracy of the speaker adversarial training module.
+            np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
+            np_pred_speakers = pred_speakers.cpu().numpy()
+            val_spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+
+            wandb.log({"val/loss_spk_adv": reduced_loss_spk_adv,
+                       "val/spk_adv_accuracy": val_spk_adv_accuracy}
+                       , step=iteration)
 
         # foward attention ratio
         log_name = "mean_forward_attention_ratio.val"

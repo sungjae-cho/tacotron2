@@ -269,7 +269,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                 loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
             else:
-                loss_spk_adv = torch.zeros(1)
+                loss_spk_adv = torch.zeros(1).cuda()
             loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
 
             if prj_name == "forward_attention_loss":
