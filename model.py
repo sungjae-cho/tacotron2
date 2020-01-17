@@ -5,6 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
+import time
 
 
 class LocationLayer(nn.Module):
@@ -310,7 +311,8 @@ class Decoder(nn.Module):
         decoder_inputs = decoder_inputs.transpose(0, 1)
         return decoder_inputs
 
-    def parse_decoder_outputs(self, mel_outputs, gate_outputs, alignments):
+    def parse_decoder_outputs(self, mel_outputs, gate_outputs, alignments,
+            attention_contexts):
         """ Prepares decoder outputs for output
         PARAMS
         ------
@@ -324,6 +326,8 @@ class Decoder(nn.Module):
         gate_outpust: gate output energies
         alignments:
         """
+        # (T_out, B, context_dim) -> (T_out, B, context_dim)
+        attention_contexts = torch.stack(attention_contexts).transpose(0, 1)
         # (T_out, B) -> (B, T_out)
         alignments = torch.stack(alignments).transpose(0, 1)
         # (T_out, B) -> (B, T_out)
@@ -337,7 +341,7 @@ class Decoder(nn.Module):
         # (B, T_out, n_mel_channels) -> (B, n_mel_channels, T_out)
         mel_outputs = mel_outputs.transpose(1, 2)
 
-        return mel_outputs, gate_outputs, alignments
+        return mel_outputs, gate_outputs, alignments, attention_contexts
 
     def decode(self, decoder_input, speaker_embedding, emotion_embedding):
         """ Decoder step using stored states, attention and memory
@@ -379,7 +383,7 @@ class Decoder(nn.Module):
             decoder_hidden_attention_context)
 
         gate_prediction = self.gate_layer(decoder_hidden_attention_context)
-        return decoder_output, gate_prediction, self.attention_weights
+        return decoder_output, gate_prediction, self.attention_weights, self.attention_context
 
     def forward(self, memory, decoder_inputs, memory_lengths,
         speaker_embeddings, emotion_embeddings):
@@ -405,19 +409,21 @@ class Decoder(nn.Module):
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
 
-        mel_outputs, gate_outputs, alignments = [], [], []
+        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
         while len(mel_outputs) < decoder_inputs.size(0) - 1:
             decoder_input = decoder_inputs[len(mel_outputs)]
-            mel_output, gate_output, attention_weights = self.decode(
+            mel_output, gate_output, attention_weights, attention_context = self.decode(
                 decoder_input, speaker_embeddings, emotion_embeddings)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [attention_weights]
+            attention_contexts += [attention_context]
 
-        mel_outputs, gate_outputs, alignments = self.parse_decoder_outputs(
-            mel_outputs, gate_outputs, alignments)
+        (mel_outputs, gate_outputs, alignments,
+            attention_contexts) = self.parse_decoder_outputs(
+                mel_outputs, gate_outputs, alignments, attention_contexts)
 
-        return mel_outputs, gate_outputs, alignments
+        return mel_outputs, gate_outputs, alignments, attention_contexts
 
     def inference(self, memory, speaker_indices, emotion_vectors):
         """ Decoder inference
@@ -435,15 +441,15 @@ class Decoder(nn.Module):
 
         self.initialize_decoder_states(memory, mask=None)
 
-        mel_outputs, gate_outputs, alignments = [], [], []
+        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
         while True:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment = self.decode(decoder_input,
+            mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
                 speaker_indices, emotion_vectors)
-
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
             alignments += [alignment]
+            attention_contexts += [attention_context]
 
             if torch.sigmoid(gate_output.data) > self.gate_threshold:
                 break
@@ -453,8 +459,8 @@ class Decoder(nn.Module):
 
             decoder_input = mel_output
 
-        mel_outputs, gate_outputs, alignments = self.parse_decoder_outputs(
-            mel_outputs, gate_outputs, alignments)
+        mel_outputs, gate_outputs, alignments, attention_contexts = self.parse_decoder_outputs(
+            mel_outputs, gate_outputs, alignments, attention_contexts)
 
         return mel_outputs, gate_outputs, alignments
 
@@ -479,6 +485,8 @@ class Tacotron2(nn.Module):
         self.emotion_embedding_layer = EmotionEncoder(hparams)
         if hparams.speaker_adversarial_training:
             self.speaker_adversarial_training_layers = SpeakerClassifier(hparams)
+        else:
+            self.speaker_adversarial_training_layers = None
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -518,26 +526,43 @@ class Tacotron2(nn.Module):
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
 
         encoder_outputs = self.encoder(embedded_inputs, text_lengths)
-        #print("encoder_outputs.size()", encoder_outputs.size())
-        if self.speaker_adversarial_training:
-            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(encoder_outputs)
-            print("prob_speakers.size()", prob_speakers.size())
-            print("speakers.size()", speakers.size())
-            print("text_lengths", text_lengths)
-            print("text_lengths.max()", text_lengths.max())
-            exit()
-        else:
-            prob_speakers, pred_speakers = None, None
 
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
 
-        mel_outputs, gate_outputs, alignments = self.decoder(
+        mel_outputs, gate_outputs, alignments, attention_contexts = self.decoder(
             encoder_outputs, mels, text_lengths,
             speaker_embeddings, emotion_embeddings)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+
+        if self.speaker_adversarial_training:
+            #spk_adv_batch = get_spk_adv_batch(encoder_outputs, text_lengths)
+            print("encoder_outputs.size()", encoder_outputs.size())
+            print("attention_contexts.size()", attention_contexts.size())
+            attention_contexts = attention_contexts.contiguous().view(-1, 512)
+            encoder_outputs = encoder_outputs.contiguous().view(-1, 512)
+            print("encoder_outputs.size()", encoder_outputs.size())
+            print("attention_contexts.size()", attention_contexts.size())
+
+            start_time = time.time()
+            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(encoder_outputs)
+            duration = time.time() - start_time
+            print("Running Time (self.speaker_adversarial_training_layers(encoder_outputs)): {}".format(duration))
+            print("prob_speakers.size()", prob_speakers.size())
+            print("speakers.size()", speakers.size())
+
+            start_time = time.time()
+            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(attention_contexts)
+            duration = time.time() - start_time
+            print("Running Time (self.speaker_adversarial_training_layers(attention_contexts)): {}".format(duration))
+            print("prob_speakers.size()", prob_speakers.size())
+            print("speakers.size()", speakers.size())
+
+            exit()
+        else:
+            prob_speakers, pred_speakers = None, None
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
