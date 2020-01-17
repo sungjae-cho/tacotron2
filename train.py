@@ -9,6 +9,7 @@ from distributed import apply_gradient_allreduce
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
+from sklearn.metrics import accuracy_score
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
@@ -16,7 +17,7 @@ from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio
-
+from utils import get_spk_adv_targets
 
 def reduce_tensor(tensor, n_gpus):
     rt = tensor.clone()
@@ -60,13 +61,13 @@ def prepare_dataloaders(hparams):
     return train_loader, valset, collate_fn
 
 
-def prepare_directories_and_logger(output_directory, log_directory, rank,
+def prepare_directories_and_logger(hparams, output_directory, log_directory, rank,
                                    run_name, prj_name, resume):
     if rank == 0:
         if not os.path.isdir(os.path.join(output_directory, prj_name, run_name)):
             os.makedirs(os.path.join(output_directory, prj_name, run_name))
             os.chmod(os.path.join(output_directory, prj_name, run_name), 0o775)
-        logger = Tacotron2Logger(run_name, prj_name,
+        logger = Tacotron2Logger(hparams, run_name, prj_name,
             os.path.join(log_directory, prj_name, run_name), resume)
     else:
         logger = None
@@ -121,7 +122,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
                 'learning_rate': learning_rate}, filepath)
 
 
-def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
+def validate(model, criterions, valset, iteration, epoch, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank, hparams):
     """Handles all the validation scoring and printing"""
     model.eval()
@@ -131,6 +132,7 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
                                 shuffle=False, batch_size=batch_size,
                                 pin_memory=False, collate_fn=collate_fn)
 
+        criterion, criterion_dom = criterions
         val_loss = 0.0
         mean_far_sum = 0.0
         batch_far_list = list()
@@ -140,10 +142,23 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
             speakers, sex, emotion_vectors, lang = etc
             y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
             alignments = y_pred[3]
-            loss = criterion(y_pred, y)
+            prob_speakers, pred_speakers = y_pred_speakers
+
+            loss_mel = criterion(y_pred, y)
+            if hparams.speaker_adversarial_training:
+                spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
+                loss_spk_adv = criterion_dom(prob_speakers, spk_adv_targets)
+            else:
+                loss_spk_adv = torch.zeros(1)
+            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
+
             if distributed_run:
+                reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                 reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
+                reduced_val_loss_mel = loss_mel.item()
+                reduced_val_loss_spk_adv = loss_spk_adv.item()
                 reduced_val_loss = loss.item()
             val_loss += reduced_val_loss
             mean_far, batch_far = forward_attention_ratio(alignments, input_lengths)
@@ -157,9 +172,11 @@ def validate(model, criterion, valset, iteration, epoch, batch_size, n_gpus,
     model.train()
     if rank == 0:
         print("Validation loss {}: {:9f}  ".format(iteration, reduced_val_loss))
+        reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
         logger.log_validation(valset,
-            reduced_val_loss, far_pair,
-            model, x, y, etc, y_pred, iteration, epoch, hparams)
+            reduced_val_losses, far_pair,
+            model, x, y, etc, y_pred, pred_speakers,
+            iteration, epoch, hparams)
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
@@ -198,6 +215,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     criterion_dom = torch.nn.CrossEntropyLoss()
 
     logger = prepare_directories_and_logger(
+        hparams,
         output_directory, log_directory, rank, run_name, prj_name, resume)
 
     train_loader, valset, collate_fn = prepare_dataloaders(hparams)
@@ -237,15 +255,22 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 param_group['lr'] = scheduler.get_lr()[0]
 
             model.zero_grad()
+
+            # Parse the current batch.
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
             y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
             prob_speakers, pred_speakers = y_pred_speakers
 
+            # Caculate losses.
+            loss_mel = criterion(y_pred, y)
             if hparams.speaker_adversarial_training:
-                loss = criterion(y_pred, y) + hparams.speaker_adv_weight * criterion_dom(prob_speakers, speakers)
+                input_lengths = x[1]
+                spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
+                loss_spk_adv = criterion_dom(prob_speakers, spk_adv_targets)
             else:
-                loss = criterion(y_pred, y)
+                loss_spk_adv = torch.zeros(1)
+            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
 
             if prj_name == "forward_attention_loss":
                 input_lengths = x[1]
@@ -261,8 +286,12 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 float_fa_loss = None
 
             if hparams.distributed_run:
+                reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
+                reduced_loss_mel = loss_mel.item()
+                reduced_loss_spk_adv = loss_spk_adv.item()
                 reduced_loss = loss.item()
             if hparams.fp16_run:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -284,14 +313,17 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Train loss {} {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, reduced_loss, grad_norm, duration))
+                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} SpkAdv loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_spk_adv)
                 logger.log_training(
-                    reduced_loss, grad_norm, learning_rate, duration, x, etc, y_pred,
+                    reduced_losses, grad_norm, learning_rate, duration, x, etc,
+                    y_pred, pred_speakers,
                     iteration, float_epoch, float_fa_loss)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
-                validate(model, criterion, valset, iteration, float_epoch,
+                criterions = (criterion, criterion_dom)
+                validate(model, criterions, valset, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams)
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):

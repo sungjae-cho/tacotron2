@@ -81,3 +81,65 @@ def to_gpu(x):
     if torch.cuda.is_available():
         x = x.cuda(non_blocking=True)
     return torch.autograd.Variable(x)
+
+def get_spk_adv_inputs(padded_encoder_outputs, input_lengths):
+    '''
+    Get a batch for the speaker adversarial training module.
+
+    PARAMS
+    -----
+    padded_encoder_outputs
+    - type: torch.cuda.FloatTensor
+    - size: [batch_size, max_text_len(=variable), encoder_embedding_dim]
+    input_lengths
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+
+    RETURNS
+    -----
+    spk_adv_inputs
+    - type: torch.cuda.LongTensor
+    - size: [sum_max_text_len, encoder_embedding_dim]
+    '''
+    input_lengths = input_lengths.tolist()
+    batch_size = padded_encoder_outputs.size(0)
+    text_dim = padded_encoder_outputs.size(2)
+    encoder_output_list = list()
+    for i in range(batch_size):
+        input_length = input_lengths[i]
+        padded_encoder_output = padded_encoder_outputs[i,:,:]
+        encoder_output = padded_encoder_output[:input_length,:]
+        encoder_output_per_step = encoder_output.view(-1, text_dim)
+        encoder_output_list.append(encoder_output_per_step)
+    spk_adv_inputs = torch.cat(encoder_output_list)
+
+    return spk_adv_inputs
+
+def get_spk_adv_targets(speaker_targets, input_lengths):
+    '''
+    Get a batch for the speaker adversarial training module.
+
+    PARAMS
+    -----
+    speaker_targets
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+    input_lengths
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+
+    RETURNS
+    -----
+    spk_adv_targets
+    - type: torch.cuda.LongTensor
+    - size: [sum_max_text_len]
+    '''
+    batch_size = input_lengths.size(0)
+    input_lengths = input_lengths.tolist()
+    spk_adv_target_list = list()
+    for i in range(batch_size):
+        input_length = input_lengths[i]
+        spk_adv_target_list.append(speaker_targets[i].expand(input_length))
+    spk_adv_targets = torch.cat(spk_adv_target_list)
+
+    return spk_adv_targets

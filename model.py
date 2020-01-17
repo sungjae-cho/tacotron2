@@ -6,6 +6,7 @@ from torch.nn import functional as F
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 import time
+from utils import get_spk_adv_inputs
 
 
 class LocationLayer(nn.Module):
@@ -538,29 +539,8 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
         if self.speaker_adversarial_training:
-            #spk_adv_batch = get_spk_adv_batch(encoder_outputs, text_lengths)
-            print("encoder_outputs.size()", encoder_outputs.size())
-            print("attention_contexts.size()", attention_contexts.size())
-            attention_contexts = attention_contexts.contiguous().view(-1, 512)
-            encoder_outputs = encoder_outputs.contiguous().view(-1, 512)
-            print("encoder_outputs.size()", encoder_outputs.size())
-            print("attention_contexts.size()", attention_contexts.size())
-
-            start_time = time.time()
-            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(encoder_outputs)
-            duration = time.time() - start_time
-            print("Running Time (self.speaker_adversarial_training_layers(encoder_outputs)): {}".format(duration))
-            print("prob_speakers.size()", prob_speakers.size())
-            print("speakers.size()", speakers.size())
-
-            start_time = time.time()
-            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(attention_contexts)
-            duration = time.time() - start_time
-            print("Running Time (self.speaker_adversarial_training_layers(attention_contexts)): {}".format(duration))
-            print("prob_speakers.size()", prob_speakers.size())
-            print("speakers.size()", speakers.size())
-
-            exit()
+            spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
+            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(spk_adv_batch)
         else:
             prob_speakers, pred_speakers = None, None
 
@@ -735,11 +715,11 @@ class GradientReverse(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        grad_output = grad_clip(grad_output)
+        grad_output = GradientReverse.grad_clip(grad_output)
         return GradientReverse.scale * grad_output.neg()
 
     def grad_clip(grad_output):
         grad_norm = grad_output.norm().item()
-        if grad_norm > max_grad_norm:
-            grad_output = grad_output / grad_norm * max_grad_norm
+        if grad_norm > GradientReverse.max_grad_norm:
+            grad_output = grad_output / grad_norm * GradientReverse.max_grad_norm
         return grad_output
