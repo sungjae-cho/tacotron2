@@ -58,11 +58,12 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
     lang_list = df.lang.unique().tolist()
 
     # all_dbs != selected_dbs
-    all_dbs = hparams.csv_data_paths.items()
+    all_dbs = hparams.csv_data_paths.keys()
     selected_dbs = hparams.dbs
-    if sorted(all_dbs) != sorted(selected_dbs):
+    if sorted(list(all_dbs)) != sorted(list(selected_dbs)):
         df_list = list()
-        for csv_path in all_csv_paths:
+        for db in selected_dbs:
+            csv_path = hparams.csv_data_paths[db]
             df = pd.read_csv(csv_path)
             df = df[df.split == split]
             df = df[columns]
