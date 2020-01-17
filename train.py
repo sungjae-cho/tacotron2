@@ -142,12 +142,12 @@ def validate(model, criterions, valset, iteration, epoch, batch_size, n_gpus,
             speakers, sex, emotion_vectors, lang = etc
             y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
             alignments = y_pred[3]
-            prob_speakers, pred_speakers = y_pred_speakers
+            (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
             loss_mel = criterion(y_pred, y)
             if hparams.speaker_adversarial_training:
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                loss_spk_adv = criterion_dom(prob_speakers, spk_adv_targets)
+                loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
             else:
                 loss_spk_adv = torch.zeros(1)
             loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
@@ -260,14 +260,14 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
             y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
-            prob_speakers, pred_speakers = y_pred_speakers
+            (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
             # Caculate losses.
             loss_mel = criterion(y_pred, y)
             if hparams.speaker_adversarial_training:
                 input_lengths = x[1]
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                loss_spk_adv = criterion_dom(prob_speakers, spk_adv_targets)
+                loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
             else:
                 loss_spk_adv = torch.zeros(1)
             loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv

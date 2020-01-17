@@ -540,13 +540,13 @@ class Tacotron2(nn.Module):
 
         if self.speaker_adversarial_training:
             spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
-            prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(spk_adv_batch)
+            logit_outputs, prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(spk_adv_batch)
         else:
             prob_speakers, pred_speakers = None, None
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
-            output_lengths), (prob_speakers, pred_speakers)
+            output_lengths), (logit_outputs, prob_speakers, pred_speakers)
 
     def inference(self, inputs, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
@@ -694,10 +694,11 @@ class SpeakerClassifier(nn.Module):
     def forward(self, inputs):
         revgrad_inputs = self.revgrad_layer(inputs, self.revgrad_lambda, self.revgrad_max_grad_norm)
         h = F.relu(self.linear_1(revgrad_inputs))
-        prob_speakers = F.softmax(self.linear_2(h), dim=1)
+        logit_outputs = self.linear_2(h)
+        prob_speakers = F.softmax(logit_outputs, dim=1)
         speakers = torch.argmax(prob_speakers, dim=1)
 
-        return prob_speakers, speakers
+        return logit_outputs, prob_speakers, speakers
 
     # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
     def revgrad_layer(self, x, scale=1.0, max_grad_norm=0.5):
