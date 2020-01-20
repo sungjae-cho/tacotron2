@@ -17,7 +17,7 @@ from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio
-from utils import get_spk_adv_targets
+from utils import get_spk_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
     rt = tensor.clone()
@@ -179,7 +179,8 @@ def validate(model, criterions, valset, iteration, epoch, batch_size, n_gpus,
             iteration, epoch, hparams)
 
 
-def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
+def train(output_directory, log_directory, checkpoint_path, pretrained_path,
+          warm_start, n_gpus,
           rank, group_name, hparams, run_name, prj_name, resume):
     """Training and validation logging results to tensorboard and stdout
 
@@ -234,6 +235,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
             epoch_offset = max(0, int(iteration / len(train_loader)))
+
+    if pretrained_path is not None:
+        model = load_pretrained_model(model, pretrained_path)[0]
 
     model.train()
     is_overflow = False
@@ -351,6 +355,8 @@ if __name__ == '__main__':
                         help='directory to save tensorboard logs')
     parser.add_argument('-c', '--checkpoint_path', type=str, default=None,
                         required=False, help='checkpoint path')
+    parser.add_argument('--pretrained_path', type=str, default=None,
+                        required=False, help='pretrained model path')
     parser.add_argument('-r', '--resume', type=bool, default=False,
                         required=False, help='whether to resume logging')
     parser.add_argument('--warm_start', action='store_true',
@@ -385,5 +391,6 @@ if __name__ == '__main__':
     print("Visible GPU IDs:", args.visible_gpus)
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
+          args.pretrained_path,
           args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
           args.run_name, args.prj_name, args.resume)
