@@ -32,6 +32,7 @@ def create_hparams(hparams_string=None, verbose=False):
             'emovdb':'metadata/emovdb.csv'
         },
         dbs = ['ljspeech', 'emovdb'],
+        emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'], # Emotions to import
         text_cleaners=['english_cleaners'],
 
         ################################

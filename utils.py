@@ -70,6 +70,9 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
             df_list.append(df)
         df = pd.concat(df_list, ignore_index=True)
 
+    if sorted(emotion_list) != sorted(hparams.emotions):
+        df = df[df.emotion.isin(hparams.emotions)]
+
     row_list = df.values.tolist()
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
