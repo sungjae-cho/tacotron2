@@ -77,7 +77,27 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
     if sorted(emotion_list) != sorted(hparams.emotions):
         df = df[df.emotion.isin(hparams.emotions)]
 
-    row_list = df.values.tolist()
+    # Upsampling datasets that do not have as many samples as the largest
+    # dataset has to the extent that the largest one has.
+    df_size = df.groupby(['speaker', 'emotion']).size().reset_index(name='size')
+    max_size = df_size['size'].max()
+
+    df_dataset_list = list()
+    for _, row in df_size.iterrows():
+        df_spk_emo = df[(df.speaker == speaker) & (df.emotion == emotion)]
+
+        size = row['size']
+        n_dup_dfs = max_size // size
+        n_rest_samples = max_size % size
+
+        dup_dfs = [df_spk_emo] * n_dup_dfs + [df[:n_rest_samples]]
+        df_dataset = pd.concat(dup_dfs, ignore_index=True)
+        df_dataset_list.append(df_dataset)
+
+    df_datasets = pd.concat(df_dataset_list, ignore_index=True)
+
+    # Make all rows as elements of a list.
+    row_list = df_datasets.values.tolist()
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 
