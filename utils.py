@@ -52,10 +52,10 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
-    speaker_list = df.speaker.unique().tolist()
-    sex_list = df.sex.unique().tolist()
-    emotion_list = df.emotion.unique().tolist()
-    lang_list = df.lang.unique().tolist()
+    speaker_list = sorted(df.speaker.unique().tolist())
+    sex_list = sorted(df.sex.unique().tolist())
+    emotion_list = sorted(df.emotion.unique().tolist())
+    lang_list = sorted(df.lang.unique().tolist())
 
     # all_dbs != selected_dbs
     all_dbs = hparams.csv_data_paths.keys()
