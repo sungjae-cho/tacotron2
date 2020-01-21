@@ -43,6 +43,8 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
     split in {'train', 'val', 'test'}
     '''
     columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
+
+    # Import all pontential DBs
     df_list = list()
     all_csv_paths = hparams.csv_data_paths.values()
     for csv_path in all_csv_paths:
@@ -52,6 +54,7 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
         df_list.append(df)
     df = pd.concat(df_list, ignore_index=True)
 
+    # Create lists containing all pontential values.
     speaker_list = sorted(df.speaker.unique().tolist())
     sex_list = sorted(df.sex.unique().tolist())
     emotion_list = sorted(df.emotion.unique().tolist())
@@ -70,6 +73,7 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
             df_list.append(df)
         df = pd.concat(df_list, ignore_index=True)
 
+    # Import particular emotions unless all emotions are used.
     if sorted(emotion_list) != sorted(hparams.emotions):
         df = df[df.emotion.isin(hparams.emotions)]
 
