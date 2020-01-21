@@ -84,9 +84,12 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
 
     df_dataset_list = list()
     for _, row in df_size.iterrows():
+        speaker = row['speaker']
+        emotion = row['emotion']
+        size = row['size']
+
         df_spk_emo = df[(df.speaker == speaker) & (df.emotion == emotion)]
 
-        size = row['size']
         n_dup_dfs = max_size // size
         n_rest_samples = max_size % size
 
