@@ -166,8 +166,10 @@ class Tacotron2Logger(SummaryWriter):
 
             mel_len = get_mel_length(alignments, idx, text_len)
             mel = mel_outputs[idx:idx+1,:,:mel_len]
+            mel_target = mel_targets[idx:idx+1,:,:]
 
             np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
+            np_wav_target = self.mel2wav(mel_target.type('torch.cuda.HalfTensor'))
 
             np_alignment = plot_alignment_to_numpy(
                 alignments[idx].data.cpu().numpy().T,
@@ -215,6 +217,7 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/loss_mel".format(log_prefix): reduced_loss_mel,
                        "{}/alignment/teacher_forcing".format(log_prefix): [wandb.Image(np_alignment, caption=caption_string)],
                        "{}/alignment/inference".format(log_prefix): [wandb.Image(np_alignment_inf, caption=caption_string)],
+                       "{}/audio/target".format(log_prefix): [wandb.Audio(np_wav_target.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                        "{}/audio/teacher_forcing".format(log_prefix): [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                        "{}/audio/inference".format(log_prefix): [wandb.Audio(np_wav_inf.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                        "{}/mel_target".format(log_prefix): [wandb.Image(np_mel_target)],
