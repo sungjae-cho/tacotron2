@@ -128,7 +128,7 @@ def load_pretrained_model(finetune_model, pretrained_path, model_optim=False,
     if type(freeze_pretrained) == list:
         frozen_weights = freeze_pretrained
     elif freeze_pretrained:
-        frozen_weights = feed_weight.keys()
+        frozen_weights = list(feed_weight.keys())
         if except_for is not None:
             for except_key in except_for:
                 frozen_weights = [xx for xx in frozen_weights if except_key not in xx]
@@ -140,12 +140,31 @@ def load_pretrained_model(finetune_model, pretrained_path, model_optim=False,
     # If pretrained weights have different shape or non-exist, then compensate it.
     for k, v in checkpoint['state_dict'].items():
         if k in finetune_state_dict.keys():
-            if checkpoint['state_dict'][k].shape != finetune_state_dict[k].shape:
+            cp_tensor = checkpoint['state_dict'][k]
+            ft_tensor = finetune_state_dict[k]
+            if cp_tensor.shape != ft_tensor.shape:
                 feed_weight[k] = finetune_state_dict[k]
+                if len(cp_tensor.shape) == len(ft_tensor.shape):
+                    ft_import_dim = list()
+                    for i_dim in range(len(cp_tensor.shape)):
+                        if cp_tensor.shape[i_dim] <= ft_tensor.shape[i_dim]:
+                            ft_import_dim.append(cp_tensor.shape[i_dim])
+                    if len(ft_import_dim) == len(cp_tensor.shape):
+                        d = ft_import_dim
+                        if len(d) == 1:
+                            feed_weight[k][:d[0]] = cp_tensor
+                        elif len(d) == 2:
+                            feed_weight[k][:d[0],:d[1]] = cp_tensor
+                        elif len(d) == 3:
+                            feed_weight[k][:d[0],:d[1],:d[2]] = cp_tensor
+                        else:
+                            print("Implement more dimensions")
+                            exit()
+                        print("{} weights are partially imported.".format(k))
                 if k in frozen_weights:
                     frozen_weights.remove(k)
                 resume = False
-                print('[*] Weights in model-will-be-finetuned is not in pretrained model. Resume is not available')
+                print('[{}] Weights in model-will-be-finetuned is not in pretrained model. Resume is not available'.format(k))
             else:
                 # k is in finetune network and shape is same.
                 pass
