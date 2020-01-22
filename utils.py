@@ -79,28 +79,29 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
 
     # Upsampling datasets that do not have as many samples as the largest
     # dataset has to the extent that the largest one has.
-    df_size = df.groupby(['speaker', 'emotion']).size().reset_index(name='size')
-    max_size = df_size['size'].max()
+    if split == 'train':
+        df_size = df.groupby(['speaker', 'emotion']).size().reset_index(name='size')
+        max_size = df_size['size'].max()
 
-    df_dataset_list = list()
-    for _, row in df_size.iterrows():
-        speaker = row['speaker']
-        emotion = row['emotion']
-        size = row['size']
+        df_dataset_list = list()
+        for _, row in df_size.iterrows():
+            speaker = row['speaker']
+            emotion = row['emotion']
+            size = row['size']
 
-        df_spk_emo = df[(df.speaker == speaker) & (df.emotion == emotion)]
+            df_spk_emo = df[(df.speaker == speaker) & (df.emotion == emotion)]
 
-        n_dup_dfs = max_size // size
-        n_rest_samples = max_size % size
+            n_dup_dfs = max_size // size
+            n_rest_samples = max_size % size
 
-        dup_dfs = [df_spk_emo] * n_dup_dfs + [df[:n_rest_samples]]
-        df_dataset = pd.concat(dup_dfs, ignore_index=True)
-        df_dataset_list.append(df_dataset)
+            dup_dfs = [df_spk_emo] * n_dup_dfs + [df[:n_rest_samples]]
+            df_dataset = pd.concat(dup_dfs, ignore_index=True)
+            df_dataset_list.append(df_dataset)
 
-    df_datasets = pd.concat(df_dataset_list, ignore_index=True)
+        df = pd.concat(df_dataset_list, ignore_index=True)
 
     # Make all rows as elements of a list.
-    row_list = df_datasets.values.tolist()
+    row_list = df.values.tolist()
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 
