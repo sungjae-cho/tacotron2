@@ -38,9 +38,11 @@ def load_filepaths_and_text(filename, split="|"):
     return filepaths_and_text
 
 
-def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
+def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion):
     '''
     split in {'train', 'val', 'test'}
+    speaker: str.
+    emotion: str. {'amused', 'angry', 'neutral', 'disgusted', 'sleepy'}
     '''
     columns = ['wav_path', 'text', 'speaker', 'sex', 'emotion', 'lang']
 
@@ -77,6 +79,12 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
     if sorted(emotion_list) != sorted(hparams.emotions):
         df = df[df.emotion.isin(hparams.emotions)]
 
+    # Select a particular speaker to be contained in df.
+    if speaker is not None:
+        df = df[df.speaker == speaker]
+    if emotion is not None:
+        df = df[df.emotion == emotion]
+
     # Upsampling datasets that do not have as many samples as the largest
     # dataset has to the extent that the largest one has.
     if split == 'train':
@@ -85,14 +93,14 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split):
 
         df_dataset_list = list()
         for _, row in df_size.iterrows():
-            speaker = row['speaker']
-            emotion = row['emotion']
-            size = row['size']
+            row_speaker = row['speaker']
+            row_emotion = row['emotion']
+            row_size = row['size']
 
-            df_spk_emo = df[(df.speaker == speaker) & (df.emotion == emotion)]
+            df_spk_emo = df[(df.speaker == row_speaker) & (df.emotion == row_emotion)]
 
-            n_dup_dfs = max_size // size
-            n_rest_samples = max_size % size
+            n_dup_dfs = max_size // row_size
+            n_rest_samples = max_size % row_size
 
             dup_dfs = [df_spk_emo] * n_dup_dfs + [df[:n_rest_samples]]
             df_dataset = pd.concat(dup_dfs, ignore_index=True)

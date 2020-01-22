@@ -44,7 +44,16 @@ def init_distributed(hparams, n_gpus, rank, group_name):
 def prepare_dataloaders(hparams):
     # Get data, data loaders and collate function ready
     trainset = TextMelLoader(hparams, 'train')
-    valset = TextMelLoader(hparams, 'val')
+
+    valsets = dict()
+    all_valset = TextMelLoader(hparams, 'val')
+    valsets[('all', 'all')] = all_valset
+    for speaker in all_valset.speaker_list:
+        for emotion in all_valset.emotion_list:
+            valset = TextMelLoader(hparams, 'val', speaker, emotion)
+            if len(valset) != 0:
+                valsets[(speaker, emotion)] = valset
+
     collate_fn = TextMelCollate(hparams.n_frames_per_step)
 
     if hparams.distributed_run:
@@ -58,7 +67,7 @@ def prepare_dataloaders(hparams):
                               sampler=train_sampler,
                               batch_size=hparams.batch_size, pin_memory=False,
                               drop_last=True, collate_fn=collate_fn)
-    return train_loader, valset, collate_fn
+    return train_loader, valsets, collate_fn
 
 
 def prepare_directories_and_logger(hparams, output_directory, log_directory, rank,
@@ -122,61 +131,63 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
                 'learning_rate': learning_rate}, filepath)
 
 
-def validate(model, criterions, valset, iteration, epoch, batch_size, n_gpus,
+def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank, hparams):
     """Handles all the validation scoring and printing"""
-    model.eval()
-    with torch.no_grad():
-        val_sampler = DistributedSampler(valset) if distributed_run else None
-        val_loader = DataLoader(valset, sampler=val_sampler, num_workers=1,
-                                shuffle=False, batch_size=batch_size,
-                                pin_memory=False, collate_fn=collate_fn)
+    for val_type, valset in valsets.items():
+        #val_type: tuple. (str_speaker, str_emotion).
+        model.eval()
+        with torch.no_grad():
+            val_sampler = DistributedSampler(valset) if distributed_run else None
+            val_loader = DataLoader(valset, sampler=val_sampler, num_workers=1,
+                                    shuffle=False, batch_size=batch_size,
+                                    pin_memory=False, collate_fn=collate_fn)
 
-        criterion, criterion_dom = criterions
-        val_loss = 0.0
-        mean_far_sum = 0.0
-        batch_far_list = list()
-        for i, batch in enumerate(val_loader):
-            x, y, etc = model.parse_batch(batch)
-            input_lengths = x[1]
-            speakers, sex, emotion_vectors, lang = etc
-            y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
-            alignments = y_pred[3]
-            (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
+            criterion, criterion_dom = criterions
+            val_loss = 0.0
+            mean_far_sum = 0.0
+            batch_far_list = list()
+            for i, batch in enumerate(val_loader):
+                x, y, etc = model.parse_batch(batch)
+                input_lengths = x[1]
+                speakers, sex, emotion_vectors, lang = etc
+                y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
+                alignments = y_pred[3]
+                (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
-            loss_mel = criterion(y_pred, y)
-            if hparams.speaker_adversarial_training:
-                spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
-            else:
-                loss_spk_adv = torch.zeros(1)
-            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
+                loss_mel = criterion(y_pred, y)
+                if hparams.speaker_adversarial_training:
+                    spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
+                    loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
+                else:
+                    loss_spk_adv = torch.zeros(1)
+                loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
 
-            if distributed_run:
-                reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
-                reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
-                reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
-            else:
-                reduced_val_loss_mel = loss_mel.item()
-                reduced_val_loss_spk_adv = loss_spk_adv.item()
-                reduced_val_loss = loss.item()
-            val_loss += reduced_val_loss
-            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths)
-            mean_far_sum += mean_far
-            batch_far_list.append(batch_far)
-        val_loss = val_loss / (i + 1)
-        val_mean_far = mean_far_sum / (i + 1)
-        val_batch_far = torch.cat(batch_far_list)
-        far_pair = (val_mean_far, val_batch_far)
+                if distributed_run:
+                    reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                    reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
+                else:
+                    reduced_val_loss_mel = loss_mel.item()
+                    reduced_val_loss_spk_adv = loss_spk_adv.item()
+                    reduced_val_loss = loss.item()
+                val_loss += reduced_val_loss
+                mean_far, batch_far = forward_attention_ratio(alignments, input_lengths)
+                mean_far_sum += mean_far
+                batch_far_list.append(batch_far)
+            val_loss = val_loss / (i + 1)
+            val_mean_far = mean_far_sum / (i + 1)
+            val_batch_far = torch.cat(batch_far_list)
+            far_pair = (val_mean_far, val_batch_far)
 
-    model.train()
-    if rank == 0:
-        print("Validation loss {}: {:9f}  ".format(iteration, reduced_val_loss))
-        reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
-        logger.log_validation(valset,
-            reduced_val_losses, far_pair,
-            model, x, y, etc, y_pred, pred_speakers,
-            iteration, epoch, hparams)
+        model.train()
+        if rank == 0:
+            print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, reduced_val_loss))
+            reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
+            logger.log_validation(valset, val_type,
+                reduced_val_losses, far_pair,
+                model, x, y, etc, y_pred, pred_speakers,
+                iteration, epoch, hparams)
 
 
 def train(output_directory, log_directory, checkpoint_path, pretrained_path,
@@ -219,7 +230,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         hparams,
         output_directory, log_directory, rank, run_name, prj_name, resume)
 
-    train_loader, valset, collate_fn = prepare_dataloaders(hparams)
+    train_loader, valsets, collate_fn = prepare_dataloaders(hparams)
 
     # Load checkpoint if one exists
     iteration = 0
@@ -327,7 +338,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 criterions = (criterion, criterion_dom)
-                validate(model, criterions, valset, iteration, float_epoch,
+                validate(model, criterions, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams)
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
