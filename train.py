@@ -368,7 +368,7 @@ if __name__ == '__main__':
                         required=False, help='checkpoint path')
     parser.add_argument('--pretrained_path', type=str, default=None,
                         required=False, help='pretrained model path')
-    parser.add_argument('-r', '--resume', type=bool, default=False,
+    parser.add_argument('-r', '--resume', type=str, default="",
                         required=False, help='whether to resume logging')
     parser.add_argument('--warm_start', action='store_true',
                         help='load model weights only, ignore specified layers')
