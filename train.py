@@ -264,7 +264,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
         for i, batch in enumerate(train_loader):
-            print("i: {}".format(i))
             batches_per_epoch = len(train_loader)
             float_epoch = iteration / batches_per_epoch
             start = time.perf_counter()
