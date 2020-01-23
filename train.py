@@ -161,7 +161,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                     loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
                 else:
-                    loss_spk_adv = torch.zeros(1)
+                    loss_spk_adv = torch.zeros(1).cuda()
                 loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
 
                 if distributed_run:
@@ -264,6 +264,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
         for i, batch in enumerate(train_loader):
+            print("i: {}".format(i))
             batches_per_epoch = len(train_loader)
             float_epoch = iteration / batches_per_epoch
             start = time.perf_counter()
