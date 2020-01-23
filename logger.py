@@ -170,8 +170,11 @@ class Tacotron2Logger(SummaryWriter):
 
             np_alignment = plot_alignment_to_numpy(
                 alignments[idx].data.cpu().numpy().T,
+                text_len,
                 decoding_len=mel_len)
-            np_alignment_inf = plot_alignment_to_numpy(alignments_inf[0].data.cpu().numpy().T)
+            np_alignment_inf = plot_alignment_to_numpy(
+                alignments_inf[0].data.cpu().numpy().T,
+                text_len)
 
             np_mel_target = plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy())
             np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy())
@@ -204,7 +207,6 @@ class Tacotron2Logger(SummaryWriter):
 
         # [#3] Loggings only for all validation set.
         else:
-            return
             # Log epochs and iterations.
             wandb.log({"epoch": epoch,
                        "iteration":iteration}
@@ -230,6 +232,7 @@ class Tacotron2Logger(SummaryWriter):
                 for emotion in valset.emotion_list:
                     sequence = np.array(text_to_sequence(text, ['english_cleaners']))[None, :]
                     sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
+                    text_len = sequence.size(1)
                     speaker_int = valset.speaker2int(speaker)
                     emotion_vector = valset.get_emotion(emotion)
                     speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
@@ -238,7 +241,7 @@ class Tacotron2Logger(SummaryWriter):
                     _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_tensor)
 
                     np_wav = self.mel2wav(mel_outputs_postnet.type('torch.cuda.HalfTensor'))
-                    np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T)
+                    np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T, text_len)
                     np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].data.cpu().numpy())
 
                     group_log_name = "Inference_test/{speaker}/{emotion}".format(

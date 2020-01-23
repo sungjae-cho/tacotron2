@@ -13,27 +13,25 @@ def save_figure_to_numpy(fig):
     return data
 
 
-def plot_alignment_to_numpy(alignment, decoding_len=None, info=None):
-    # alignment.size == [batch_size, mel_steps, txt_steps]
+def plot_alignment_to_numpy(alignment, encoding_len, decoding_len=None, info=None):
+    # alignment.size == [txt_steps, mel_steps]
 
     '''
     max_mel_len = alignment.size(1)
     list_xticks = sorted(list(range(0, max_mel_len+1, step=100)) + [decoding_len])
     plt.xticks(ticks=x, rotation=45)
     '''
+    if decoding_len is  None:
+        decoding_len = alignment.shape[0]
+    alignment = alignment[:encoding_len,:decoding_len]
     fig, ax = plt.subplots(figsize=(6, 4))
     im = ax.imshow(alignment, aspect='auto', origin='lower',
                    interpolation='none')
-
-    if decoding_len is not None:
-        plt.axvline(x=decoding_len, color='r')
     fig.colorbar(im, ax=ax)
 
-    max_mel_len = alignment.shape[1]
-    if decoding_len is not None:
-        list_xticks = sorted(list(range(0, max_mel_len+1, 100)) + [decoding_len])
-    else:
-        list_xticks = sorted(list(range(0, max_mel_len+1, 100)))
+    xticks = set(range(0, decoding_len, 100))
+    xticks.add(decoding_len)
+    list_xticks = sorted(list(xticks))
     plt.xticks(ticks=list_xticks, rotation=45)
 
     xlabel = 'Decoder timestep'
