@@ -78,12 +78,6 @@ class Tacotron2Logger(SummaryWriter):
             speakers, sex, emotion_vectors, lang = etc
             _, mel_outputs, gate_outputs, alignments = y_pred
 
-            # Tensorbard log
-            #self.add_scalar("training.loss", reduced_loss, iteration)
-            #self.add_scalar("grad.norm", grad_norm, iteration)
-            #self.add_scalar("learning.rate", learning_rate, iteration)
-            #self.add_scalar("duration", duration, iteration)
-
             # Compute forward_attention_ratio.
             hop_size = 1
             mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs, hop_size)
@@ -127,7 +121,6 @@ class Tacotron2Logger(SummaryWriter):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
-        #self.add_scalar("validation.loss", reduced_loss, iteration) # Tensorboard log
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
         mean_far, batch_far = far_pair
@@ -169,42 +162,24 @@ class Tacotron2Logger(SummaryWriter):
             mel_target_len = output_lengths[idx].item()
             mel_target = mel_targets[idx:idx+1,:,:mel_target_len]
 
+            _, mel_outputs_postnet_inf, _, alignments_inf = model.inference(text_sequence, speaker_tensor, emotion_tensor)
+
             np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
             np_wav_target = self.mel2wav(mel_target.type('torch.cuda.HalfTensor'))
+            np_wav_inf = self.mel2wav(mel_outputs_postnet_inf.type('torch.cuda.HalfTensor'))
 
             np_alignment = plot_alignment_to_numpy(
                 alignments[idx].data.cpu().numpy().T,
                 decoding_len=mel_len)
-            '''self.add_image(
-                "alignment",
-                np_alignment,
-                iteration, dataformats='HWC')'''
+            np_alignment_inf = plot_alignment_to_numpy(alignments_inf[0].data.cpu().numpy().T)
 
             np_mel_target = plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy())
-            '''self.add_image(
-                "mel_target",
-                np_mel_target,
-                iteration, dataformats='HWC')'''
-
             np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy())
-            '''self.add_image(
-                "mel_predicted",
-                np_mel_predicted,
-                iteration, dataformats='HWC')'''
+            np_mel_predicted_inf = plot_spectrogram_to_numpy(mel_outputs_postnet_inf[0].data.cpu().numpy())
 
             np_gate = plot_gate_outputs_to_numpy(
                 gate_targets[idx].data.cpu().numpy(),
                 torch.sigmoid(gate_outputs[idx]).data.cpu().numpy())
-            '''self.add_image(
-                "gate",
-                np_gate,
-                iteration, dataformats='HWC')'''
-
-            _, mel_outputs_postnet_inf, _, alignments_inf = model.inference(text_sequence, speaker_tensor, emotion_tensor)
-
-            np_wav_inf = self.mel2wav(mel_outputs_postnet_inf.type('torch.cuda.HalfTensor'))
-            np_alignment_inf = plot_alignment_to_numpy(alignments_inf[0].data.cpu().numpy().T)
-            np_mel_predicted_inf = plot_spectrogram_to_numpy(mel_outputs_postnet_inf[0].data.cpu().numpy())
 
             # wandb log
             caption_string = '[{speaker}|{emotion}] {text}'.format(
@@ -249,7 +224,6 @@ class Tacotron2Logger(SummaryWriter):
             # plot distribution of parameters
             for tag, value in model.named_parameters():
                 tag = tag.replace('.', '/')
-                # self.add_histogram(tag, value.data.cpu().numpy(), iteration) # Tensorboard log
                 wandb.log({tag:wandb.Histogram(value.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
             # Inference test.
