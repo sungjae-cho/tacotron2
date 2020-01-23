@@ -356,20 +356,22 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     checkpoint_path)
 
-            if iteration > round(50000 * (64 / hparams.batch_size)):
-                scheduler.step()
+            tmp_iteration = iteration
+            tmp_learning_rate = learning_rate
 
             def signal_handler(sig, frame):
                 print('You pressed Ctrl+C!')
                 if rank == 0:
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
-                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                    save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration,
                                     checkpoint_path)
-
                 sys.exit(0)
 
             signal.signal(signal.SIGINT, signal_handler)
+
+            if iteration > round(50000 * (64 / hparams.batch_size)):
+                scheduler.step()
 
             iteration += 1
 
