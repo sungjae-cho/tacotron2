@@ -2,6 +2,8 @@ import os
 import time
 import argparse
 import math
+import signal
+import sys
 from numpy import finfo
 
 import torch
@@ -356,6 +358,18 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if iteration > round(50000 * (64 / hparams.batch_size)):
                 scheduler.step()
+
+            def signal_handler(sig, frame):
+                print('You pressed Ctrl+C!')
+                if rank == 0:
+                    checkpoint_path = os.path.join(
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
+                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                                    checkpoint_path)
+
+                sys.exit(0)
+
+            signal.signal(signal.SIGINT, signal_handler)
 
             iteration += 1
 
