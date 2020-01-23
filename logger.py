@@ -189,9 +189,7 @@ class Tacotron2Logger(SummaryWriter):
             )
 
             log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
-            wandb.log({"{}/loss".format(log_prefix): reduced_loss,
-                       "{}/loss_mel".format(log_prefix): reduced_loss_mel,
-                       "{}/alignment/teacher_forcing".format(log_prefix): [wandb.Image(np_alignment, caption=caption_string)],
+            wandb.log({"{}/alignment/teacher_forcing".format(log_prefix): [wandb.Image(np_alignment, caption=caption_string)],
                        "{}/alignment/inference".format(log_prefix): [wandb.Image(np_alignment_inf, caption=caption_string)],
                        "{}/audio/target".format(log_prefix): [wandb.Audio(np_wav_target.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
                        "{}/audio/teacher_forcing".format(log_prefix): [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
