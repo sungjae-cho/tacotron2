@@ -152,6 +152,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 input_lengths = x[1]
                 speakers, sex, emotion_vectors, lang = etc
                 y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
+                gate_outputs = y_pred[2]
                 alignments = y_pred[3]
                 (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
@@ -172,7 +173,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss = loss.item()
                 val_loss += reduced_val_loss
-                mean_far, batch_far = forward_attention_ratio(alignments, input_lengths)
+                mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs)
                 mean_far_sum += mean_far
                 batch_far_list.append(batch_far)
             val_loss = val_loss / (i + 1)
@@ -289,10 +290,11 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if prj_name == "forward_attention_loss":
                 input_lengths = x[1]
+                gate_outputs = y_pred[2]
                 alignments = y_pred[3]
-                mean_far, _ = forward_attention_ratio(alignments, input_lengths)
+                mean_far, _ = forward_attention_ratio(alignments, input_lengths, gate_outputs)
                 if mean_far > 0.95:
-                    fa_loss = forward_attention_loss(alignments, input_lengths)
+                    fa_loss = forward_attention_loss(alignments, input_lengths, gate_outputs)
                     loss += fa_loss
                     float_fa_loss = fa_loss.item()
                 else:

@@ -86,7 +86,7 @@ class Tacotron2Logger(SummaryWriter):
 
             # Compute forward_attention_ratio.
             hop_size = 1
-            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, hop_size)
+            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs, hop_size)
 
             # wandb log
             wandb.log({"epoch": epoch,
@@ -164,9 +164,10 @@ class Tacotron2Logger(SummaryWriter):
             text_sequence = text_padded[idx,:text_len].view(1, -1)
             text_string = sequence_to_text(text_sequence.squeeze().tolist())
 
-            mel_len = get_mel_length(alignments, idx, text_len)
+            mel_len = get_mel_length(gate_outputs[idx])
             mel = mel_outputs[idx:idx+1,:,:mel_len]
-            mel_target = mel_targets[idx:idx+1,:,:]
+            mel_target_len = output_lengths[idx].item()
+            mel_target = mel_targets[idx:idx+1,:,:mel_target_len]
 
             np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
             np_wav_target = self.mel2wav(mel_target.type('torch.cuda.HalfTensor'))
@@ -230,6 +231,7 @@ class Tacotron2Logger(SummaryWriter):
 
         # [#3] Loggings only for all validation set.
         else:
+            return
             # Log epochs and iterations.
             wandb.log({"epoch": epoch,
                        "iteration":iteration}

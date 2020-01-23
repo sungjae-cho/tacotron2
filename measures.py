@@ -1,18 +1,31 @@
 
 import torch
 
-def get_mel_length(alignments, batch_i, text_length, last_steps=5):
+#def get_mel_length(alignments, batch_i, text_length, last_steps=5):
+def get_mel_length(gate_output):
     '''
+    Prams
+    -----
+    gate_output: torch.Tensor.
+    - size: [max_mel_len].
+
     Return
-    - mel_length: int. Size == [batch_size].
+    -----
+    mel_length: int.
+    - Size == [batch_size].
     '''
-    mel_length = torch.max(torch.argmax(alignments[batch_i,:,text_length-last_steps:text_length],dim=0))
-    mel_length = mel_length.item()
+    #mel_length = torch.max(torch.argmax(alignments[batch_i,:,text_length-last_steps:text_length],dim=0))
+    #mel_length = mel_length.item()
+    is_positive_output = (gate_output > 0).tolist()
+    if True in is_positive_output:
+        mel_length = is_positive_output.index(True)
+    else:
+        mel_length = len(is_positive_output)
 
     return mel_length
 
 
-def forward_attention_ratio(alignments, text_lengths, hop_size=1):
+def forward_attention_ratio(alignments, text_lengths, gate_outputs, hop_size=1):
     '''
     Params
     -----
@@ -38,7 +51,8 @@ def forward_attention_ratio(alignments, text_lengths, hop_size=1):
     batch_forward_attention_ratio = torch.empty((batch_size), dtype=torch.float)
     for i in range(batch_size):
         text_length = text_lengths[i]
-        mel_len = get_mel_length(alignments, i, text_length)
+        gate_output = gate_outputs[i]
+        mel_len = get_mel_length(gate_output)
         if mel_len-hop_size > 0:
             forward_attention_ratio = torch.mean(is_increment[i,:mel_len-hop_size]).item()
         else:
