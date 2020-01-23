@@ -663,9 +663,11 @@ class EmotionEncoder(nn.Module):
         self.out_dim = hparams.emotion_embedding_dim
         self.max_emotions = hparams.max_emotions
         if hparams.neutral_zero_vector:
-            self.linear_projection = LinearNorm(self.max_emotions-1, self.out_dim, bias=False, w_init_gain='linear')
+            self.linear_projection = torch.nn.Linear(in_features=self.max_emotions-1, out_features=self.out_dim, bias=False)
+            #self.linear_projection = LinearNorm(self.max_emotions-1, self.out_dim, bias=False, w_init_gain='linear')
         else:
-            self.linear_projection = LinearNorm(self.max_emotions, self.out_dim, bias=False, w_init_gain='linear')
+            self.linear_projection = torch.nn.Linear(in_features=self.max_emotions, out_features=self.out_dim, bias=False)
+            #self.linear_projection = LinearNorm(self.max_emotions, self.out_dim, bias=False, w_init_gain='linear')
 
 
     def forward(self, inputs):
