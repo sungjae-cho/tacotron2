@@ -111,26 +111,33 @@ def warm_start_model(checkpoint_path, model, ignore_layers):
     return model
 
 
-def load_checkpoint(checkpoint_path, model, optimizer):
+def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler):
     assert os.path.isfile(checkpoint_path)
     print("Loading checkpoint '{}'".format(checkpoint_path))
     checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
     model.load_state_dict(checkpoint_dict['state_dict'])
     optimizer.load_state_dict(checkpoint_dict['optimizer'])
     learning_rate = checkpoint_dict['learning_rate']
+    print("Loaded learning_rate=", learning_rate)
+    if 'lr_scheduler' in checkpoint_dict.keys():
+        lr_scheduler.load_state_dict(checkpoint_dict['lr_scheduler'])
+    else:
+        lr_scheduler.load_state_dict({'base_lrs':[learning_rate]})
     iteration = checkpoint_dict['iteration']
     print("Loaded checkpoint '{}' from iteration {}" .format(
         checkpoint_path, iteration))
     return model, optimizer, learning_rate, iteration
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, filepath):
+def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
         iteration, filepath))
     torch.save({'iteration': iteration,
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
-                'learning_rate': learning_rate}, filepath)
+                'learning_rate': learning_rate,
+                'lr_scheduler': lr_scheduler.state_dict()
+                }, filepath)
 
 
 def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
@@ -217,6 +224,11 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     learning_rate = hparams.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=hparams.weight_decay)
+    lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
+        optimizer,
+        0.5**(1 / (125000 * (64 / hparams.batch_size))),
+        -1
+    )
 
     if hparams.fp16_run:
         from apex import amp
@@ -244,7 +256,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 checkpoint_path, model, hparams.ignore_layers)
         else:
             model, optimizer, _learning_rate, iteration = load_checkpoint(
-                checkpoint_path, model, optimizer)
+                checkpoint_path, model, optimizer, lr_scheduler)
             if hparams.use_saved_learning_rate:
                 learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
@@ -256,12 +268,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     model.train()
     is_overflow = False
     for param_group in optimizer.param_groups:
-        param_group['initial_lr'] = learning_rate
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(
-        optimizer,
-        0.5**(1 / (125000 * (64 / hparams.batch_size))),
-        last_epoch=-1
-    )
+        param_group['initial_lr'] = hparams.learning_rate
+        param_group['lr'] = learning_rate
+
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
@@ -270,7 +279,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             float_epoch = iteration / batches_per_epoch
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
-                param_group['lr'] = scheduler.get_lr()[0]
+                param_group['lr'] = lr_scheduler.get_lr()[0]
 
             model.zero_grad()
 
@@ -326,7 +335,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), hparams.grad_clip_thresh)
 
-            learning_rate = scheduler.get_lr()[0]
+            learning_rate = lr_scheduler.get_lr()[0]
             print("learning_rate:", learning_rate)
             optimizer.step()
 
@@ -349,12 +358,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    checkpoint_path)
+                                    lr_scheduler, checkpoint_path)
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    checkpoint_path)
+                                    lr_scheduler, checkpoint_path)
 
             tmp_iteration = iteration
             tmp_learning_rate = learning_rate
@@ -365,13 +374,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
                     save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration,
-                                    checkpoint_path)
+                                    lr_scheduler, checkpoint_path)
                 sys.exit(0)
 
             signal.signal(signal.SIGINT, signal_handler)
 
             if iteration > round(50000 * (64 / hparams.batch_size)):
-                scheduler.step()
+                lr_scheduler.step()
 
             iteration += 1
 
