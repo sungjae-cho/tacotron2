@@ -22,7 +22,7 @@ def plot_alignment_to_numpy(alignment, encoding_len, decoding_len=None, info=Non
     plt.xticks(ticks=x, rotation=45)
     '''
     if decoding_len is  None:
-        decoding_len = alignment.shape[0]
+        decoding_len = alignment.shape[1]
     alignment = alignment[:encoding_len,:decoding_len]
     fig, ax = plt.subplots(figsize=(6, 4))
     im = ax.imshow(alignment, aspect='auto', origin='lower',
