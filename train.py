@@ -37,7 +37,7 @@ def init_distributed(hparams, n_gpus, rank, group_name):
 
     # Initialize distributed communication
     dist.init_process_group(
-        backend=hparams.dist_backend, init_method=hparams.dist_url,
+        backend=hparams.dist_backend, init_method="{}:{}".format(hparams.dist_url, hparams.dist_port),
         world_size=n_gpus, rank=rank, group_name=group_name)
 
     print("Done initializing distributed")
