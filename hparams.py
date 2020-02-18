@@ -91,6 +91,7 @@ def create_hparams(hparams_string=None, verbose=False):
         p_attention_dropout=0.1,
         p_decoder_dropout=0.1,
         has_style_token_lstm_1=True,
+        has_style_token_lstm_2=True,
 
         # Attention parameters
         attention_rnn_dim=1024,

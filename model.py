@@ -217,12 +217,22 @@ class Decoder(nn.Module):
         self.p_attention_dropout = hparams.p_attention_dropout
         self.p_decoder_dropout = hparams.p_decoder_dropout
         self.has_style_token_lstm_1 = hparams.has_style_token_lstm_1
+        self.has_style_token_lstm_2 = hparams.has_style_token_lstm_2
+
         if self.has_style_token_lstm_1:
             self.attention_rnn_input_dim = (hparams.prenet_dim
                 + hparams.encoder_embedding_dim
                 + hparams.emotion_embedding_dim + hparams.speaker_embedding_dim)
         else:
             self.attention_rnn_input_dim = hparams.prenet_dim + hparams.encoder_embedding_dim
+
+        if self.has_style_token_lstm_2:
+            self.decoder_rnn_input_dim = (hparams.attention_rnn_dim
+                + hparams.encoder_embedding_dim
+                + hparams.emotion_embedding_dim + hparams.speaker_embedding_dim)
+        else:
+            self.decoder_rnn_input_dim = (hparams.attention_rnn_dim
+                + hparams.encoder_embedding_dim)
 
         self.prenet = Prenet(
             hparams.n_mel_channels * hparams.n_frames_per_step,
@@ -238,8 +248,7 @@ class Decoder(nn.Module):
             hparams.attention_location_kernel_size)
 
         self.decoder_rnn = nn.LSTMCell(
-            (hparams.attention_rnn_dim + hparams.encoder_embedding_dim +
-             hparams.emotion_embedding_dim + hparams.speaker_embedding_dim),
+            self.decoder_rnn_input_dim,
             hparams.decoder_rnn_dim, 1)
 
         self.linear_projection = LinearNorm(
@@ -381,8 +390,14 @@ class Decoder(nn.Module):
             attention_weights_cat, self.mask)
 
         self.attention_weights_cum += self.attention_weights
-        decoder_input = torch.cat(
-            (self.attention_hidden, self.attention_context, speaker_embedding, emotion_embedding), -1)
+
+        if self.has_style_token_lstm_2:
+            decoder_input = torch.cat(
+                (self.attention_hidden, self.attention_context, speaker_embedding, emotion_embedding), -1)
+        else:
+            decoder_input = torch.cat(
+                (self.attention_hidden, self.attention_context), -1)
+
         self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
             decoder_input, (self.decoder_hidden, self.decoder_cell))
         self.decoder_hidden = F.dropout(
