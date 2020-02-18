@@ -19,7 +19,7 @@ from data_utils import TextMelLoader, TextMelCollate
 from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
-from measures import forward_attention_ratio
+from measures import forward_attention_ratio, attention_ratio, multiple_attention_ratio
 from utils import get_spk_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
@@ -155,8 +155,14 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
             criterion, criterion_dom = criterions
             val_loss = 0.0
-            mean_far_sum = 0.0
+
+            # forward_attention_ratio
             batch_far_list = list()
+            # attention_ratio
+            batch_ar_list = list()
+            # multiple_attention_ratio
+            batch_mar_list = list()
+
             for i, batch in enumerate(val_loader):
                 x, y, etc = model.parse_batch(batch)
                 input_lengths = x[1]
@@ -183,20 +189,37 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss = loss.item()
                 val_loss += reduced_val_loss
-                mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs)
-                mean_far_sum += mean_far
+
+                # forward_attention_ratio
+                _, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs)
                 batch_far_list.append(batch_far)
+                # attention_ratio
+                _, batch_ar = attention_ratio(alignments, text_lengths, gate_outputs)
+                batch_ar_list.append(batch_ar)
+                # multiple_attention_ratio
+                _, batch_mar = multiple_attention_ratio(alignments, text_lengths, gate_outputs)
+                batch_mar_list.append(batch_mar)
+
             val_loss = val_loss / (i + 1)
-            val_mean_far = mean_far_sum / (i + 1)
+            # forward_attention_ratio
             val_batch_far = torch.cat(batch_far_list)
+            val_mean_far = val_batch_far.mean().item()
             far_pair = (val_mean_far, val_batch_far)
+            # attention_ratio
+            val_batch_ar = torch.cat(batch_ar_list)
+            val_mean_ar = val_batch_ar.mean().item()
+            ar_pair = (val_mean_ar, val_batch_ar)
+            # multiple_attention_ratio
+            val_batch_mar = torch.cat(batch_mar_list)
+            val_mean_mar = val_batch_mar.mean().item()
+            mar_pair = (val_mean_mar, val_batch_mar)
 
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, reduced_val_loss))
             reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
             logger.log_validation(valset, val_type,
-                reduced_val_losses, far_pair,
+                reduced_val_losses, far_pair, ar_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 
