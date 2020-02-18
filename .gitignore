@@ -1,5 +1,7 @@
 wandb/
 .ipynb_checkpoints/
+dev_ipynb/
 __pycache__
 outdir
 logdir
+logs
