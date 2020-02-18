@@ -41,10 +41,10 @@ def forward_attention_ratio(alignments, text_lengths, gate_outputs, hop_size=1):
     - Each element is the forward attention ratio of each batch sample.
     '''
     # torch.Tensor. Shape: [batch_size, mel_steps]
-    max_alignments = torch.argmax(alignments, dim=2)
+    argmax_alignments = torch.argmax(alignments, dim=2)
 
-    pre_alignments = max_alignments[:,:-hop_size]
-    post_alignments = max_alignments[:,hop_size:]
+    pre_alignments = argmax_alignments[:,:-hop_size]
+    post_alignments = argmax_alignments[:,hop_size:]
     is_increment = (pre_alignments <= post_alignments).type(torch.DoubleTensor)
 
     batch_size = alignments.size(0)
