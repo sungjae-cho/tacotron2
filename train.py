@@ -5,6 +5,7 @@ import math
 import signal
 import sys
 from numpy import finfo
+from apex import amp
 
 import torch
 from distributed import apply_gradient_allreduce
@@ -231,7 +232,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     )
 
     if hparams.fp16_run:
-        from apex import amp
         model, optimizer = amp.initialize(
             model, optimizer, opt_level='O1') # default: opt_level='O2'
 
