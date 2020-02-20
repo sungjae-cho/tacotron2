@@ -48,7 +48,10 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
 
     # Import all pontential DBs
     df_list = list()
-    all_csv_paths = hparams.csv_data_paths.values()
+    all_csv_paths = list()
+    for db in hparams.all_dbs:
+        all_csv_paths.append(hparams.csv_data_paths[db])
+        
     for csv_path in all_csv_paths:
         df = pd.read_csv(csv_path)
         df = df[df.split == split]
