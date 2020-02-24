@@ -12,7 +12,7 @@ from tensorboardX import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
     plot_embeddings_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
-from measures import forward_attention_ratio, get_mel_length, attention_ratio, multiple_attention_ratio
+from measures import forward_attention_ratio, get_mel_length, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from text import sequence_to_text
 from denoiser import Denoiser
 from text import text_to_sequence
@@ -80,9 +80,12 @@ class Tacotron2Logger(SummaryWriter):
 
             # Compute forward_attention_ratio.
             hop_size = 1
-            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs, hop_size)
-            mean_ar, batch_ar = attention_ratio(alignments, input_lengths, gate_outputs)
-            mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, gate_outputs)
+            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs, hop_size)
+            mean_ar, batch_ar = attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+            mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+            mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+            mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
+            batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
 
             # wandb log
             wandb.log({"epoch": epoch,
@@ -94,10 +97,14 @@ class Tacotron2Logger(SummaryWriter):
                        "train/iter_duration": duration,
                        "train/mean_forward_attention_ratio":mean_far,
                        "train/mean_attention_ratio":mean_ar,
+                       "train/mean_attention_range_ratio":mean_arr,
                        "train/mean_multiple_attention_ratio":mean_mar,
+                       "train/mean_attention_quality":mean_attention_quality,
                        "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
                        "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
-                       "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy())
+                       "train/attention_range_ratio":wandb.Histogram(batch_arr.data.cpu().numpy()),
+                       "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
+                       "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                        }, step=iteration)
 
             # Calculate accuracy of the speaker adversarial training module.
@@ -117,7 +124,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_validation(self, valset, val_type,
-        reduced_losses, far_pair, ar_pair, mar_pair,
+        reduced_losses, far_pair, ar_pair, arr_pair, mar_pair,
         model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
@@ -131,7 +138,10 @@ class Tacotron2Logger(SummaryWriter):
         mel_targets, gate_targets = y
         mean_far, batch_far = far_pair
         mean_ar, batch_ar = ar_pair
+        mean_arr, batch_arr = arr_pair
         mean_mar, batch_mar = mar_pair
+        mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
+        batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
 
         # [#1] Logging for all val_type
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
@@ -139,10 +149,14 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/loss_mel".format(log_prefix): reduced_loss_mel,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
+                   "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
                    "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
+                   "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
                    "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
                    "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
-                   "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy())
+                   "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
+                   "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
+                   "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                    } , step=iteration)
 
         if self.hparams.speaker_adversarial_training:
@@ -215,10 +229,14 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/gate".format(log_prefix): [wandb.Image(np_gate)],
                        "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                        "{}/mean_attention_ratio".format(log_prefix):mean_ar,
+                       "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
                        "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
+                       "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
                        "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
                        "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
-                       "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy())
+                       "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
+                       "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
+                       "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                        } , step=iteration)
 
         # [#3] Loggings only for all validation set.
@@ -229,13 +247,16 @@ class Tacotron2Logger(SummaryWriter):
                        , step=iteration)
 
             speaker_embeddings, emotion_embeddings = self.get_embeddings(valset, model)
-            np_plot_speaker_embeddings = plot_embeddings_to_numpy(valset.speaker_list, speaker_embeddings.data.cpu().numpy())
-            np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.data.cpu().numpy())
 
+            if len(valset.speaker_list) > 1:
+                np_plot_speaker_embeddings = plot_embeddings_to_numpy(valset.speaker_list, speaker_embeddings.data.cpu().numpy())
+                wandb.log({"speaker_embeddings": [wandb.Image(np_plot_speaker_embeddings)]}
+                           , step=iteration)
 
-            wandb.log({"speaker_embeddings": [wandb.Image(np_plot_speaker_embeddings)],
-                       "emotion_embeddings": [wandb.Image(np_plot_emotion_embeddings)]}
-                       , step=iteration)
+            if len(valset.emotion_list) > 1:
+                np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.data.cpu().numpy())
+                wandb.log({"emotion_embeddings": [wandb.Image(np_plot_emotion_embeddings)]}
+                           , step=iteration)
 
             # plot distribution of parameters
             for tag, value in model.named_parameters():
