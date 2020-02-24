@@ -19,7 +19,7 @@ from data_utils import TextMelLoader, TextMelCollate
 from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
-from measures import forward_attention_ratio, attention_ratio, multiple_attention_ratio
+from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from utils import get_spk_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
@@ -160,12 +160,15 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             batch_far_list = list()
             # attention_ratio
             batch_ar_list = list()
+            # attention_range_ratio
+            batch_arr_list = list()
             # multiple_attention_ratio
             batch_mar_list = list()
 
             for i, batch in enumerate(val_loader):
                 x, y, etc = model.parse_batch(batch)
                 input_lengths = x[1]
+                output_lengths = x[4]
                 speakers, sex, emotion_vectors, lang = etc
                 y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
                 gate_outputs = y_pred[2]
@@ -191,13 +194,16 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 val_loss += reduced_val_loss
 
                 # forward_attention_ratio
-                _, batch_far = forward_attention_ratio(alignments, input_lengths, gate_outputs)
+                _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
                 batch_far_list.append(batch_far)
                 # attention_ratio
-                _, batch_ar = attention_ratio(alignments, text_lengths, gate_outputs)
+                _, batch_ar = attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
                 batch_ar_list.append(batch_ar)
+                # attention_range_ratio
+                _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+                batch_arr_list.append(batch_arr)
                 # multiple_attention_ratio
-                _, batch_mar = multiple_attention_ratio(alignments, text_lengths, gate_outputs)
+                _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
                 batch_mar_list.append(batch_mar)
 
             val_loss = val_loss / (i + 1)
@@ -209,6 +215,10 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             val_batch_ar = torch.cat(batch_ar_list)
             val_mean_ar = val_batch_ar.mean().item()
             ar_pair = (val_mean_ar, val_batch_ar)
+            # attention_range_ratio
+            val_batch_arr = torch.cat(batch_arr_list)
+            val_mean_arr = val_batch_arr.mean().item()
+            arr_pair = (val_mean_arr, val_batch_arr)
             # multiple_attention_ratio
             val_batch_mar = torch.cat(batch_mar_list)
             val_mean_mar = val_batch_mar.mean().item()
@@ -219,7 +229,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, reduced_val_loss))
             reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
             logger.log_validation(valset, val_type,
-                reduced_val_losses, far_pair, ar_pair, mar_pair,
+                reduced_val_losses, far_pair, ar_pair, arr_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 
