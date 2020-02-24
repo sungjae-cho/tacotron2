@@ -13,6 +13,7 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score
+from torch.nn import MSELoss
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
@@ -170,7 +171,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 input_lengths = x[1]
                 output_lengths = x[4]
                 speakers, sex, emotion_vectors, lang = etc
-                y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
+                y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
                 gate_outputs = y_pred[2]
                 alignments = y_pred[3]
                 (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
@@ -319,7 +320,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # Parse the current batch.
             x, y, etc = model.parse_batch(batch)
             speakers, sex, emotion_vectors, lang = etc
-            y_pred, y_pred_speakers = model(x, speakers, emotion_vectors)
+            y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
             (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
             # Caculate losses.
@@ -330,7 +331,16 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
             else:
                 loss_spk_adv = torch.zeros(1).cuda()
-            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
+            if hparams.monotonic_attention:
+                input_lengths = x[1]
+                loss_att_means = MSELoss()(att_means, input_lengths.float())
+                print("input_lengths.mean()", input_lengths.float().mean())
+                print("att_means.mean()", att_means.mean())
+            else:
+                loss_att_means = torch.zeros(1).cuda()
+
+            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv + \
+                hparams.loss_att_means_weight * loss_att_means
 
             if prj_name == "forward_attention_loss":
                 input_lengths = x[1]

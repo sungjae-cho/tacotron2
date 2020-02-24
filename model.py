@@ -1,8 +1,10 @@
 from math import sqrt
 import torch
+import numpy as np
 from torch.autograd import Variable
 from torch import nn
 from torch.nn import functional as F
+from torch.distributions.normal import Normal
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 import time
@@ -84,6 +86,134 @@ class Attention(nn.Module):
         attention_weights = F.softmax(alignment, dim=1)
         attention_context = torch.bmm(attention_weights.unsqueeze(1), memory)
         attention_context = attention_context.squeeze(1)
+
+        return attention_context, attention_weights
+
+
+class MontonicAttention(nn.Module):
+    def __init__(self, attention_rnn_dim, embedding_dim, attention_dim,
+                 attention_location_n_filters, attention_location_kernel_size):
+        super(MontonicAttention, self).__init__()
+        self.query_layer = LinearNorm(attention_rnn_dim, attention_dim,
+                                      bias=False, w_init_gain='tanh')
+        self.memory_layer = LinearNorm(embedding_dim, attention_dim, bias=False,
+                                       w_init_gain='tanh')
+        self.mean_layer = LinearNorm(attention_dim, 5, bias=False, w_init_gain='sigmoid')
+        self.logvar_layer = LinearNorm(attention_dim, 1, bias=False, w_init_gain='linear')
+
+        self.location_layer = LocationLayer(attention_location_n_filters,
+                                            attention_location_kernel_size,
+                                            attention_dim)
+        self.score_mask_value = 0
+
+        self.prev_means = None
+        self.prev_logvars = None
+        self.logvar_min = np.log(0.1**2)
+        self.logvar_max = np.log(36.770**2)
+
+
+    def get_means(self):
+        return self.prev_means
+
+
+    def normal_pdf(self, batch_txt_length, means, stds):
+        '''
+        PARAMS
+        -----
+        batch_txt_length: int.
+        means: torch.Tensor.
+        - size: [batch_size]
+        stds: torch.Tensor.
+        - size: [batch_size]
+
+        RETURNS
+        -----
+        p: torch.Tensor.
+        - size: [batch_size, batch_txt_length]
+        '''
+        enc_steps = batch_txt_length
+        batch_size = means.size(0)
+
+        means = means.unsqueeze(1).expand(means.size(0), enc_steps)
+        stds = stds.unsqueeze(1).expand(stds.size(0), enc_steps)
+
+        x = torch.Tensor(np.arange(enc_steps).reshape((1, enc_steps))).cuda()
+        x = x.expand(batch_size, enc_steps)
+
+        p = Normal(means, stds).cdf(x+0.5) - Normal(means, stds).cdf(x-0.5)
+        #p = Normal(means, stds).log_prob(x).exp()
+        # p_sum is a normalizing factor to make the sum across the encoding dimension 1.
+        p_sum = p.sum(dim=1, keepdim=True).expand(p.size())
+        '''print("means.max()", means.max())
+        print("means.max()", means.min())
+        print("stds.max()", stds.max())
+        print("stds.max()", stds.max())
+        print("p_sum.min()", p_sum.min().item())
+        print("p_sum.max()", p_sum.max().item())'''
+        #p = p / p_sum
+
+        return p
+
+    def reset_initial_state(self):
+        self.prev_means = None
+
+    def forward(self, attention_hidden_state, memory, processed_memory,
+                attention_weights_cat, mask):
+        """
+        PARAMS
+        ------
+        attention_hidden_state: attention rnn last output (batch, n_mel_channels * n_frames_per_step)
+        memory: encoder outputs (B, T_in, attention_dim)
+        processed_memory: processed encoder outputs (B, T_in, encoder_embedding_dim)
+        attention_weights_cat: previous and cummulative attention weights (B, 2, max_time)
+        mask: binary mask for padded data
+        """
+
+        processed_query = self.query_layer(attention_hidden_state.unsqueeze(1))
+        processed_attention_weights = self.location_layer(attention_weights_cat)
+        pred_features = torch.tanh(processed_query + processed_attention_weights + processed_memory)
+        # pred_features.size == (B, T_in, attention_dim)
+
+        # Average pooling across the second dimension
+        # avgpooled.size == (B, attention_dim)
+        avgpooled = pred_features.mean(dim=1)
+
+        # mean_increments.size == (B, 10)
+        mean_increments = F.sigmoid(self.mean_layer(avgpooled))
+        # mean_increment.size == (B)
+        mean_increment = mean_increments.sum(dim=-1)
+        if self.prev_means is None:
+            self.prev_means = torch.zeros_like(mean_increment).cuda()
+
+        means = self.prev_means + mean_increment
+        self.prev_means = means
+
+        # stds.size == (B)
+        logvars = (self.logvar_max - self.logvar_min) \
+            * F.sigmoid(self.logvar_layer(avgpooled)) \
+            / (self.logvar_max + self.logvar_min)
+        '''logvars = F.sigmoid(self.logvar_layer(avgpooled))'''
+
+        stds = logvars.squeeze(-1).exp().sqrt()
+        self.prev_vars = logvars
+
+        batch_txt_length = memory.size(1)
+        attention_weights = self.normal_pdf(batch_txt_length, means, stds)
+
+        if mask is not None:
+            attention_weights.data.masked_fill_(mask, self.score_mask_value)
+        '''print("pred_features.size()", pred_features.size())
+        print("memory.size()", memory.size())
+        print("attention_weights.size()", attention_weights.size())
+        print("avgpooled.size()", avgpooled.size())
+        print("mean_increment.size()", mean_increment.size())
+        print("means.size()", means.size())'''
+        attention_context = torch.bmm(attention_weights.unsqueeze(1), memory)
+        attention_context = attention_context.squeeze(1)
+        #print("attention_weights")
+        #print(attention_weights)
+        #print("attention_context")
+        #print(attention_context)
 
         return attention_context, attention_weights
 
@@ -218,6 +348,7 @@ class Decoder(nn.Module):
         self.p_decoder_dropout = hparams.p_decoder_dropout
         self.has_style_token_lstm_1 = hparams.has_style_token_lstm_1
         self.has_style_token_lstm_2 = hparams.has_style_token_lstm_2
+        self.monotonic_attention = hparams.monotonic_attention
 
         if self.has_style_token_lstm_1:
             self.attention_rnn_input_dim = (hparams.prenet_dim
@@ -242,10 +373,16 @@ class Decoder(nn.Module):
             self.attention_rnn_input_dim,
             hparams.attention_rnn_dim)
 
-        self.attention_layer = Attention(
-            hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
-            hparams.attention_dim, hparams.attention_location_n_filters,
-            hparams.attention_location_kernel_size)
+        if self.monotonic_attention:
+            self.attention_layer = MontonicAttention(
+                hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+                hparams.attention_dim, hparams.attention_location_n_filters,
+                hparams.attention_location_kernel_size)
+        else:
+            self.attention_layer = Attention(
+                hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+                hparams.attention_dim, hparams.attention_location_n_filters,
+                hparams.attention_location_kernel_size)
 
         self.decoder_rnn = nn.LSTMCell(
             self.decoder_rnn_input_dim,
@@ -258,6 +395,13 @@ class Decoder(nn.Module):
         self.gate_layer = LinearNorm(
             hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
             bias=True, w_init_gain='sigmoid')
+
+    def get_attention_means(self):
+        if self.monotonic_attention:
+            att_means = self.attention_layer.get_means()
+        else:
+            att_means = None
+        return att_means
 
     def get_go_frame(self, memory):
         """ Gets all zeros frames to use as first decoder input
@@ -306,6 +450,9 @@ class Decoder(nn.Module):
         self.memory = memory
         self.processed_memory = self.attention_layer.memory_layer(memory)
         self.mask = mask
+
+        if self.monotonic_attention:
+            self.attention_layer.reset_initial_state()
 
     def parse_decoder_inputs(self, decoder_inputs):
         """ Prepares decoder inputs, i.e. mel outputs
@@ -449,7 +596,9 @@ class Decoder(nn.Module):
             attention_contexts) = self.parse_decoder_outputs(
                 mel_outputs, gate_outputs, alignments, attention_contexts)
 
-        return mel_outputs, gate_outputs, alignments, attention_contexts
+        att_means = self.get_attention_means()
+
+        return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
 
     def inference(self, memory, speaker_indices, emotion_vectors):
         """ Decoder inference
@@ -556,9 +705,10 @@ class Tacotron2(nn.Module):
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = self.decoder(
-            encoder_outputs, mels, text_lengths,
-            speaker_embeddings, emotion_embeddings)
+        (mel_outputs, gate_outputs, alignments,
+            attention_contexts, att_means) = self.decoder(
+                encoder_outputs, mels, text_lengths,
+                    speaker_embeddings, emotion_embeddings)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -571,7 +721,7 @@ class Tacotron2(nn.Module):
 
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
-            output_lengths), (logit_outputs, prob_speakers, pred_speakers)
+            output_lengths), (logit_outputs, prob_speakers, pred_speakers), att_means
 
     def inference(self, inputs, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
