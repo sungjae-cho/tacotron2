@@ -59,6 +59,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # With modules
         speaker_adversarial_training=False,
         residual_encoder=False,
+        monotonic_attention=False,
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,
@@ -97,6 +98,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # Attention parameters
         attention_rnn_dim=1024,
         attention_dim=128,
+        loss_att_means_weight=0.1,
 
         # Location Layer parameters
         attention_location_n_filters=32,
