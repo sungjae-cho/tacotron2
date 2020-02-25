@@ -98,7 +98,10 @@ def create_hparams(hparams_string=None, verbose=False):
         # Attention parameters
         attention_rnn_dim=1024,
         attention_dim=128,
+
+        # MontonicAttention parameters
         loss_att_means_weight=0.1,
+        n_mean_units=1,
 
         # Location Layer parameters
         attention_location_n_filters=32,

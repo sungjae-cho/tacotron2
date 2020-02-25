@@ -91,14 +91,15 @@ class Attention(nn.Module):
 
 
 class MontonicAttention(nn.Module):
-    def __init__(self, attention_rnn_dim, embedding_dim, attention_dim,
+    def __init__(self, hparams, attention_rnn_dim, embedding_dim, attention_dim,
                  attention_location_n_filters, attention_location_kernel_size):
         super(MontonicAttention, self).__init__()
         self.query_layer = LinearNorm(attention_rnn_dim, attention_dim,
                                       bias=False, w_init_gain='tanh')
         self.memory_layer = LinearNorm(embedding_dim, attention_dim, bias=False,
                                        w_init_gain='tanh')
-        self.mean_layer = LinearNorm(attention_dim, 5, bias=False, w_init_gain='sigmoid')
+        self.mean_layer = LinearNorm(attention_dim, hparams.n_mean_units,
+            bias=False, w_init_gain='sigmoid')
         self.logvar_layer = LinearNorm(attention_dim, 1, bias=False, w_init_gain='linear')
 
         self.location_layer = LocationLayer(attention_location_n_filters,
@@ -375,6 +376,7 @@ class Decoder(nn.Module):
 
         if self.monotonic_attention:
             self.attention_layer = MontonicAttention(
+                hparams,
                 hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
                 hparams.attention_dim, hparams.attention_location_n_filters,
                 hparams.attention_location_kernel_size)
