@@ -185,8 +185,6 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 if hparams.monotonic_attention:
                     input_lengths = x[1]
                     loss_att_means = MSELoss()(att_means, input_lengths.float())
-                    print("input_lengths.mean()", input_lengths.float().mean())
-                    print("att_means.mean()", att_means.mean())
                 else:
                     loss_att_means = torch.zeros(1).cuda()
 
@@ -347,8 +345,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             if hparams.monotonic_attention:
                 input_lengths = x[1]
                 loss_att_means = MSELoss()(att_means, input_lengths.float())
-                print("input_lengths.mean()", input_lengths.float().mean())
-                print("att_means.mean()", att_means.mean())
             else:
                 loss_att_means = torch.zeros(1).cuda()
 
