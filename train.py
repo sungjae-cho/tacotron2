@@ -182,15 +182,26 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
                 else:
                     loss_spk_adv = torch.zeros(1).cuda()
-                loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv
+                if hparams.monotonic_attention:
+                    input_lengths = x[1]
+                    loss_att_means = MSELoss()(att_means, input_lengths.float())
+                    print("input_lengths.mean()", input_lengths.float().mean())
+                    print("att_means.mean()", att_means.mean())
+                else:
+                    loss_att_means = torch.zeros(1).cuda()
+
+                loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv + \
+                    hparams.loss_att_means_weight * loss_att_means
 
                 if distributed_run:
                     reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                     reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                    reduced_val_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
                     reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
+                    reduced_val_loss_att_means = loss_att_means.item()
                     reduced_val_loss = loss.item()
                 val_loss += reduced_val_loss
 
@@ -228,7 +239,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, reduced_val_loss))
-            reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel, reduced_val_loss_spk_adv)
+            reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel,
+                reduced_val_loss_spk_adv, reduced_val_loss_att_means)
             logger.log_validation(valset, val_type,
                 reduced_val_losses, far_pair, ar_pair, arr_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
@@ -360,10 +372,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                reduced_loss_att_means = reduce_tensor(reduced_loss_att_means.data, n_gpus).item()
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_spk_adv = loss_spk_adv.item()
+                reduced_loss_att_means = loss_att_means.item()
                 reduced_loss = loss.item()
             if hparams.fp16_run:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
@@ -385,9 +399,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} SpkAdv loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, grad_norm, duration))
-                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_spk_adv)
+                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means)
                 logger.log_training(
                     reduced_losses, grad_norm, learning_rate, duration, x, etc,
                     y_pred, pred_speakers,

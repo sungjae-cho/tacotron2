@@ -73,7 +73,7 @@ class Tacotron2Logger(SummaryWriter):
             x, etc, y_pred, pred_speakers, iteration, epoch,
             forward_attention_loss=None):
 
-            reduced_loss, reduced_loss_mel, reduced_loss_spk_adv = reduced_losses
+            reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means = reduced_losses
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
             speakers, sex, emotion_vectors, lang = etc
             _, mel_outputs, gate_outputs, alignments = y_pred
@@ -122,6 +122,12 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({"train/forward_attention_loss": forward_attention_loss}
                            , step=iteration)
 
+           # Logging loss_monotonic_attention_MSE.
+            if self.hparams.monotonic_attention:
+                wandb.log({"train/loss_monotonic_attention_MSE": reduced_loss_att_means}
+                           , step=iteration)
+
+
 
     def log_validation(self, valset, val_type,
         reduced_losses, far_pair, ar_pair, arr_pair, mar_pair,
@@ -130,7 +136,7 @@ class Tacotron2Logger(SummaryWriter):
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
 
-        reduced_loss, reduced_loss_mel, reduced_loss_spk_adv = reduced_losses
+        reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means = reduced_losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
@@ -168,6 +174,11 @@ class Tacotron2Logger(SummaryWriter):
             wandb.log({"{}/loss_spk_adv".format(log_prefix): reduced_loss_spk_adv,
                        "{}/spk_adv_accuracy".format(log_prefix): val_spk_adv_accuracy}
                        , step=iteration)
+
+        # Logging loss_monotonic_attention_MSE.
+         if self.hparams.monotonic_attention:
+             wandb.log({"{}/loss_monotonic_attention_MSE".format(log_prefix): reduced_loss_att_means}
+                        , step=iteration)
 
         # [#2] Logging for all val_type except ('all', 'all')
         if (val_speaker, val_emotion) != ('all', 'all'):
