@@ -176,7 +176,7 @@ class Tacotron2Logger(SummaryWriter):
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
-         if self.hparams.monotonic_attention:
+        if self.hparams.monotonic_attention:
              wandb.log({"{}/loss_monotonic_attention_MSE".format(log_prefix): reduced_loss_att_means}
                         , step=iteration)
 
