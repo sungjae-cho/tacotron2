@@ -297,7 +297,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             epoch_offset = max(0, int(iteration / len(train_loader)))
 
     if pretrained_path is not None:
-        model = load_pretrained_model(model, pretrained_path)[0]
+        model = load_pretrained_model(model, pretrained_path,
+            freeze_pretrained=hparams.freeze_pretrained)[0]
 
     model.train()
     is_overflow = False

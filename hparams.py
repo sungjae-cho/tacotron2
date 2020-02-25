@@ -122,7 +122,8 @@ def create_hparams(hparams_string=None, verbose=False):
         weight_decay=1e-6,
         grad_clip_thresh=1.0, # gradient clipping L2-norm
         batch_size=64,
-        mask_padding=True  # set model's padded outputs to padded values
+        mask_padding=True,  # set model's padded outputs to padded values
+        freeze_pretrained=False
     )
 
     if hparams_string:
