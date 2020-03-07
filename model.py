@@ -9,6 +9,7 @@ from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 import time
 from utils import get_spk_adv_inputs
+from utils import hard_clip, soft_clip
 
 
 class LocationLayer(nn.Module):
@@ -180,7 +181,10 @@ class MontonicAttention(nn.Module):
         avgpooled = pred_features.mean(dim=1)
 
         # mean_increments.size == (B, 10)
-        mean_increments = F.sigmoid(self.mean_layer(avgpooled))
+        #mean_increments = F.sigmoid(self.mean_layer(avgpooled))
+        #mean_increments = F.relu(self.mean_layer(avgpooled))
+        #mean_increments = hard_clip(self.mean_layer(avgpooled))
+        mean_increments = soft_clip(self.mean_layer(avgpooled))
         # mean_increment.size == (B)
         mean_increment = mean_increments.sum(dim=-1)
         if self.prev_means is None:
@@ -192,7 +196,7 @@ class MontonicAttention(nn.Module):
         # stds.size == (B)
         logvars = (self.logvar_max - self.logvar_min) \
             * F.sigmoid(self.logvar_layer(avgpooled)) \
-            / (self.logvar_max + self.logvar_min)
+             + self.logvar_min
         '''logvars = F.sigmoid(self.logvar_layer(avgpooled))'''
 
         stds = logvars.squeeze(-1).exp().sqrt()
