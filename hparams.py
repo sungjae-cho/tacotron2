@@ -33,6 +33,10 @@ def create_hparams(hparams_string=None, verbose=False):
             'emovdb':'metadata/emovdb.csv'
         },
         all_dbs = ['ljspeech', 'emovdb'],
+        # If all_speakers==None, use all possible speakers from all_dbs.
+        all_speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
+        # If all_emotions==None, use all possible speakers from all_dbs.
+        all_emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
         dbs = ['ljspeech', 'emovdb'],
         emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'], # Emotions to import
         text_cleaners=['english_cleaners'],
@@ -67,7 +71,6 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_embedding_dim=512,
 
         # SpeakerEncoder parameters
-        max_speakers=6,
         speaker_embedding_dim=6,
 
         # LanguageEncoder parameters
@@ -75,7 +78,6 @@ def create_hparams(hparams_string=None, verbose=False):
         lang_embedding_dim=3,
 
         # EmotionEncoder parameters
-        max_emotions=5,
         emotion_embedding_dim=3,
         neutral_zero_vector=True,
 

@@ -818,7 +818,7 @@ class SpeakerEncoder(nn.Module):
     def __init__(self, hparams):
         super(SpeakerEncoder, self).__init__()
         self.out_dim = hparams.speaker_embedding_dim
-        self.max_speakers = hparams.max_speakers
+        self.max_speakers = len(hparams.all_speakers)
         #self.linear_projection = torch.nn.Linear(in_features=self.max_speakers, out_features=self.out_dim, bias=False)
         self.linear_projection = nn.Embedding(self.max_speakers, self.out_dim)
 
@@ -832,7 +832,7 @@ class EmotionEncoder(nn.Module):
     def __init__(self, hparams):
         super(EmotionEncoder, self).__init__()
         self.out_dim = hparams.emotion_embedding_dim
-        self.max_emotions = hparams.max_emotions
+        self.max_emotions = len(hparams.all_emotions)
         if hparams.neutral_zero_vector:
             self.linear_projection = torch.nn.Linear(in_features=self.max_emotions-1, out_features=self.out_dim, bias=False)
             #self.linear_projection = LinearNorm(self.max_emotions-1, self.out_dim, bias=False, w_init_gain='linear')
@@ -867,7 +867,7 @@ class SpeakerClassifier(nn.Module):
 
         self.text_embedding_size = hparams.encoder_embedding_dim
         self.n_hidden_units = hparams.n_hidden_units
-        self.max_speakers = hparams.max_speakers
+        self.max_speakers = len(hparams.all_speakers)
         self.revgrad_lambda = hparams.revgrad_lambda
         self.revgrad_max_grad_norm = hparams.revgrad_max_grad_norm
 
