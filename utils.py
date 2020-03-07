@@ -2,6 +2,7 @@ import numpy as np
 from scipy.io.wavfile import read
 import torch
 import pandas as pd
+import torch.nn.functional as F
 
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
@@ -51,7 +52,7 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
     all_csv_paths = list()
     for db in hparams.all_dbs:
         all_csv_paths.append(hparams.csv_data_paths[db])
-        
+
     for csv_path in all_csv_paths:
         df = pd.read_csv(csv_path)
         df = df[df.split == split]
@@ -274,3 +275,9 @@ def get_spk_adv_targets(speaker_targets, input_lengths):
     spk_adv_targets = torch.cat(spk_adv_target_list)
 
     return spk_adv_targets
+
+def hard_clip(input):
+    return F.hardtanh(input + 0.5 , min_val=0, max_val=1)
+
+def soft_clip(input, p=10):
+    return torch.log(1 + torch.exp(p * input)) / p - torch.log(1 + torch.exp(p * (input - 1))) / p
