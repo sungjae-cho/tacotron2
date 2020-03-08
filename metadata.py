@@ -6,12 +6,13 @@ from tqdm import tqdm
 from ffmpy import FFmpeg
 
 class MetaData:
-    def __init__(self, db):
+    def __init__(self, db, use_nvidia_ljs_split=True):
         self.db = db
         self.ljs_path = '/data2/sungjaecho/data_tts/LJSpeech-1.1'
         self.emovdb_path = '/data2/sungjaecho/data_tts/EmoV-DB/EmoV-DB'
         self.metadata_path = 'metadata'
         self.df = None
+        self.use_nvidia_ljs_split = use_nvidia_ljs_split
 
     def get_df(self, split=None):
         if split is None:
@@ -36,6 +37,7 @@ class MetaData:
                 with open(csv_path, encoding='utf-8') as f:
                     wavpath_rawtext_text = [line.strip().split("|") for line in f]
                 self.df = pd.DataFrame(columns=['id','text_raw','text'])
+                print("Loading {} data...".format(self.db))
                 for i in tqdm(range(len(wavpath_rawtext_text))):
                     # the length of row is 3
                     row = wavpath_rawtext_text[i]
@@ -49,7 +51,7 @@ class MetaData:
             self.df = pd.read_csv(csv_path, sep=',', encoding='utf-8')
             self.df = self.df.rename(columns={
                 'sentence_path':'wav_path',
-                'transcription':'text'})
+                'script':'text'})
             self.df.speaker = self.df.speaker.apply(self.change_speaker_name)
 
         print("Loaded from {}".format(csv_path))
@@ -70,30 +72,66 @@ class MetaData:
 
 
         if self.db == "emovdb":
+            self.df['wav_path'] = self.df.wav_path.apply(self.get_wav_path)
+            print(self.df['wav_path'])
             self.df['sex'] = self.df.speaker.apply(self.get_sex)
             self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
             self.df = self.df[['database','split','id','wav_path','duration','text','speaker','sex','emotion','lang']]
 
     def get_split_labels(self, split_ratio):
-        df_len = len(self.df)
-        i_val_start = int(df_len * split_ratio['train'])
-        i_test_start = int(df_len * (split_ratio['train'] + split_ratio['val']))
+        if self.use_nvidia_ljs_split and self.db == "ljspeech":
+            split_labels = list()
 
-        n_train = i_val_start
-        n_val = i_test_start - i_val_start
-        n_test = df_len - i_test_start
+            split_types = ['train', 'val', 'test']
+            db_path = dict()
+            db_path['train'] = 'filelists/ljs_audio_text_train_filelist.txt'
+            db_path['val']   = 'filelists/ljs_audio_text_val_filelist.txt'
+            db_path['test']  = 'filelists/ljs_audio_text_test_filelist.txt'
 
-        split_labels = (['train'] * n_train) + (['val'] * n_val) + (['test'] * n_test)
+            db = dict()
+            id_sets = dict()
+            for split_type in split_types:
+                id_sets[split_type] = set()
+                db[split_type] = pd.read_csv(db_path[split_type], sep='|', header=None, encoding='utf-8', quoting=3)
+                db[split_type] = db[split_type].rename(columns={0:"wav_path", 1:"text"})
+                for i, row in db[split_type].iterrows():
+                    wav_id = os.path.splitext(os.path.split(row.wav_path)[1])[0]
+                    id_sets[split_type].add(wav_id)
 
-        random.seed(3141)
-        random.shuffle(split_labels)
+            for i, row in self.df.iterrows():
+                for split_type in split_types:
+                    if row.id in id_sets[split_type]:
+                        split_labels.append(split_type)
+
+        else:
+            df_len = len(self.df)
+            i_val_start = int(df_len * split_ratio['train'])
+            i_test_start = int(df_len * (split_ratio['train'] + split_ratio['val']))
+
+            n_train = i_val_start
+            n_val = i_test_start - i_val_start
+            n_test = df_len - i_test_start
+
+            print("split_ratio", split_ratio)
+            print("(n_train, n_val, n_test)", (n_train, n_val, n_test))
+
+            split_labels = (['train'] * n_train) + (['val'] * n_val) + (['test'] * n_test)
+
+            random.seed(3141)
+            random.shuffle(split_labels)
+
 
         return split_labels
 
-    def get_wav_path(self, id, speaker=None, emotion=None):
+    def get_wav_path(self, col):
         if self.db == "ljspeech":
-            wav_path = os.path.join(self.ljs_path, 'wavs', "{}.wav".format(id))
+            wav_path = os.path.join(self.ljs_path, 'wavs', "{}.wav".format(col))
+
+            return wav_path
+
+        if self.db == "emovdb":
+            wav_path = os.path.join(self.emovdb_path, col)
 
             return wav_path
 
@@ -117,7 +155,7 @@ class MetaData:
 
         return dst_speaker_name
 
-    def make_new_db(self, split_ratio):
+    def make_new_db(self, split_ratio={'train':0.95, 'val':0.025, 'test':0.025}):
         self.load_original_db()
         self.add_columns(split_ratio)
 
@@ -149,12 +187,13 @@ class MetaData:
 
 def save_csv_db():
     db = "ljspeech"
-    split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
-    md = MetaData(db)
-    md.make_new_db(split_ratio)
+    #split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
+    md = MetaData(db, use_nvidia_ljs_split=True)
+    md.make_new_db()
 
     db = "emovdb"
-    split_ratio = {'train':0.95, 'val':0.025, 'test':0.025}
+    test_ratio = 0.2
+    split_ratio = {'train':(1 - test_ratio)**2, 'val':(1 - test_ratio)*test_ratio, 'test':test_ratio}
     md = MetaData(db)
     md.make_new_db(split_ratio)
 
@@ -216,10 +255,10 @@ def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
 
 
 def main():
-    #save_csv_db()
-    #print_data_stat()
+    save_csv_db()
+    print_data_stat()
     #debug()
-    make_one_sample_rate(db = "emovdb", sample_rate=22050)
+    #make_one_sample_rate(db = "emovdb", sample_rate=22050)
 
 if __name__ == "__main__":
     main()

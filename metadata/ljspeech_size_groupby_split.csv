@@ -1,4 +1,4 @@
 split,size
-test,66
-train,12969
-val,65
+test,500
+train,12500
+val,100
