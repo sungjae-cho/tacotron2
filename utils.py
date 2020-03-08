@@ -128,7 +128,7 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 
 def load_pretrained_model(finetune_model, pretrained_path, model_optim=False,
-        resume=False, freeze_pretrained=False, except_for=None):
+        resume=False, freeze_pretrained=False, except_for=[None]):
     '''
     Author: Tae-Ho Kim (ktho894[at]gmail.com)
         load pretrained model to finetun_model.
@@ -143,7 +143,7 @@ def load_pretrained_model(finetune_model, pretrained_path, model_optim=False,
         frozen_weights = freeze_pretrained
     elif freeze_pretrained:
         frozen_weights = list(feed_weight.keys())
-        if except_for is not None:
+        if except_for[0] is not None:
             for except_key in except_for:
                 frozen_weights = [xx for xx in frozen_weights if except_key not in xx]
     else:
