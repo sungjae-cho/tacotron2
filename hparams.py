@@ -32,13 +32,18 @@ def create_hparams(hparams_string=None, verbose=False):
             'ljspeech':'metadata/ljspeech.csv',
             'emovdb':'metadata/emovdb.csv'
         },
+        # All DBs to be used in the project
         all_dbs = ['ljspeech', 'emovdb'],
-        # If all_speakers==None, use all possible speakers from all_dbs.
+        # All speakers to be used in the project
         all_speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
-        # If all_emotions==None, use all possible speakers from all_dbs.
+        # All emotions to be used in the project
         all_emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
+        # DBs to use while this run
         dbs = ['ljspeech', 'emovdb'],
-        emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'], # Emotions to import
+        # Emotions to use while this run
+        emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
+        # Speakers to use while this run
+        speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
         text_cleaners=['english_cleaners'],
 
         ################################

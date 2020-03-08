@@ -18,8 +18,9 @@ class TextMelLoader(torch.utils.data.Dataset):
     def __init__(self, hparams, split, speaker=None, emotion=None):
         loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
         self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
-        self.max_emotions = hparams.max_emotions
-        self.max_speakers = hparams.max_speakers
+        self.hparams = hparams
+        self.max_emotions = len(hparams.all_emotions)
+        self.max_speakers = len(hparams.all_speakers)
         self.speaker_list = sorted(loaded_tuple[1])
         self.sex_list = sorted(loaded_tuple[2])
         self.emotion_list = sorted(loaded_tuple[3])
@@ -100,14 +101,10 @@ class TextMelLoader(torch.utils.data.Dataset):
             one_hot_vector_size = self.max_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
-            elif emotion == 'amused':
-                emotion_tensor = torch.eye(one_hot_vector_size)[0]
-            elif emotion == 'angry':
-                emotion_tensor = torch.eye(one_hot_vector_size)[1]
-            elif emotion == 'disgusted':
-                emotion_tensor = torch.eye(one_hot_vector_size)[2]
-            elif emotion == 'sleepy':
-                emotion_tensor = torch.eye(one_hot_vector_size)[3]
+            nonneutral_emotions = self.hparams.all_emotions.copy()
+            nonneutral_emotions.remove('neutral')
+            for i, emo in enumerate(nonneutral_emotions):
+                emotion_tensor = torch.eye(one_hot_vector_size)[i]
         else:
             emotion_tensor = one_hot_encoding(
                 self.emotion2int(emotion), self.max_emotions)
@@ -140,14 +137,9 @@ class TextMelLoader(torch.utils.data.Dataset):
                 str_emotion = 'neutral'
             else:
                 int_emotion = torch.argmax(emotion_tensor).item()
-                if int_emotion == 0:
-                    str_emotion = 'amused'
-                elif int_emotion == 1:
-                    str_emotion = 'angry'
-                elif int_emotion == 2:
-                    str_emotion = 'disgusted'
-                elif int_emotion == 3:
-                    str_emotion = 'sleepy'
+                nonneutral_emotions = self.hparams.all_emotions.copy()
+                nonneutral_emotions.remove('neutral')
+                str_emotion = nonneutral_emotions[int_emotion]
         else:
             str_emotion = self.int2emotion(torch.argmax(emotion_tensor).item())
 
