@@ -133,7 +133,8 @@ def create_hparams(hparams_string=None, verbose=False):
         grad_clip_thresh=1.0, # gradient clipping L2-norm
         batch_size=64,
         mask_padding=True,  # set model's padded outputs to padded values
-        freeze_pretrained=False
+        freeze_pretrained=False,
+        freeze_except_for=['string_contained_in_modules_to_exclude']
     )
 
     if hparams_string:

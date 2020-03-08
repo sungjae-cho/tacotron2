@@ -308,7 +308,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
     if pretrained_path is not None:
         model = load_pretrained_model(model, pretrained_path,
-            freeze_pretrained=hparams.freeze_pretrained)[0]
+            freeze_pretrained=hparams.freeze_pretrained,
+            except_for=hparams.freeze_except_for)[0]
 
     model.train()
     is_overflow = False
@@ -467,6 +468,7 @@ if __name__ == '__main__':
                         help='give a distinct name for this running')
     parser.add_argument('--prj_name', type=str, default='tts-tacotron2',
                         help='give a project name for this running')
+
 
     args = parser.parse_args()
     hparams = create_hparams(args.hparams)
