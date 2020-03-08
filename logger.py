@@ -7,7 +7,7 @@ sys.path.append('waveglow/')
 import warnings
 warnings.filterwarnings('ignore')
 from sklearn.metrics import accuracy_score
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
     plot_embeddings_to_numpy
