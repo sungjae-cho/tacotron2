@@ -69,11 +69,11 @@ class Tacotron2Logger(SummaryWriter):
         return speaker_embeddings, emotion_embeddings
 
 
-    def log_training(self, reduced_losses, grad_norm, learning_rate, duration,
+    def log_training(self, losses, grad_norm, learning_rate, duration,
             x, etc, y_pred, pred_speakers, iteration, epoch,
             forward_attention_loss=None):
 
-            reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means = reduced_losses
+            loss, loss_mel, loss_spk_adv, loss_att_means = losses
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
             speakers, sex, emotion_vectors, lang = etc
             _, mel_outputs, gate_outputs, alignments = y_pred
@@ -90,8 +90,8 @@ class Tacotron2Logger(SummaryWriter):
             # wandb log
             wandb.log({"epoch": epoch,
                        "iteration":iteration,
-                       "train/loss": reduced_loss,
-                       "train/loss_mel": reduced_loss_mel,
+                       "train/loss": loss,
+                       "train/loss_mel": loss_mel,
                        "train/grad_norm": grad_norm,
                        "train/learning_rate": learning_rate,
                        "train/iter_duration": duration,
@@ -113,7 +113,7 @@ class Tacotron2Logger(SummaryWriter):
                 np_pred_speakers = pred_speakers.cpu().numpy()
                 spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
 
-                wandb.log({"train/loss_spk_adv": reduced_loss_spk_adv,
+                wandb.log({"train/loss_spk_adv": loss_spk_adv,
                            "train/spk_adv_accuracy": spk_adv_accuracy}
                            , step=iteration)
 
@@ -124,19 +124,19 @@ class Tacotron2Logger(SummaryWriter):
 
            # Logging loss_monotonic_attention_MSE.
             if self.hparams.monotonic_attention:
-                wandb.log({"train/loss_monotonic_attention_MSE": reduced_loss_att_means}
+                wandb.log({"train/loss_monotonic_attention_MSE": loss_att_means}
                            , step=iteration)
 
 
 
     def log_validation(self, valset, val_type,
-        reduced_losses, far_pair, ar_pair, arr_pair, mar_pair,
+        losses, far_pair, ar_pair, arr_pair, mar_pair,
         model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
 
-        reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means = reduced_losses
+        loss, loss_mel, loss_spk_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
@@ -151,8 +151,8 @@ class Tacotron2Logger(SummaryWriter):
 
         # [#1] Logging for all val_type
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
-        wandb.log({"{}/loss".format(log_prefix): reduced_loss,
-                   "{}/loss_mel".format(log_prefix): reduced_loss_mel,
+        wandb.log({"{}/loss".format(log_prefix): loss,
+                   "{}/loss_mel".format(log_prefix): loss_mel,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
@@ -171,13 +171,13 @@ class Tacotron2Logger(SummaryWriter):
             np_pred_speakers = pred_speakers.cpu().numpy()
             val_spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
 
-            wandb.log({"{}/loss_spk_adv".format(log_prefix): reduced_loss_spk_adv,
+            wandb.log({"{}/loss_spk_adv".format(log_prefix): loss_spk_adv,
                        "{}/spk_adv_accuracy".format(log_prefix): val_spk_adv_accuracy}
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
         if self.hparams.monotonic_attention:
-             wandb.log({"{}/loss_monotonic_attention_MSE".format(log_prefix): reduced_loss_att_means}
+             wandb.log({"{}/loss_monotonic_attention_MSE".format(log_prefix): loss_att_means}
                         , step=iteration)
 
         # [#2] Logging for all val_type except ('all', 'all')

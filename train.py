@@ -155,6 +155,9 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                                     pin_memory=False, collate_fn=collate_fn)
 
             criterion, criterion_dom = criterions
+            val_loss_mel = 0.0
+            val_loss_spk_adv = 0.0
+            val_loss_att_means = 0.0
             val_loss = 0.0
 
             # forward_attention_ratio
@@ -201,6 +204,10 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss_att_means = loss_att_means.item()
                     reduced_val_loss = loss.item()
+
+                val_loss_mel += reduced_val_loss_mel
+                val_loss_spk_adv += reduced_val_loss_spk_adv
+                val_loss_att_means += reduced_val_loss_att_means
                 val_loss += reduced_val_loss
 
                 # forward_attention_ratio
@@ -216,7 +223,11 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
                 batch_mar_list.append(batch_mar)
 
+            val_loss_mel = val_loss_mel / (i + 1)
+            val_loss_spk_adv = val_loss_spk_adv / (i + 1)
+            val_loss_att_means = val_loss_att_means / (i + 1)
             val_loss = val_loss / (i + 1)
+
             # forward_attention_ratio
             val_batch_far = torch.cat(batch_far_list)
             val_mean_far = val_batch_far.mean().item()
@@ -236,11 +247,10 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
         model.train()
         if rank == 0:
-            print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, reduced_val_loss))
-            reduced_val_losses = (reduced_val_loss, reduced_val_loss_mel,
-                reduced_val_loss_spk_adv, reduced_val_loss_att_means)
+            print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
+            val_losses = (val_loss, val_loss_mel, val_loss_spk_adv, val_loss_att_means)
             logger.log_validation(valset, val_type,
-                reduced_val_losses, far_pair, ar_pair, arr_pair, mar_pair,
+                val_losses, far_pair, ar_pair, arr_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 
