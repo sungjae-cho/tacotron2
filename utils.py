@@ -139,9 +139,9 @@ def load_pretrained_model(finetune_model, pretrained_path, model_optim=False,
     checkpoint = torch.load(pretrained_path, map_location=lambda storage, loc: storage)
     feed_weight = checkpoint['state_dict'].copy()
 
-    if type(freeze_pretrained) == list:
-        frozen_weights = freeze_pretrained
-    elif freeze_pretrained:
+    #if type(freeze_pretrained) == list:
+    #    frozen_weights = freeze_pretrained
+    if freeze_pretrained:
         frozen_weights = list(feed_weight.keys())
         if except_for[0] is not None:
             for except_key in except_for:
