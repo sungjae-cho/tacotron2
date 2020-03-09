@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from scipy.io.wavfile import read
 import torch
 import pandas as pd
@@ -39,7 +40,7 @@ def load_filepaths_and_text(filename, split="|"):
     return filepaths_and_text
 
 
-def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion):
+def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion, random_seed):
     '''
     split in {'train', 'val', 'test'}
     speaker: str.
@@ -102,6 +103,9 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
     # Upsampling datasets that do not have as many samples as the largest
     # dataset has to the extent that the largest one has.
     if split == 'train':
+        # Shuffle every time upsampling.
+        df = df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+
         df_size = df.groupby(['speaker', 'emotion']).size().reset_index(name='size')
         max_size = df_size['size'].max()
 

@@ -16,9 +16,18 @@ class TextMelLoader(torch.utils.data.Dataset):
         3) computes mel-spectrograms from audio files.
     """
     def __init__(self, hparams, split, speaker=None, emotion=None):
-        loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion)
-        self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
         self.hparams = hparams
+        self.split = split
+        self.speaker = speaker
+        self.emotion = emotion
+        self.iterations = 0
+
+        loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(
+            self.hparams, self.split, self.speaker, self.emotion, self.iterations)
+        self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
+        random.seed(self.iterations)
+        random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
+
         self.max_emotions = len(hparams.all_emotions)
         self.max_speakers = len(hparams.all_speakers)
         self.speaker_list = sorted(loaded_tuple[1])
@@ -34,8 +43,9 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.filter_length, hparams.hop_length, hparams.win_length,
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
-        random.seed(1234)
-        random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
+
+
+
 
 
     def get_mel_text_pair(self, audiopath_and_text):
@@ -170,7 +180,18 @@ class TextMelLoader(torch.utils.data.Dataset):
         return self.lang_list[integer]
 
     def __getitem__(self, index):
-        return self.get_mel_text_etc_tuple(self.wavpath_text_speaker_sex_emotion_lang[index])
+        mel_text_etc_tuple = self.get_mel_text_etc_tuple(self.wavpath_text_speaker_sex_emotion_lang[index])
+        if self.split == 'train':
+            self.iterations += 1
+            if self.iterations % (self.__len__() - (self.__len__() % self.hparams.batch_size)) == 0:
+                print("Upsampling the training set again.")
+                print("Iterations", self.iterations)
+                loaded_tuple = load_wavpath_text_speaker_sex_emotion_lang(
+                    self.hparams, self.split, self.speaker, self.emotion, self.iterations)
+                self.wavpath_text_speaker_sex_emotion_lang = loaded_tuple[0]
+                random.seed(self.iterations)
+                random.shuffle(self.wavpath_text_speaker_sex_emotion_lang)
+        return mel_text_etc_tuple
 
     def __len__(self):
         return len(self.wavpath_text_speaker_sex_emotion_lang)
