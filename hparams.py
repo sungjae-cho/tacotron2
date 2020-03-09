@@ -134,7 +134,7 @@ def create_hparams(hparams_string=None, verbose=False):
         batch_size=64,
         mask_padding=True,  # set model's padded outputs to padded values
         freeze_pretrained=False,
-        freeze_except_for=[None]
+        freeze_except_for=['nothing']
     )
 
     if hparams_string:
