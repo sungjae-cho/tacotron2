@@ -71,7 +71,10 @@ def prepare_dataloaders(hparams):
                               sampler=train_sampler,
                               batch_size=hparams.batch_size, pin_memory=False,
                               drop_last=True, collate_fn=collate_fn)
-    return train_loader, valsets, collate_fn
+    return train_loader, trainset, valsets, collate_fn
+
+
+
 
 
 def prepare_directories_and_logger(hparams, output_directory, log_directory, rank,
@@ -299,7 +302,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         hparams,
         output_directory, log_directory, rank, run_name, prj_name, resume)
 
-    train_loader, valsets, collate_fn = prepare_dataloaders(hparams)
+    train_loader, trainset, valsets, collate_fn = prepare_dataloaders(hparams)
 
     # Load checkpoint if one exists
     iteration = 0
@@ -329,7 +332,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
-        print("Epoch: {}".format(epoch))
+        print("Start Epoch {}:".format(epoch+1))
         for i, batch in enumerate(train_loader):
             batches_per_epoch = len(train_loader)
             float_epoch = iteration / batches_per_epoch
@@ -426,7 +429,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                                     lr_scheduler, checkpoint_path)
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
-                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch+1))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
                                     lr_scheduler, checkpoint_path)
 
@@ -448,6 +451,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 lr_scheduler.step()
 
             iteration += 1
+
+        # End of the current epoch
+        # Upsampling again
+        trainset.upsampling(iteration)
 
 
 if __name__ == '__main__':
