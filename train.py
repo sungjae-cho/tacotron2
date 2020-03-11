@@ -415,7 +415,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 logger.log_training(
                     reduced_losses, grad_norm, learning_rate, duration, x, etc,
                     y_pred, pred_speakers,
-                    iteration, float_epoch, float_fa_loss)
+                    iteration, float_epoch, batches_per_epoch, float_fa_loss)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 criterions = (criterion, criterion_dom)

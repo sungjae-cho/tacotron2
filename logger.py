@@ -69,64 +69,138 @@ class Tacotron2Logger(SummaryWriter):
         return speaker_embeddings, emotion_embeddings
 
 
+    def is_first_batch(self, iteration):
+        if (iteration % self.batches_per_epoch) == 0:
+            return True
+        else:
+            return False
+
+
+    def is_last_batch(self, iteration):
+        if (iteration % self.batches_per_epoch) == (self.batches_per_epoch - 1):
+            return True
+        else:
+            return False
+
+
+    def init_training_epoch_variables(self):
+        self.sum_loss = 0
+        self.sum_loss_mel = 0
+        self.sum_loss_spk_adv = 0
+        self.sum_loss_att_means = 0
+
+        self.sum_grad_norm = 0
+
+        self.sum_mean_far = 0
+        self.sum_mean_ar = 0
+        self.sum_mean_arr = 0
+        self.sum_mean_mar = 0
+        self.sum_mean_attention_quality = 0
+
+        self.sum_spk_adv_accuracy = 0
+
+
     def log_training(self, losses, grad_norm, learning_rate, duration,
-            x, etc, y_pred, pred_speakers, iteration, epoch,
+            x, etc, y_pred, pred_speakers, iteration, epoch, batches_per_epoch,
             forward_attention_loss=None):
 
-            loss, loss_mel, loss_spk_adv, loss_att_means = losses
-            text_padded, input_lengths, mel_padded, max_len, output_lengths = x
-            speakers, sex, emotion_vectors, lang = etc
-            _, mel_outputs, gate_outputs, alignments = y_pred
+        self.batches_per_epoch = batches_per_epoch
+        loss, loss_mel, loss_spk_adv, loss_att_means = losses
+        text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+        speakers, sex, emotion_vectors, lang = etc
+        _, mel_outputs, gate_outputs, alignments = y_pred
 
-            # Compute forward_attention_ratio.
-            hop_size = 1
-            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs, hop_size)
-            mean_ar, batch_ar = attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
-            mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths, gate_outputs)
-            mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
-            mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
-            batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
+        # Compute forward_attention_ratio.
+        hop_size = 1
+        mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs, hop_size)
+        mean_ar, batch_ar = attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+        mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+        mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths, gate_outputs)
+        mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
+        batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
 
+        # Initialize training_epoch_variables
+        if self.is_first_batch(iteration):
+            self.init_training_epoch_variables()
+
+        # Update training_epoch_variables
+        self.sum_loss += loss
+        self.sum_loss_mel += loss_mel
+        self.sum_loss_spk_adv += loss_spk_adv
+        self.sum_loss_att_means += loss_att_means
+
+        self.sum_grad_norm += grad_norm
+
+        self.sum_mean_far += mean_far
+        self.sum_mean_ar += mean_ar
+        self.sum_mean_arr += mean_arr
+        self.sum_mean_mar += mean_mar
+        self.sum_mean_attention_quality += mean_attention_quality
+
+        # wandb log
+        wandb.log({"epoch": epoch,
+                   "iteration":iteration,
+                   "train/loss": loss,
+                   "train/loss_mel": loss_mel,
+                   "train/grad_norm": grad_norm,
+                   "train/learning_rate": learning_rate,
+                   "train/iter_duration": duration,
+                   "train/mean_forward_attention_ratio":mean_far,
+                   "train/mean_attention_ratio":mean_ar,
+                   "train/mean_attention_range_ratio":mean_arr,
+                   "train/mean_multiple_attention_ratio":mean_mar,
+                   "train/mean_attention_quality":mean_attention_quality,
+                   "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
+                   "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
+                   "train/attention_range_ratio":wandb.Histogram(batch_arr.data.cpu().numpy()),
+                   "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
+                   "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
+                   }, step=iteration)
+
+        # Calculate accuracy of the speaker adversarial training module.
+        if self.hparams.speaker_adversarial_training:
+            np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
+            np_pred_speakers = pred_speakers.cpu().numpy()
+            spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+
+            # Update training_epoch_variables
+            self.sum_spk_adv_accuracy += spk_adv_accuracy
+
+            wandb.log({"train/loss_spk_adv": loss_spk_adv,
+                       "train/spk_adv_accuracy": spk_adv_accuracy}
+                       , step=iteration)
+
+        # Logging forward_attention_loss.
+        if forward_attention_loss is not None:
+            wandb.log({"train/forward_attention_loss": forward_attention_loss}
+                       , step=iteration)
+
+        # Logging loss_monotonic_attention_MSE.
+        if self.hparams.monotonic_attention:
+            wandb.log({"train/loss_monotonic_attention_MSE": loss_att_means}
+                       , step=iteration)
+
+        # Log training epoch variables
+        if self.is_last_batch(iteration):
             # wandb log
-            wandb.log({"epoch": epoch,
-                       "iteration":iteration,
-                       "train/loss": loss,
-                       "train/loss_mel": loss_mel,
-                       "train/grad_norm": grad_norm,
-                       "train/learning_rate": learning_rate,
-                       "train/iter_duration": duration,
-                       "train/mean_forward_attention_ratio":mean_far,
-                       "train/mean_attention_ratio":mean_ar,
-                       "train/mean_attention_range_ratio":mean_arr,
-                       "train/mean_multiple_attention_ratio":mean_mar,
-                       "train/mean_attention_quality":mean_attention_quality,
-                       "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
-                       "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
-                       "train/attention_range_ratio":wandb.Histogram(batch_arr.data.cpu().numpy()),
-                       "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
-                       "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
+            wandb.log({"train_epoch/loss": (self.sum_loss / self.batches_per_epoch),
+                       "train_epoch/loss_mel": (self.sum_loss_mel / self.batches_per_epoch),
+                       "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
+                       "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
+                       "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
+                       "train_epoch/mean_attention_range_ratio":(self.sum_mean_arr / self.batches_per_epoch),
+                       "train_epoch/mean_multiple_attention_ratio":(self.sum_mean_mar / self.batches_per_epoch),
+                       "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch)
                        }, step=iteration)
 
-            # Calculate accuracy of the speaker adversarial training module.
             if self.hparams.speaker_adversarial_training:
-                np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
-                np_pred_speakers = pred_speakers.cpu().numpy()
-                spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+                wandb.log({"train_epoch/loss_spk_adv": (self.sum_loss_spk_adv / self.batches_per_epoch),
+                           "train_epoch/spk_adv_accuracy": (self.sum_spk_adv_accuracy / self.batches_per_epoch)
+                           }, step=iteration)
 
-                wandb.log({"train/loss_spk_adv": loss_spk_adv,
-                           "train/spk_adv_accuracy": spk_adv_accuracy}
-                           , step=iteration)
-
-            # Logging forward_attention_loss.
-            if forward_attention_loss is not None:
-                wandb.log({"train/forward_attention_loss": forward_attention_loss}
-                           , step=iteration)
-
-           # Logging loss_monotonic_attention_MSE.
             if self.hparams.monotonic_attention:
-                wandb.log({"train/loss_monotonic_attention_MSE": loss_att_means}
-                           , step=iteration)
-
+                wandb.log({"train_epoch/loss_monotonic_attention_MSE": (self.sum_loss_att_means / self.batches_per_epoch)
+                           }, step=iteration)
 
 
     def log_validation(self, valset, val_type,
