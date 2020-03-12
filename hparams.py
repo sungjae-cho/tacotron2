@@ -76,7 +76,7 @@ def create_hparams(hparams_string=None, verbose=False):
         encoder_embedding_dim=512,
 
         # SpeakerEncoder parameters
-        speaker_embedding_dim=6,
+        speaker_embedding_dim=3,
 
         # LanguageEncoder parameters
         max_languages=2,
