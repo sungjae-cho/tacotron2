@@ -22,16 +22,15 @@ def get_mel_length(gate_output):
     else:
         mel_length = len(is_positive_output)
 
-    return mel_length    
+    return mel_length
 
 
-def forward_attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
+def forward_attention_ratio(alignments, gate_outputs=None, output_lengths=None,
         hop_size=1, mode_mel_length="stop_token"):
     '''
     Params
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps]
-    text_lengths: torch.Tensor. a 1-D tensor that keeps input text lengths.
     output_lengths: torch.Tensor. A 1-D tensor that keeps output mel lengths.
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
@@ -58,8 +57,8 @@ def forward_attention_ratio(alignments, text_lengths, output_lengths, gate_outpu
 
     batch_size = alignments.size(0)
     batch_forward_attention_ratio = torch.empty((batch_size), dtype=torch.float)
+
     for i in range(batch_size):
-        text_length = text_lengths[i]
         if mode_mel_length == "ground_truth":
             mel_length = output_lengths[i].item()
         if mode_mel_length == "stop_token":
@@ -79,7 +78,7 @@ def forward_attention_ratio(alignments, text_lengths, output_lengths, gate_outpu
     return mean_forward_attention_ratio, batch_forward_attention_ratio
 
 
-def attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
+def attention_ratio(alignments, gate_outputs=None, output_lengths=None,
         mode_mel_length="stop_token"):
     '''
     Attention ratio is a measure for
@@ -88,7 +87,6 @@ def attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
     Params
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps].
-    text_lengths: torch.Tensor. A 1-D tensor that keeps input text lengths.
     output_lengths: torch.Tensor. A 1-D tensor that keeps output mel lengths.
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
@@ -108,8 +106,8 @@ def attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
     batch_size = alignments.size(0)
     batch_attention_ratio = torch.empty((batch_size), dtype=torch.float)
     sum_attention_ratio = 0
+
     for i in range(batch_size):
-        text_length = text_lengths[i].item()
         if mode_mel_length == "ground_truth":
             mel_length = output_lengths[i].item()
         if mode_mel_length == "stop_token":
@@ -118,7 +116,8 @@ def attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
             if mel_length == 0:
                 batch_attention_ratio[i] = 0
                 continue
-        alignment = alignments[i,:mel_length,:text_length]
+        alignment = alignments[i,:mel_length,:]
+        text_length = alignment.size(1)
         argmax_alignment = torch.argmax(alignment, dim=1)
         n_unique_argmax = torch.unique(argmax_alignment).size(0)
         sample_attention_ratio = n_unique_argmax / text_length
@@ -128,16 +127,15 @@ def attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
     return mean_attention_ratio, batch_attention_ratio
 
 
-def attention_range_ratio(alignments, text_lengths, output_lengths, gate_outputs,
+def attention_range_ratio(alignments, gate_outputs=None, output_lengths=None,
         mode_mel_length="stop_token"):
     '''
-    Attention ratio is a measure for 
+    Attention ratio is a measure for
     "how much encoding steps are attended over all encoding steps".
-    
+
     Params
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps].
-    text_lengths: torch.Tensor. A 1-D tensor that keeps input text lengths.
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
     - 0 indicates a signal to generate the next decoding step.
@@ -145,7 +143,7 @@ def attention_range_ratio(alignments, text_lengths, output_lengths, gate_outputs
     mode_mel_length: str.
     - "ground_truth"
     - "stop_token"
-        
+
     Returns
     -----
     mean_attention_ratio
@@ -155,8 +153,8 @@ def attention_range_ratio(alignments, text_lengths, output_lengths, gate_outputs
     '''
     batch_size = alignments.size(0)
     batch_attention_range_ratio = torch.empty((batch_size), dtype=torch.float)
+
     for i in range(batch_size):
-        text_length = text_lengths[i].item()
         if mode_mel_length == "ground_truth":
             mel_length = output_lengths[i].item()
         if mode_mel_length == "stop_token":
@@ -165,7 +163,8 @@ def attention_range_ratio(alignments, text_lengths, output_lengths, gate_outputs
             if mel_length == 0:
                 batch_attention_range_ratio[i] = 0
                 continue
-        alignment = alignments[i,:mel_length,:text_length]
+        alignment = alignments[i,:mel_length,:]
+        text_length = alignment.size(1)
         argmax_alignment = torch.argmax(alignment, dim=1)
         unique_argmax_set = torch.unique(argmax_alignment)
         range_length = torch.max(unique_argmax_set) - torch.min(unique_argmax_set) + 1
@@ -173,11 +172,11 @@ def attention_range_ratio(alignments, text_lengths, output_lengths, gate_outputs
         range_ratio = range_length / text_length
         batch_attention_range_ratio[i] = range_ratio
     mean_attention_range_ratio = batch_attention_range_ratio.mean().item()
-    
+
     return mean_attention_range_ratio, batch_attention_range_ratio
 
 
-def multiple_attention_ratio(alignments, text_lengths, output_lengths, gate_outputs,
+def multiple_attention_ratio(alignments, gate_outputs=None, output_lengths=None,
         mode_mel_length="stop_token"):
     '''
     Multiple attention ratio is a measure for
@@ -186,7 +185,6 @@ def multiple_attention_ratio(alignments, text_lengths, output_lengths, gate_outp
     Params
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps].
-    text_lengths: torch.Tensor. A 1-D tensor that keeps input text lengths.
     output_lengths: torch.Tensor. A 1-D tensor that keeps output mel lengths.
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
@@ -207,7 +205,6 @@ def multiple_attention_ratio(alignments, text_lengths, output_lengths, gate_outp
     batch_multiple_attention_ratio = torch.empty((batch_size), dtype=torch.float)
 
     for i in range(batch_size):
-        text_length = text_lengths[i].item()
         if mode_mel_length == "ground_truth":
             mel_length = output_lengths[i].item()
         if mode_mel_length == "stop_token":
@@ -216,7 +213,8 @@ def multiple_attention_ratio(alignments, text_lengths, output_lengths, gate_outp
             if mel_length == 0:
                 batch_multiple_attention_ratio[i] = 1
                 continue
-        alignment = alignments[i,:mel_length,:text_length]
+        alignment = alignments[i,:mel_length,:]
+        text_length = alignment.size(1)
         argmax_alignment = torch.argmax(alignment, dim=1)
         argmax_alignment = argmax_alignment.tolist()
 

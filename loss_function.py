@@ -21,12 +21,11 @@ class Tacotron2Loss(nn.Module):
         return mel_loss + gate_loss
 
 
-def forward_attention_loss(alignments, text_lengths, gate_outputs, hop_size=1):
+def forward_attention_loss(alignments, gate_outputs, hop_size=1):
     '''
     Params
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, mel_steps, txt_steps]
-    text_lengths: torch.Tensor. a 1-D tensor that keeps input text lengths.
     hop_size: int. hopping size to determine increment.
 
     Returns
@@ -36,7 +35,7 @@ def forward_attention_loss(alignments, text_lengths, gate_outputs, hop_size=1):
     batch_forward_attention_ratio: torch.Tensor((batch_size),dtype=torch.float).
     - Each element is the forward attention ratio of each batch sample.
     '''
-    _, batch_forward_attention_ratio = forward_attention_ratio(alignments, text_lengths, gate_outputs, hop_size)
+    _, batch_forward_attention_ratio = forward_attention_ratio(alignments, gate_outputs)
     mean_forward_attention_loss = torch.mean(-torch.log(batch_forward_attention_ratio))
 
     return mean_forward_attention_loss
