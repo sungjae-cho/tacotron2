@@ -133,7 +133,7 @@ def attention_ratio(alignments, input_lengths, text_padded,
         text_sequence = text_padded[i,:text_length].view(1, -1)
         text_string = sequence_to_text(text_sequence.squeeze().tolist())
 
-        alignment = alignments[i,:mel_length,:]
+        alignment = alignments[i,:mel_length,:text_length]
         argmax_alignment = torch.argmax(alignment, dim=1)
         n_unique_argmax = torch.unique(argmax_alignment).size(0)
         sample_attention_ratio = n_unique_argmax / text_length
@@ -228,8 +228,8 @@ def attention_range_ratio(alignments, input_lengths,
             if mel_length == 0:
                 batch_attention_range_ratio[i] = 0
                 continue
-        alignment = alignments[i,:mel_length,:]
         text_length = input_lengths[i].item()
+        alignment = alignments[i,:mel_length,:text_length]
         argmax_alignment = torch.argmax(alignment, dim=1)
         unique_argmax_set = torch.unique(argmax_alignment)
         range_length = torch.max(unique_argmax_set) - torch.min(unique_argmax_set) + 1
@@ -281,8 +281,8 @@ def multiple_attention_ratio(alignments, input_lengths,
             if mel_length == 0:
                 batch_multiple_attention_ratio[i] = 1
                 continue
-        alignment = alignments[i,:mel_length,:]
         text_length = input_lengths[i].item()
+        alignment = alignments[i,:mel_length,:text_length]
         argmax_alignment = torch.argmax(alignment, dim=1)
         argmax_alignment = argmax_alignment.tolist()
 
