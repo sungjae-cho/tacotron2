@@ -167,6 +167,9 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             batch_far_list = list()
             # attention_ratio
             batch_ar_list = list()
+            batch_letter_ar_list = list()
+            batch_punct_ar_list = list()
+            batch_blank_ar_list = list()
             # attention_range_ratio
             batch_arr_list = list()
             # multiple_attention_ratio
@@ -174,6 +177,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
             for i, batch in enumerate(val_loader):
                 x, y, etc = model.parse_batch(batch)
+                text_padded = x[0]
                 input_lengths = x[1]
                 output_lengths = x[4]
                 speakers, sex, emotion_vectors, lang = etc
@@ -217,8 +221,15 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_far_list.append(batch_far)
                 # attention_ratio
-                _, batch_ar = attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                batch_ar = ar_pairs[0][1]
+                batch_letter_ar = ar_pairs[1][1]
+                batch_punct_ar = ar_pairs[2][1]
+                batch_blank_ar = ar_pairs[3][1]
                 batch_ar_list.append(batch_ar)
+                batch_letter_ar_list.append(batch_letter_ar)
+                batch_punct_ar_list.append(batch_punct_ar)
+                batch_blank_ar_list.append(batch_blank_ar)
                 # attention_range_ratio
                 _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_arr_list.append(batch_arr)
@@ -238,7 +249,16 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             # attention_ratio
             val_batch_ar = torch.cat(batch_ar_list)
             val_mean_ar = val_batch_ar.mean().item()
-            ar_pair = (val_mean_ar, val_batch_ar)
+            val_batch_letter_ar = torch.cat(batch_letter_ar_list)
+            val_mean_letter_ar = val_batch_letter_ar.mean().item()
+            val_batch_punct_ar = torch.cat(batch_punct_ar_list)
+            val_mean_punct_ar = val_batch_punct_ar.mean().item()
+            val_batch_blank_ar = torch.cat(batch_blank_ar_list)
+            val_mean_blank_ar = val_batch_blank_ar.mean().item()
+            ar_pairs = ((val_mean_ar, val_batch_ar),
+                        (val_mean_letter_ar, val_batch_letter_ar),
+                        (val_mean_punct_ar, val_batch_punct_ar),
+                        (val_mean_blank_ar, val_batch_blank_ar))
             # attention_range_ratio
             val_batch_arr = torch.cat(batch_arr_list)
             val_mean_arr = val_batch_arr.mean().item()
@@ -253,7 +273,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             val_losses = (val_loss, val_loss_mel, val_loss_spk_adv, val_loss_att_means)
             logger.log_validation(valset, val_type,
-                val_losses, far_pair, ar_pair, arr_pair, mar_pair,
+                val_losses, far_pair, ar_pairs, arr_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 

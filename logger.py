@@ -93,6 +93,9 @@ class Tacotron2Logger(SummaryWriter):
 
         self.sum_mean_far = 0
         self.sum_mean_ar = 0
+        self.sum_mean_letter_ar = 0
+        self.sum_mean_punct_ar = 0
+        self.sum_mean_blank_ar = 0
         self.sum_mean_arr = 0
         self.sum_mean_mar = 0
         self.sum_mean_attention_quality = 0
@@ -112,7 +115,11 @@ class Tacotron2Logger(SummaryWriter):
 
         # Compute forward_attention_ratio.
         mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_ar, batch_ar = attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        mean_ar, batch_ar = ar_pairs[0]
+        mean_letter_ar, batch_letter_ar = ar_pairs[1]
+        mean_punct_ar, batch_punct_ar = ar_pairs[2]
+        mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
@@ -132,6 +139,9 @@ class Tacotron2Logger(SummaryWriter):
 
         self.sum_mean_far += mean_far
         self.sum_mean_ar += mean_ar
+        self.sum_mean_letter_ar += mean_letter_ar
+        self.sum_mean_punct_ar += mean_punct_ar
+        self.sum_mean_blank_ar += mean_blank_ar
         self.sum_mean_arr += mean_arr
         self.sum_mean_mar += mean_mar
         self.sum_mean_attention_quality += mean_attention_quality
@@ -146,11 +156,17 @@ class Tacotron2Logger(SummaryWriter):
                    "train/iter_duration": duration,
                    "train/mean_forward_attention_ratio":mean_far,
                    "train/mean_attention_ratio":mean_ar,
+                   "train/mean_letter_attention_ratio":mean_letter_ar,
+                   "train/mean_punctuation_attention_ratio":mean_punct_ar,
+                   "train/mean_blank_attention_ratio":mean_blank_ar,
                    "train/mean_attention_range_ratio":mean_arr,
                    "train/mean_multiple_attention_ratio":mean_mar,
                    "train/mean_attention_quality":mean_attention_quality,
                    "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
                    "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
+                   "train/letter_attention_ratio":wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
+                   "train/punct_attention_ratio":wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
+                   "train/blank_attention_ratio":wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
                    "train/attention_range_ratio":wandb.Histogram(batch_arr.data.cpu().numpy()),
                    "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
                    "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
@@ -187,6 +203,9 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
+                       "train_epoch/mean_letter_attention_ratio":(self.sum_mean_letter_ar / self.batches_per_epoch),
+                       "train_epoch/mean_punctuation_attention_ratio":(self.sum_mean_punct_ar / self.batches_per_epoch),
+                       "train_epoch/mean_blank_attention_ratio":(self.sum_mean_blank_ar / self.batches_per_epoch),
                        "train_epoch/mean_attention_range_ratio":(self.sum_mean_arr / self.batches_per_epoch),
                        "train_epoch/mean_multiple_attention_ratio":(self.sum_mean_mar / self.batches_per_epoch),
                        "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch)
@@ -203,7 +222,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_validation(self, valset, val_type,
-        losses, far_pair, ar_pair, arr_pair, mar_pair,
+        losses, far_pair, ar_pairs, arr_pair, mar_pair,
         model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
@@ -216,7 +235,10 @@ class Tacotron2Logger(SummaryWriter):
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
         mean_far, batch_far = far_pair
-        mean_ar, batch_ar = ar_pair
+        mean_ar, batch_ar = ar_pairs[0]
+        mean_letter_ar, batch_letter_ar = ar_pairs[1]
+        mean_punct_ar, batch_punct_ar = ar_pairs[2]
+        mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = arr_pair
         mean_mar, batch_mar = mar_pair
         mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
@@ -228,11 +250,17 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/loss_mel".format(log_prefix): loss_mel,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
+                   "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
+                   "{}/mean_punctuation_attention_ratio".format(log_prefix):mean_punct_ar,
+                   "{}/mean_blank_attention_ratio".format(log_prefix):mean_blank_ar,
                    "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
                    "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
                    "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
                    "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
                    "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
+                   "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
+                   "{}/punctuation_attention_ratio".format(log_prefix):wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
+                   "{}/blank_attention_ratio".format(log_prefix):wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
                    "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
                    "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
                    "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
@@ -313,11 +341,17 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/gate".format(log_prefix): [wandb.Image(np_gate)],
                        "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                        "{}/mean_attention_ratio".format(log_prefix):mean_ar,
+                       "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
+                       "{}/mean_punctuation_attention_ratio".format(log_prefix):mean_punct_ar,
+                       "{}/mean_blank_attention_ratio".format(log_prefix):mean_blank_ar,
                        "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
                        "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
                        "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
                        "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
                        "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
+                       "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
+                       "{}/punctuation_attention_ratio".format(log_prefix):wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
+                       "{}/blank_attention_ratio".format(log_prefix):wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
                        "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
                        "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
                        "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())

@@ -1,5 +1,7 @@
 
 import torch
+from text import sequence_to_text
+from text.find_symbol_location import find_letter_locations, find_punctuation_locations, find_blank_locations
 
 #def get_mel_length(alignments, batch_i, text_length, last_steps=5):
 def get_mel_length(gate_output):
@@ -82,7 +84,7 @@ def forward_attention_ratio(alignments, input_lengths,
     return mean_forward_attention_ratio, batch_forward_attention_ratio
 
 
-def attention_ratio(alignments, input_lengths,
+def attention_ratio(alignments, input_lengths, text_padded,
         output_lengths=None, gate_outputs=None, mode_mel_length="stop_token"):
     '''
     Attention ratio is a measure for
@@ -92,6 +94,7 @@ def attention_ratio(alignments, input_lengths,
     -----
     alignments: Attention map. torch.Tensor. Shape: [batch_size, max_batch_mel_steps, max_batch_txt_steps].
     input_lengths: torch.Tenor. A 1-D tensor that keeps input text lengths. Shape: [batch_size].
+    text_padded: torch.LongTensor. Shape: [batch_size, max_batch_input_len].
     output_lengths: torch.Tensor. A 1-D tensor that keeps output mel lengths. Shape: [batch_size].
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
@@ -112,6 +115,9 @@ def attention_ratio(alignments, input_lengths,
     '''
     batch_size = alignments.size(0)
     batch_attention_ratio = torch.empty((batch_size), dtype=torch.float)
+    batch_letter_attention_ratio = torch.empty((batch_size), dtype=torch.float)
+    batch_punct_attention_ratio = torch.empty((batch_size), dtype=torch.float)
+    batch_blank_attention_ratio = torch.empty((batch_size), dtype=torch.float)
     sum_attention_ratio = 0
 
     for i in range(batch_size):
@@ -123,15 +129,63 @@ def attention_ratio(alignments, input_lengths,
             if mel_length == 0:
                 batch_attention_ratio[i] = 0
                 continue
-        alignment = alignments[i,:mel_length,:]
         text_length = input_lengths[i].item()
+        text_sequence = text_padded[i,:text_length].view(1, -1)
+        text_string = sequence_to_text(text_sequence.squeeze().tolist())
+
+        alignment = alignments[i,:mel_length,:]
         argmax_alignment = torch.argmax(alignment, dim=1)
         n_unique_argmax = torch.unique(argmax_alignment).size(0)
         sample_attention_ratio = n_unique_argmax / text_length
         batch_attention_ratio[i] = sample_attention_ratio
-    mean_attention_ratio = batch_attention_ratio.mean().item()
 
-    return mean_attention_ratio, batch_attention_ratio
+        argmax_alignment_list = argmax_alignment.tolist()
+
+        cnt_letters = 0
+        letter_locations = find_letter_locations(text_string)
+        for idx in letter_locations:
+            if idx in argmax_alignment_list:
+                cnt_letters += 1
+                continue
+        if len(letter_locations) == 0:
+            letter_attention_ratio = 0
+        else:
+            letter_attention_ratio = cnt_letters / len(letter_locations)
+        batch_letter_attention_ratio[i] = letter_attention_ratio
+
+        cnt_punct = 0
+        punct_locations = find_punctuation_locations(text_string)
+        for idx in punct_locations:
+            if idx in argmax_alignment_list:
+                cnt_punct += 1
+                continue
+        if len(punct_locations) == 0:
+            punct_attention_ratio = 0
+        else:
+            punct_attention_ratio = cnt_punct / len(punct_locations)
+        batch_punct_attention_ratio[i] = punct_attention_ratio
+
+        cnt_blanks = 0
+        blank_locations = find_blank_locations(text_string)
+        for idx in blank_locations:
+            if idx in argmax_alignment_list:
+                cnt_blanks += 1
+                continue
+        if len(blank_locations) == 0:
+            blank_attention_ratio = 0
+        else:
+            blank_attention_ratio = cnt_blanks / len(blank_locations)
+        batch_blank_attention_ratio[i] = blank_attention_ratio
+
+    mean_attention_ratio = batch_attention_ratio.mean().item()
+    mean_letter_attention_ratio = batch_letter_attention_ratio.mean().item()
+    mean_punct_attention_ratio = batch_punct_attention_ratio.mean().item()
+    mean_blank_attention_ratio = batch_blank_attention_ratio.mean().item()
+
+    return ((mean_attention_ratio, batch_attention_ratio),
+            (mean_letter_attention_ratio, batch_letter_attention_ratio),
+            (mean_punct_attention_ratio, batch_punct_attention_ratio),
+            (mean_blank_attention_ratio, batch_blank_attention_ratio))
 
 
 def attention_range_ratio(alignments, input_lengths,
