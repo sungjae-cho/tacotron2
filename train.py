@@ -214,16 +214,16 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 val_loss += reduced_val_loss
 
                 # forward_attention_ratio
-                _, batch_far = forward_attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_far_list.append(batch_far)
                 # attention_ratio
-                _, batch_ar = attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                _, batch_ar = attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_ar_list.append(batch_ar)
                 # attention_range_ratio
-                _, batch_arr = attention_range_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_arr_list.append(batch_arr)
                 # multiple_attention_ratio
-                _, batch_mar = multiple_attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_mar_list.append(batch_mar)
 
             val_loss_mel = val_loss_mel / (i + 1)
@@ -370,9 +370,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 input_lengths = x[1]
                 gate_outputs = y_pred[2]
                 alignments = y_pred[3]
-                mean_far, _ = forward_attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                mean_far, _ = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 if mean_far > 0.95:
-                    fa_loss = forward_attention_loss(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                    fa_loss = forward_attention_loss(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                     loss += fa_loss
                     float_fa_loss = fa_loss.item()
                 else:

@@ -111,10 +111,10 @@ class Tacotron2Logger(SummaryWriter):
         _, mel_outputs, gate_outputs, alignments = y_pred
 
         # Compute forward_attention_ratio.
-        mean_far, batch_far = forward_attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_ar, batch_ar = attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_arr, batch_arr = attention_range_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_mar, batch_mar = multiple_attention_ratio(alignments, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        mean_ar, batch_ar = attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+        mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
         batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
 
