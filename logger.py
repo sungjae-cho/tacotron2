@@ -12,7 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
     plot_embeddings_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
-from measures import forward_attention_ratio, get_mel_length, attention_ratio, attention_range_ratio, multiple_attention_ratio
+from measures import forward_attention_ratio, get_mel_length, get_mel_lengths, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from text import sequence_to_text
 from denoiser import Denoiser
 from text import text_to_sequence
@@ -90,6 +90,8 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_spk_adv = 0
         self.sum_loss_att_means = 0
 
+        self.sum_gate_accuracy = 0
+
         self.sum_grad_norm = 0
 
         self.sum_mean_far = 0
@@ -134,12 +136,20 @@ class Tacotron2Logger(SummaryWriter):
         if self.is_first_batch(iteration):
             self.init_training_epoch_variables()
 
+        # Stop gate accuracy
+        np_output_lengths = output_lengths.cpu().numpy()
+        mel_lengths = get_mel_lengths(gate_outputs)
+        np_mel_lengths = mel_lengths.cpu().numpy()
+        gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
+
         # Update training_epoch_variables
         self.sum_loss += loss
         self.sum_loss_mel += loss_mel
         self.sum_loss_gate += loss_gate
         self.sum_loss_spk_adv += loss_spk_adv
         self.sum_loss_att_means += loss_att_means
+
+        self.sum_gate_accuracy += gate_accuracy
 
         self.sum_grad_norm += grad_norm
 
@@ -160,6 +170,7 @@ class Tacotron2Logger(SummaryWriter):
                    "train/loss": loss,
                    "train/loss_mel": loss_mel,
                    "train/loss_gate": loss_gate,
+                   "train/gate_accuracy": gate_accuracy,
                    "train/grad_norm": grad_norm,
                    "train/learning_rate": learning_rate,
                    "train/iter_duration": duration,
@@ -212,6 +223,7 @@ class Tacotron2Logger(SummaryWriter):
             wandb.log({"train_epoch/loss": (self.sum_loss / self.batches_per_epoch),
                        "train_epoch/loss_mel": (self.sum_loss_mel / self.batches_per_epoch),
                        "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),
+                       "train_epoch/gate_accuracy": (self.sum_gate_accuracy / self.batches_per_epoch),
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
@@ -260,11 +272,18 @@ class Tacotron2Logger(SummaryWriter):
         best_attention_quality = batch_attention_quality.max().item()
         worst_attention_quality = batch_attention_quality.min().item()
 
+        # Stop gate accuracy
+        np_output_lengths = output_lengths.cpu().numpy()
+        mel_lengths = get_mel_lengths(gate_outputs)
+        np_mel_lengths = mel_lengths.cpu().numpy()
+        gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
+
         # [#1] Logging for all val_type
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
         wandb.log({"{}/loss".format(log_prefix): loss,
                    "{}/loss_mel".format(log_prefix): loss_mel,
                    "{}/loss_gate".format(log_prefix): loss_gate,
+                   "{}/gate_accuracy".format(log_prefix): gate_accuracy,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
