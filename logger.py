@@ -100,8 +100,8 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_arr = 0
         self.sum_mean_mar = 0
         self.sum_mean_attention_quality = 0
-        self.sum_best_attention_qaulity = 0
-        self.sum_worst_attention_qaulity = 0
+        self.sum_best_attention_quality = 0
+        self.sum_worst_attention_quality = 0
 
         self.sum_spk_adv_accuracy = 0
 
@@ -151,8 +151,8 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_arr += mean_arr
         self.sum_mean_mar += mean_mar
         self.sum_mean_attention_quality += mean_attention_quality
-        self.sum_best_attention_qaulity += best_attention_qaulity
-        self.sum_worst_attention_qaulity += worst_attention_qaulity
+        self.sum_best_attention_quality += best_attention_quality
+        self.sum_worst_attention_quality += worst_attention_quality
 
         # wandb log
         wandb.log({"epoch": epoch,
@@ -221,7 +221,7 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/mean_attention_range_ratio":(self.sum_mean_arr / self.batches_per_epoch),
                        "train_epoch/mean_multiple_attention_ratio":(self.sum_mean_mar / self.batches_per_epoch),
                        "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch),
-                       "train_epoch/best_attention_quality":(self.sum_best_attention_quality / self.batches_per_epoch)
+                       "train_epoch/best_attention_quality":(self.sum_best_attention_quality / self.batches_per_epoch),
                        "train_epoch/worst_attention_quality":(self.sum_worst_attention_quality / self.batches_per_epoch)
                        }, step=iteration)
 
