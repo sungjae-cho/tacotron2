@@ -99,6 +99,8 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_arr = 0
         self.sum_mean_mar = 0
         self.sum_mean_attention_quality = 0
+        self.sum_best_attention_qaulity = 0
+        self.sum_worst_attention_qaulity = 0
 
         self.sum_spk_adv_accuracy = 0
 
@@ -124,6 +126,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
         batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
+        best_attention_quality = batch_attention_quality.max().item()
+        worst_attention_quality = batch_attention_quality.min().item()
 
         # Initialize training_epoch_variables
         if self.is_first_batch(iteration):
@@ -145,6 +149,8 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_arr += mean_arr
         self.sum_mean_mar += mean_mar
         self.sum_mean_attention_quality += mean_attention_quality
+        self.sum_best_attention_qaulity += best_attention_qaulity
+        self.sum_worst_attention_qaulity += worst_attention_qaulity
 
         # wandb log
         wandb.log({"epoch": epoch,
@@ -162,6 +168,8 @@ class Tacotron2Logger(SummaryWriter):
                    "train/mean_attention_range_ratio":mean_arr,
                    "train/mean_multiple_attention_ratio":mean_mar,
                    "train/mean_attention_quality":mean_attention_quality,
+                   "train/best_attention_quality":best_attention_quality,
+                   "train/worst_attention_quality":worst_attention_quality,
                    "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
                    "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
                    "train/letter_attention_ratio":wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
@@ -208,7 +216,9 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/mean_blank_attention_ratio":(self.sum_mean_blank_ar / self.batches_per_epoch),
                        "train_epoch/mean_attention_range_ratio":(self.sum_mean_arr / self.batches_per_epoch),
                        "train_epoch/mean_multiple_attention_ratio":(self.sum_mean_mar / self.batches_per_epoch),
-                       "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch)
+                       "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch),
+                       "train_epoch/best_attention_quality":(self.sum_best_attention_quality / self.batches_per_epoch)
+                       "train_epoch/worst_attention_quality":(self.sum_worst_attention_quality / self.batches_per_epoch)
                        }, step=iteration)
 
             if self.hparams.speaker_adversarial_training:
@@ -243,6 +253,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_mar, batch_mar = mar_pair
         mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
         batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
+        best_attention_quality = batch_attention_quality.max().item()
+        worst_attention_quality = batch_attention_quality.min().item()
 
         # [#1] Logging for all val_type
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
@@ -256,6 +268,8 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
                    "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
                    "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
+                   "{}/best_attention_quality".format(log_prefix):best_attention_quality,
+                   "{}/worst_attention_quality".format(log_prefix):worst_attention_quality,
                    "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
                    "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
                    "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
