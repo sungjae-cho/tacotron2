@@ -108,10 +108,9 @@ class TextMelLoader(torch.utils.data.Dataset):
             one_hot_vector_size = self.max_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
-            nonneutral_emotions = self.hparams.all_emotions.copy()
-            nonneutral_emotions.remove('neutral')
-            for i, emo in enumerate(nonneutral_emotions):
-                emotion_tensor = torch.eye(one_hot_vector_size)[i]
+            else:
+                emotion_tensor = one_hot_encoding(
+                    self.emotion2int(emotion), one_hot_vector_size)
         else:
             emotion_tensor = one_hot_encoding(
                 self.emotion2int(emotion), self.max_emotions)
@@ -143,10 +142,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             if torch.sum(emotion_tensor).item() == 0:
                 str_emotion = 'neutral'
             else:
-                int_emotion = torch.argmax(emotion_tensor).item()
-                nonneutral_emotions = self.hparams.all_emotions.copy()
-                nonneutral_emotions.remove('neutral')
-                str_emotion = nonneutral_emotions[int_emotion]
+                str_emotion = self.int2emotion(torch.argmax(emotion_tensor).item())
         else:
             str_emotion = self.int2emotion(torch.argmax(emotion_tensor).item())
 
@@ -165,10 +161,27 @@ class TextMelLoader(torch.utils.data.Dataset):
         return self.sex_list[integer]
 
     def emotion2int(self, emotion):
-        return self.emotion_list.index(emotion)
+        if self.neutral_zero_vector:
+            if emotion == 'neutral':
+                return None
+            else:
+                nonneutral_emotions = self.hparams.all_emotions.copy()
+                nonneutral_emotions.remove('neutral')
+                return nonneutral_emotions.index(emotion)
+
+        else:
+            return self.emotion_list.index(emotion)
 
     def int2emotion(self, integer):
-        return self.emotion_list[integer]
+        if self.neutral_zero_vector:
+            if integer is None:
+                return 'neutral'
+            else:
+                nonneutral_emotions = self.hparams.all_emotions.copy()
+                nonneutral_emotions.remove('neutral')
+                return nonneutral_emotions[integer]
+        else:
+            return self.emotion_list[integer]
 
     def lang2int(self, lang):
         return self.lang_list.index(lang)
