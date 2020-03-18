@@ -86,6 +86,7 @@ class Tacotron2Logger(SummaryWriter):
     def init_training_epoch_variables(self):
         self.sum_loss = 0
         self.sum_loss_mel = 0
+        self.sum_loss_gate = 0
         self.sum_loss_spk_adv = 0
         self.sum_loss_att_means = 0
 
@@ -110,7 +111,7 @@ class Tacotron2Logger(SummaryWriter):
             forward_attention_loss=None):
 
         self.batches_per_epoch = batches_per_epoch
-        loss, loss_mel, loss_spk_adv, loss_att_means = losses
+        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -136,6 +137,7 @@ class Tacotron2Logger(SummaryWriter):
         # Update training_epoch_variables
         self.sum_loss += loss
         self.sum_loss_mel += loss_mel
+        self.sum_loss_gate += loss_gate
         self.sum_loss_spk_adv += loss_spk_adv
         self.sum_loss_att_means += loss_att_means
 
@@ -157,6 +159,7 @@ class Tacotron2Logger(SummaryWriter):
                    "iteration":iteration,
                    "train/loss": loss,
                    "train/loss_mel": loss_mel,
+                   "train/loss_gate": loss_gate,
                    "train/grad_norm": grad_norm,
                    "train/learning_rate": learning_rate,
                    "train/iter_duration": duration,
@@ -208,6 +211,7 @@ class Tacotron2Logger(SummaryWriter):
             # wandb log
             wandb.log({"train_epoch/loss": (self.sum_loss / self.batches_per_epoch),
                        "train_epoch/loss_mel": (self.sum_loss_mel / self.batches_per_epoch),
+                       "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
@@ -238,7 +242,7 @@ class Tacotron2Logger(SummaryWriter):
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
 
-        loss, loss_mel, loss_spk_adv, loss_att_means = losses
+        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
@@ -260,6 +264,7 @@ class Tacotron2Logger(SummaryWriter):
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
         wandb.log({"{}/loss".format(log_prefix): loss,
                    "{}/loss_mel".format(log_prefix): loss_mel,
+                   "{}/loss_gate".format(log_prefix): loss_gate,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,

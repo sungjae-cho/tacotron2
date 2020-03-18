@@ -159,6 +159,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
             criterion, criterion_dom = criterions
             val_loss_mel = 0.0
+            val_loss_gate = 0.0
             val_loss_spk_adv = 0.0
             val_loss_att_means = 0.0
             val_loss = 0.0
@@ -186,7 +187,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 alignments = y_pred[3]
                 (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
 
-                loss_mel = criterion(y_pred, y)
+                loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                     loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
@@ -198,21 +199,24 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 else:
                     loss_att_means = torch.zeros(1).cuda()
 
-                loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv + \
+                loss = loss_taco2 + hparams.speaker_adv_weight * loss_spk_adv + \
                     hparams.loss_att_means_weight * loss_att_means
 
                 if distributed_run:
                     reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                    reduced_val_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
                     reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                     reduced_val_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
                     reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
                 else:
                     reduced_val_loss_mel = loss_mel.item()
+                    reduced_val_loss_gate = loss_gate.item()
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss_att_means = loss_att_means.item()
                     reduced_val_loss = loss.item()
 
                 val_loss_mel += reduced_val_loss_mel
+                val_loss_gate += reduced_val_loss_gate
                 val_loss_spk_adv += reduced_val_loss_spk_adv
                 val_loss_att_means += reduced_val_loss_att_means
                 val_loss += reduced_val_loss
@@ -238,6 +242,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 batch_mar_list.append(batch_mar)
 
             val_loss_mel = val_loss_mel / (i + 1)
+            val_loss_gate = val_loss_gate / (i + 1)
             val_loss_spk_adv = val_loss_spk_adv / (i + 1)
             val_loss_att_means = val_loss_att_means / (i + 1)
             val_loss = val_loss / (i + 1)
@@ -271,7 +276,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
-            val_losses = (val_loss, val_loss_mel, val_loss_spk_adv, val_loss_att_means)
+            val_losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
             logger.log_validation(valset, val_type,
                 val_losses, far_pair, ar_pairs, arr_pair, mar_pair,
                 model, x, y, etc, y_pred, pred_speakers,
@@ -370,7 +375,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             output_lengths = x[4]
 
             # Caculate losses.
-            loss_mel = criterion(y_pred, y)
+            loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
             if hparams.speaker_adversarial_training:
                 input_lengths = x[1]
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
@@ -383,7 +388,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             else:
                 loss_att_means = torch.zeros(1).cuda()
 
-            loss = loss_mel + hparams.speaker_adv_weight * loss_spk_adv + \
+            loss = loss_taco2 + hparams.speaker_adv_weight * loss_spk_adv + \
                 hparams.loss_att_means_weight * loss_att_means
 
             if prj_name == "forward_attention_loss":
@@ -402,11 +407,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                reduced_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                 reduced_loss_att_means = reduce_tensor(reduced_loss_att_means.data, n_gpus).item()
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
                 reduced_loss_mel = loss_mel.item()
+                reduced_loss_gate = loss_gate.item()
                 reduced_loss_spk_adv = loss_spk_adv.item()
                 reduced_loss_att_means = loss_att_means.item()
                 reduced_loss = loss.item()
@@ -430,9 +437,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
-                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_spk_adv, reduced_loss_att_means)
+                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means)
                 logger.log_training(
                     reduced_losses, grad_norm, learning_rate, duration, x, etc,
                     y_pred, pred_speakers,
