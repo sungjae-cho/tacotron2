@@ -353,22 +353,6 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/mel_predicted/teacher_forcing".format(log_prefix): [wandb.Image(np_mel_predicted)],
                        "{}/mel_predicted/inference".format(log_prefix): [wandb.Image(np_mel_predicted_inf)],
                        "{}/gate".format(log_prefix): [wandb.Image(np_gate)],
-                       "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
-                       "{}/mean_attention_ratio".format(log_prefix):mean_ar,
-                       "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
-                       "{}/mean_punctuation_attention_ratio".format(log_prefix):mean_punct_ar,
-                       "{}/mean_blank_attention_ratio".format(log_prefix):mean_blank_ar,
-                       "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
-                       "{}/mean_multiple_attention_ratio".format(log_prefix):mean_mar,
-                       "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
-                       "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
-                       "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
-                       "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
-                       "{}/punctuation_attention_ratio".format(log_prefix):wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
-                       "{}/blank_attention_ratio".format(log_prefix):wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
-                       "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
-                       "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
-                       "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                        } , step=iteration)
 
         # [#3] Loggings only for all validation set.
