@@ -14,7 +14,6 @@ def get_mel_length(gate_output):
     Return
     -----
     mel_length: int.
-    - Size == [batch_size].
     '''
     #mel_length = torch.max(torch.argmax(alignments[batch_i,:,text_length-last_steps:text_length],dim=0))
     #mel_length = mel_length.item()
@@ -25,6 +24,27 @@ def get_mel_length(gate_output):
         mel_length = len(is_positive_output)
 
     return mel_length
+
+def get_mel_lengths(gate_outputs):
+    '''
+    Prams
+    -----
+    gate_output: torch.Tensor.
+    - size: [batch_size, max_mel_len].
+
+    Return
+    -----
+    mel_length: int.
+    - Size == [batch_size].
+    '''
+    batch_size = gate_outputs.size(0)
+    mel_lengths = torch.LongTensor(batch_size)
+    for i in range(batch_size):
+        gate_output = gate_outputs[i,:]
+        mel_lengths[i] = get_mel_length(gate_output)
+
+    return mel_lengths
+
 
 
 def forward_attention_ratio(alignments, input_lengths,
