@@ -277,8 +277,9 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             val_losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
+            val_attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
             logger.log_validation(valset, val_type,
-                val_losses, far_pair, ar_pairs, arr_pair, mar_pair,
+                val_losses, val_attention_measures,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 

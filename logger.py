@@ -248,13 +248,14 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_validation(self, valset, val_type,
-        losses, far_pair, ar_pairs, arr_pair, mar_pair,
+        losses, attention_measures,
         model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
 
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
+        far_pair, ar_pairs, arr_pair, mar_pair = attention_measures
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
