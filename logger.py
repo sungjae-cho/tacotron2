@@ -248,7 +248,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_validation(self, valset, val_type,
-        losses, attention_measures,
+        losses, attention_measures, fr_attention_measures,
         model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
@@ -256,11 +256,14 @@ class Tacotron2Logger(SummaryWriter):
 
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
         far_pair, ar_pairs, arr_pair, mar_pair = attention_measures
+        far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = fr_attention_measures
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_vectors, lang = etc
 
         _, mel_outputs, gate_outputs, alignments = y_pred
         mel_targets, gate_targets = y
+
+        # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
         mean_ar, batch_ar = ar_pairs[0]
         mean_letter_ar, batch_letter_ar = ar_pairs[1]
@@ -272,6 +275,19 @@ class Tacotron2Logger(SummaryWriter):
         batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
         best_attention_quality = batch_attention_quality.max().item()
         worst_attention_quality = batch_attention_quality.min().item()
+
+        # Attention quality measures (free running)
+        mean_far_fr, batch_far_fr = far_fr_pair
+        mean_ar_fr, batch_ar_fr = ar_fr_pairs[0]
+        mean_letter_ar_fr, batch_letter_ar_fr = ar_fr_pairs[1]
+        mean_punct_ar_fr, batch_punct_ar_fr = ar_fr_pairs[2]
+        mean_blank_ar_fr, batch_blank_ar_fr = ar_fr_pairs[3]
+        mean_arr_fr, batch_arr_fr = arr_fr_pair
+        mean_mar_fr, batch_mar_fr = mar_fr_pair
+        mean_attention_quality_fr = mean_far_fr * mean_ar_fr * mean_arr_fr * (1 - mean_mar_fr)
+        batch_attention_quality_fr = batch_far_fr * batch_ar_fr * batch_arr_fr * (1 - batch_mar_fr)
+        best_attention_quality_fr = batch_attention_quality_fr.max().item()
+        worst_attention_quality_fr = batch_attention_quality_fr.min().item()
 
         # Stop gate accuracy
         np_output_lengths = output_lengths.cpu().numpy()
@@ -303,6 +319,27 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
                    "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
                    "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
+                   } , step=iteration)
+
+        log_prefix_fr = "val_fr/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
+        wandb.log({"{}/mean_forward_attention_ratio".format(log_prefix_fr):mean_far_fr,
+                   "{}/mean_attention_ratio".format(log_prefix_fr):mean_ar_fr,
+                   "{}/mean_letter_attention_ratio".format(log_prefix_fr):mean_letter_ar_fr,
+                   "{}/mean_punctuation_attention_ratio".format(log_prefix_fr):mean_punct_ar_fr,
+                   "{}/mean_blank_attention_ratio".format(log_prefix_fr):mean_blank_ar_fr,
+                   "{}/mean_attention_range_ratio".format(log_prefix_fr):mean_arr_fr,
+                   "{}/mean_multiple_attention_ratio".format(log_prefix_fr):mean_mar_fr,
+                   "{}/mean_attention_quality".format(log_prefix_fr):mean_attention_quality_fr,
+                   "{}/best_attention_quality".format(log_prefix_fr):best_attention_quality_fr,
+                   "{}/worst_attention_quality".format(log_prefix_fr):worst_attention_quality_fr,
+                   "{}/forward_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_far_fr.data.cpu().numpy()),
+                   "{}/attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_ar_fr.data.cpu().numpy()),
+                   "{}/letter_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_letter_ar_fr.data.cpu().numpy()),
+                   "{}/punctuation_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_punct_ar_fr.data.cpu().numpy()),
+                   "{}/blank_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_blank_ar_fr.data.cpu().numpy()),
+                   "{}/attention_range_ratio".format(log_prefix_fr):wandb.Histogram(batch_arr_fr.data.cpu().numpy()),
+                   "{}/multiple_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_mar_fr.data.cpu().numpy()),
+                   "{}/attention_quality".format(log_prefix_fr):wandb.Histogram(batch_attention_quality_fr.data.cpu().numpy())
                    } , step=iteration)
 
         if self.hparams.speaker_adversarial_training:

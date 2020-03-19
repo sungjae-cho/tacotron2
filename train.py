@@ -164,6 +164,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             val_loss_att_means = 0.0
             val_loss = 0.0
 
+            #######################
+            # TEACHER FORCING #####
             # forward_attention_ratio
             batch_far_list = list()
             # attention_ratio
@@ -176,12 +178,32 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             # multiple_attention_ratio
             batch_mar_list = list()
 
+            ####################
+            # FREE RUNNING #####
+            # forward_attention_ratio
+            batch_far_fr_list = list()
+            # attention_ratio
+            batch_ar_fr_list = list()
+            batch_letter_ar_fr_list = list()
+            batch_punct_ar_fr_list = list()
+            batch_blank_ar_fr_list = list()
+            # attention_range_ratio
+            batch_arr_fr_list = list()
+            # multiple_attention_ratio
+            batch_mar_fr_list = list()
+
             for i, batch in enumerate(val_loader):
+                print("Val index", i)
+                # Parse inputs of each batch
                 x, y, etc = model.parse_batch(batch)
                 text_padded = x[0]
                 input_lengths = x[1]
                 output_lengths = x[4]
                 speakers, sex, emotion_vectors, lang = etc
+
+                ############################################################
+                # TEACHER FORCING #####
+                # Forward propagation by teacher forcing
                 y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
                 gate_outputs = y_pred[2]
                 alignments = y_pred[3]
@@ -221,10 +243,10 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 val_loss_att_means += reduced_val_loss_att_means
                 val_loss += reduced_val_loss
 
-                # forward_attention_ratio
+                # [M1] forward_attention_ratio
                 _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_far_list.append(batch_far)
-                # attention_ratio
+                # [M2] attention_ratio
                 ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_ar = ar_pairs[0][1]
                 batch_letter_ar = ar_pairs[1][1]
@@ -234,24 +256,52 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 batch_letter_ar_list.append(batch_letter_ar)
                 batch_punct_ar_list.append(batch_punct_ar)
                 batch_blank_ar_list.append(batch_blank_ar)
-                # attention_range_ratio
+                # [M3] attention_range_ratio
                 _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_arr_list.append(batch_arr)
-                # multiple_attention_ratio
+                # [M4] multiple_attention_ratio
                 _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_mar_list.append(batch_mar)
 
+                ############################################################
+                # FREE RUNNING #####
+                # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr = model.free_running(text_padded, input_lengths, speakers, emotion_vectors)
+
+                # Computing attention measures.
+                # [M1] forward_attention_ratio
+                _, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                batch_far_fr_list.append(batch_far_fr)
+                # [M2] attention_ratio
+                ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                batch_ar_fr = ar_fr_pairs[0][1]
+                batch_letter_ar_fr = ar_fr_pairs[1][1]
+                batch_punct_ar_fr = ar_fr_pairs[2][1]
+                batch_blank_ar_fr = ar_fr_pairs[3][1]
+                batch_ar_fr_list.append(batch_ar_fr)
+                batch_letter_ar_fr_list.append(batch_letter_ar_fr)
+                batch_punct_ar_fr_list.append(batch_punct_ar_fr)
+                batch_blank_ar_fr_list.append(batch_blank_ar_fr)
+                # [M3] attention_range_ratio
+                _, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                batch_arr_fr_list.append(batch_arr_fr)
+                # [M4] multiple_attention_ratio
+                _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                batch_mar_fr_list.append(batch_mar_fr)
+
+            ############################################################
+            # TEACHER FORCING #####
             val_loss_mel = val_loss_mel / (i + 1)
             val_loss_gate = val_loss_gate / (i + 1)
             val_loss_spk_adv = val_loss_spk_adv / (i + 1)
             val_loss_att_means = val_loss_att_means / (i + 1)
             val_loss = val_loss / (i + 1)
 
-            # forward_attention_ratio
+            # [M1] forward_attention_ratio
             val_batch_far = torch.cat(batch_far_list)
             val_mean_far = val_batch_far.mean().item()
             far_pair = (val_mean_far, val_batch_far)
-            # attention_ratio
+            # [M2] attention_ratio
             val_batch_ar = torch.cat(batch_ar_list)
             val_mean_ar = val_batch_ar.mean().item()
             val_batch_letter_ar = torch.cat(batch_letter_ar_list)
@@ -264,22 +314,52 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                         (val_mean_letter_ar, val_batch_letter_ar),
                         (val_mean_punct_ar, val_batch_punct_ar),
                         (val_mean_blank_ar, val_batch_blank_ar))
-            # attention_range_ratio
+            # [M3] attention_range_ratio
             val_batch_arr = torch.cat(batch_arr_list)
             val_mean_arr = val_batch_arr.mean().item()
             arr_pair = (val_mean_arr, val_batch_arr)
-            # multiple_attention_ratio
+            # [M4] multiple_attention_ratio
             val_batch_mar = torch.cat(batch_mar_list)
             val_mean_mar = val_batch_mar.mean().item()
             mar_pair = (val_mean_mar, val_batch_mar)
+
+            ############################################################
+            # FREE RUNNING #####
+            # [M1] forward_attention_ratio
+            val_batch_far_fr = torch.cat(batch_far_fr_list)
+            val_mean_far_fr = val_batch_far_fr.mean().item()
+            far_fr_pair = (val_mean_far_fr, val_batch_far_fr)
+            # [M2] attention_ratio
+            val_batch_ar_fr = torch.cat(batch_ar_fr_list)
+            val_mean_ar_fr = val_batch_ar_fr.mean().item()
+            val_batch_letter_ar_fr = torch.cat(batch_letter_ar_fr_list)
+            val_mean_letter_ar_fr = val_batch_letter_ar_fr.mean().item()
+            val_batch_punct_ar_fr = torch.cat(batch_punct_ar_fr_list)
+            val_mean_punct_ar_fr = val_batch_punct_ar_fr.mean().item()
+            val_batch_blank_ar_fr = torch.cat(batch_blank_ar_fr_list)
+            val_mean_blank_ar_fr = val_batch_blank_ar_fr.mean().item()
+            ar_fr_pairs = ((val_mean_ar_fr, val_batch_ar_fr),
+                           (val_mean_letter_ar_fr, val_batch_letter_ar_fr),
+                           (val_mean_punct_ar_fr, val_batch_punct_ar_fr),
+                           (val_mean_blank_ar_fr, val_batch_blank_ar_fr))
+            # [M3] attention_range_ratio
+            val_batch_arr_fr = torch.cat(batch_arr_fr_list)
+            val_mean_arr_fr = val_batch_arr_fr.mean().item()
+            arr_fr_pair = (val_mean_arr_fr, val_batch_arr_fr)
+            # [M4] multiple_attention_ratio
+            val_batch_mar_fr = torch.cat(batch_mar_fr_list)
+            val_mean_mar_fr = val_batch_mar_fr.mean().item()
+            mar_fr_pair = (val_mean_mar_fr, val_batch_mar_fr)
+
 
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             val_losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
             val_attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
+            val_fr_attention_measures = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
             logger.log_validation(valset, val_type,
-                val_losses, val_attention_measures,
+                val_losses, val_attention_measures, val_fr_attention_measures,
                 model, x, y, etc, y_pred, pred_speakers,
                 iteration, epoch, hparams)
 

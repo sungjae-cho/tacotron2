@@ -606,6 +606,56 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
 
+    def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors):
+        """ Decoder inference
+        PARAMS
+        ------
+        memory: Encoder outputs
+
+        RETURNS
+        -------
+        mel_outputs: mel outputs from the decoder.
+        - Size: [batch_size, n_mel_channels, max_decoder_steps]
+        gate_outputs: gate outputs from the decoder
+        - Size: [batch_size, max_decoder_steps, 1]
+        alignments: sequence of attention weights from the decoder
+        - Size: [batch_size, max_decoder_steps, batch_max_text_length]
+        """
+        print("Free running starts!")
+        decoder_input = self.get_go_frame(memory)
+
+        #self.initialize_decoder_states(memory, mask=None)
+        self.initialize_decoder_states(
+            memory, mask=~get_mask_from_lengths(memory_lengths))
+
+        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
+        while len(mel_outputs) < self.max_decoder_steps:
+            decoder_input = self.prenet(decoder_input)
+            mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
+                speaker_indices, emotion_vectors)
+            mel_outputs += [mel_output.squeeze(1)]
+            gate_outputs += [gate_output]
+            alignments += [alignment]
+            attention_contexts += [attention_context]
+            '''print("mel_output.size()", mel_output.size())
+            print("gate_output.size()", gate_output.size())
+            print("alignment.size()", alignment.size())
+            print("attention_context.size()", attention_context.size())'''
+
+
+            decoder_input = mel_output
+
+        mel_outputs, gate_outputs, alignments, attention_contexts = self.parse_decoder_outputs(
+            mel_outputs, gate_outputs, alignments, attention_contexts)
+
+
+        print("mel_outputs.size()", mel_outputs.size())
+        print("gate_outputs.size()", gate_outputs.size())
+        print("alignments.size()", alignments.size())
+        print("attention_contexts.size()", attention_contexts.size())
+
+        return mel_outputs, gate_outputs, alignments
+
     def inference(self, memory, speaker_indices, emotion_vectors):
         """ Decoder inference
         PARAMS
@@ -728,6 +778,22 @@ class Tacotron2(nn.Module):
         return self.parse_output(
             [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
             output_lengths), (logit_outputs, prob_speakers, pred_speakers), att_means
+
+    def free_running(self, inputs, text_lengths, speakers, emotion_vectors):
+        embedded_inputs = self.embedding(inputs).transpose(1, 2)
+        encoder_outputs = self.encoder.inference(embedded_inputs)
+        speaker_embeddings = self.speaker_embedding_layer(speakers)
+        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        mel_outputs, gate_outputs, alignments = self.decoder.free_running(
+            encoder_outputs, text_lengths, speaker_embeddings, emotion_embeddings)
+
+        mel_outputs_postnet = self.postnet(mel_outputs)
+        mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+
+        outputs = self.parse_output(
+            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
+
+        return outputs
 
     def inference(self, inputs, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
