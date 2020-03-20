@@ -637,22 +637,10 @@ class Decoder(nn.Module):
             gate_outputs += [gate_output]
             alignments += [alignment]
             attention_contexts += [attention_context]
-            '''print("mel_output.size()", mel_output.size())
-            print("gate_output.size()", gate_output.size())
-            print("alignment.size()", alignment.size())
-            print("attention_context.size()", attention_context.size())'''
-
-
             decoder_input = mel_output
 
         mel_outputs, gate_outputs, alignments, attention_contexts = self.parse_decoder_outputs(
             mel_outputs, gate_outputs, alignments, attention_contexts)
-
-
-        print("mel_outputs.size()", mel_outputs.size())
-        print("gate_outputs.size()", gate_outputs.size())
-        print("alignments.size()", alignments.size())
-        print("attention_contexts.size()", attention_contexts.size())
 
         return mel_outputs, gate_outputs, alignments
 
