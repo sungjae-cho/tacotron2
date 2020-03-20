@@ -129,6 +129,9 @@ class Tacotron2Logger(SummaryWriter):
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
 
+        if hparams.speaker_adversarial_training:
+            spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
+
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
@@ -207,15 +210,10 @@ class Tacotron2Logger(SummaryWriter):
                    "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                    }, step=iteration)
 
-        # Calculate accuracy of the speaker adversarial training module.
+        # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
-            np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
-            np_pred_speakers = pred_speakers.cpu().numpy()
-            spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
-
             # Update training_epoch_variables
             self.sum_spk_adv_accuracy += spk_adv_accuracy
-
             wandb.log({"train/loss_spk_adv": loss_spk_adv,
                        "train/spk_adv_accuracy": spk_adv_accuracy}
                        , step=iteration)
@@ -283,6 +281,9 @@ class Tacotron2Logger(SummaryWriter):
 
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
+
+        if self.hparams.speaker_adversarial_training:
+            spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
 
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
@@ -359,14 +360,10 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/attention_quality".format(log_prefix_fr):wandb.Histogram(batch_attention_quality_fr.data.cpu().numpy())
                    } , step=iteration)
 
+        # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
-            # Calculate accuracy of the speaker adversarial training module.
-            np_speakers = get_spk_adv_targets(speakers, input_lengths).cpu().numpy()
-            np_pred_speakers = pred_speakers.cpu().numpy()
-            val_spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
-
             wandb.log({"{}/loss_spk_adv".format(log_prefix): loss_spk_adv,
-                       "{}/spk_adv_accuracy".format(log_prefix): val_spk_adv_accuracy}
+                       "{}/spk_adv_accuracy".format(log_prefix): spk_adv_accuracy}
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.

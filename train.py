@@ -218,12 +218,21 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 # Compute stop gate MAE(pred_lengths, true_lengths)
                 gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
+                # Caculate Tacotron2 losses.
                 loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
+
+                # Forward the speaker adversarial module.
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
+                    # Compute the speaker adversarial loss
                     loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
+                    # Compute the accuracy of the adversarial speaker classifier.
+                    np_speakers = spk_adv_targets.cpu().numpy()
+                    np_pred_speakers = pred_speakers.cpu().numpy()
+                    spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
                 else:
                     loss_spk_adv = torch.zeros(1).cuda()
+
                 if hparams.monotonic_attention:
                     input_lengths = x[1]
                     loss_att_means = MSELoss()(att_means, input_lengths.float())
@@ -383,6 +392,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 'gate_accuracy':gate_accuracy,
                 'gate_mae':gate_mae,
             }
+            if hparams.speaker_adversarial_training:
+                dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
 
             logger.log_validation(valset, val_type, hparams, dict_log_values)
 
@@ -492,14 +503,21 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # Compute stop gate MAE(pred_lengths, true_lengths)
             gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
-            # Caculate losses.
+            # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
+
+            # Forward the speaker adversarial module.
             if hparams.speaker_adversarial_training:
-                input_lengths = x[1]
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
+                # Compute the speaker adversarial loss.
                 loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
+                # Compute the accuracy of the adversarial speaker classifier.
+                np_speakers = spk_adv_targets.cpu().numpy()
+                np_pred_speakers = pred_speakers.cpu().numpy()
+                spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
             else:
                 loss_spk_adv = torch.zeros(1).cuda()
+
             if hparams.monotonic_attention:
                 input_lengths = x[1]
                 loss_att_means = MSELoss()(att_means, input_lengths.float())
@@ -573,6 +591,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
                 }
+                if hparams.speaker_adversarial_training:
+                    dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
+
                 logger.log_training(hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
