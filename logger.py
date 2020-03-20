@@ -108,9 +108,23 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_spk_adv_accuracy = 0
 
 
-    def log_training(self, losses, grad_norm, learning_rate, duration,
+    '''def log_training(self, losses, grad_norm, learning_rate, duration,
             x, etc, y_pred, pred_speakers, iteration, epoch, batches_per_epoch,
+            forward_attention_loss=None):'''
+
+    def log_training(self, hparams, dict_log_values, batches_per_epoch,
             forward_attention_loss=None):
+
+        iteration = dict_log_values['iteration']
+        epoch = dict_log_values['epoch']
+        losses = dict_log_values['losses']
+        grad_norm = dict_log_values['grad_norm']
+        learning_rate = dict_log_values['learning_rate']
+        duration = dict_log_values['duration']
+        x = dict_log_values['x']
+        etc = dict_log_values['etc']
+        y_pred = dict_log_values['y_pred']
+        pred_speakers = dict_log_values['pred_speakers']
 
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
@@ -247,21 +261,25 @@ class Tacotron2Logger(SummaryWriter):
                            }, step=iteration)
 
 
-    def log_validation(self, valset, val_type,
-        losses, attention_measures, fr_attention_measures,
-        model, x, y, etc, y_pred, pred_speakers, iteration, epoch, hparams):
+    def log_validation(self, valset, val_type, hparams, dict_log_values):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
 
-        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
-        far_pair, ar_pairs, arr_pair, mar_pair = attention_measures
-        far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = fr_attention_measures
-        text_padded, input_lengths, mel_padded, max_len, output_lengths = x
-        speakers, sex, emotion_vectors, lang = etc
+        iteration = dict_log_values['iteration']
+        epoch = dict_log_values['epoch']
 
-        _, mel_outputs, gate_outputs, alignments = y_pred
-        mel_targets, gate_targets = y
+        model = dict_log_values['model']
+
+        text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
+        speakers, sex, emotion_vectors, lang = dict_log_values['etc']
+        mel_targets, gate_targets = dict_log_values['y']
+        _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
+        pred_speakers = dict_log_values['pred_speakers']
+
+        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = dict_log_values['losses']
+        far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
+        far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['fr_attention_measures']
 
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair

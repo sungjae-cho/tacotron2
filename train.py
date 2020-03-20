@@ -355,13 +355,25 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
-            val_losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
-            val_attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
-            val_fr_attention_measures = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
-            logger.log_validation(valset, val_type,
-                val_losses, val_attention_measures, val_fr_attention_measures,
-                model, x, y, etc, y_pred, pred_speakers,
-                iteration, epoch, hparams)
+            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
+            attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
+            fr_attention_measures = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
+
+            dict_log_values = {
+                'iteration':iteration,
+                'epoch':epoch,
+                'model':model,
+                'x':x,
+                'etc':etc,
+                'y':y,
+                'y_pred':y_pred,
+                'pred_speakers':pred_speakers,
+                'losses':losses,
+                'attention_measures':attention_measures,
+                'fr_attention_measures':fr_attention_measures,
+            }
+
+            logger.log_validation(valset, val_type, hparams, dict_log_values)
 
 
 def train(output_directory, log_directory, checkpoint_path, pretrained_path,
@@ -521,10 +533,20 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
                     iteration, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means)
-                logger.log_training(
-                    reduced_losses, grad_norm, learning_rate, duration, x, etc,
-                    y_pred, pred_speakers,
-                    iteration, float_epoch, batches_per_epoch, float_fa_loss)
+
+                dict_log_values = {
+                    'iteration':iteration,
+                    'epoch':float_epoch,
+                    'losses':reduced_losses,
+                    'grad_norm':grad_norm,
+                    'learning_rate':learning_rate,
+                    'duration':duration,
+                    'x':x,
+                    'etc':etc,
+                    'y_pred':y_pred,
+                    'pred_speakers':pred_speakers,
+                }
+                logger.log_training(hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 criterions = (criterion, criterion_dom)
