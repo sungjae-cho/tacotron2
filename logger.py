@@ -91,6 +91,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_att_means = 0
 
         self.sum_gate_accuracy = 0
+        self.sum_gate_mae = 0
 
         self.sum_grad_norm = 0
 
@@ -126,6 +127,7 @@ class Tacotron2Logger(SummaryWriter):
         y_pred = dict_log_values['y_pred']
         pred_speakers = dict_log_values['pred_speakers']
         gate_accuracy = dict_log_values['gate_accuracy']
+        gate_mae = dict_log_values['gate_mae']
 
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
@@ -159,6 +161,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_att_means += loss_att_means
 
         self.sum_gate_accuracy += gate_accuracy
+        self.sum_gate_mae += gate_mae
 
         self.sum_grad_norm += grad_norm
 
@@ -180,6 +183,7 @@ class Tacotron2Logger(SummaryWriter):
                    "train/loss_mel": loss_mel,
                    "train/loss_gate": loss_gate,
                    "train/gate_accuracy": gate_accuracy,
+                   "train/gate_mean_absolute_error":gate_mae,
                    "train/grad_norm": grad_norm,
                    "train/learning_rate": learning_rate,
                    "train/iter_duration": duration,
@@ -233,6 +237,7 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/loss_mel": (self.sum_loss_mel / self.batches_per_epoch),
                        "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),
                        "train_epoch/gate_accuracy": (self.sum_gate_accuracy / self.batches_per_epoch),
+                       "train_epoch/gate_mean_absolute_error": (self.sum_gate_mae / self.batches_per_epoch),
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
@@ -277,6 +282,7 @@ class Tacotron2Logger(SummaryWriter):
         far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['fr_attention_measures']
 
         gate_accuracy = dict_log_values['gate_accuracy']
+        gate_mae = dict_log_values['gate_mae']
 
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
@@ -311,6 +317,7 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/loss_mel".format(log_prefix): loss_mel,
                    "{}/loss_gate".format(log_prefix): loss_gate,
                    "{}/gate_accuracy".format(log_prefix): gate_accuracy,
+                   "{}/gate_mean_absolute_error".format(log_prefix): gate_mae,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,

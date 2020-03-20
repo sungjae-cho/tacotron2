@@ -12,7 +12,7 @@ from distributed import apply_gradient_allreduce
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_absolute_error
 from torch.nn import MSELoss
 
 from model import Tacotron2
@@ -215,6 +215,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 mel_lengths = get_mel_lengths(gate_outputs)
                 np_mel_lengths = mel_lengths.cpu().numpy()
                 gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
+                # Compute stop gate MAE(pred_lengths, true_lengths)
+                gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
                 loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
                 if hparams.speaker_adversarial_training:
@@ -379,6 +381,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 'attention_measures':attention_measures,
                 'fr_attention_measures':fr_attention_measures,
                 'gate_accuracy':gate_accuracy,
+                'gate_mae':gate_mae,
             }
 
             logger.log_validation(valset, val_type, hparams, dict_log_values)
@@ -486,6 +489,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             mel_lengths = get_mel_lengths(gate_outputs)
             np_mel_lengths = mel_lengths.cpu().numpy()
             gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
+            # Compute stop gate MAE(pred_lengths, true_lengths)
+            gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
             # Caculate losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
@@ -566,6 +571,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'y_pred':y_pred,
                     'pred_speakers':pred_speakers,
                     'gate_accuracy':gate_accuracy,
+                    'gate_mae':gate_mae,
                 }
                 logger.log_training(hparams, dict_log_values, batches_per_epoch)
 
