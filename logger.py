@@ -125,6 +125,7 @@ class Tacotron2Logger(SummaryWriter):
         etc = dict_log_values['etc']
         y_pred = dict_log_values['y_pred']
         pred_speakers = dict_log_values['pred_speakers']
+        gate_accuracy = dict_log_values['gate_accuracy']
 
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
@@ -149,12 +150,6 @@ class Tacotron2Logger(SummaryWriter):
         # Initialize training_epoch_variables
         if self.is_first_batch(iteration):
             self.init_training_epoch_variables()
-
-        # Stop gate accuracy
-        np_output_lengths = output_lengths.cpu().numpy()
-        mel_lengths = get_mel_lengths(gate_outputs)
-        np_mel_lengths = mel_lengths.cpu().numpy()
-        gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
 
         # Update training_epoch_variables
         self.sum_loss += loss
@@ -281,6 +276,8 @@ class Tacotron2Logger(SummaryWriter):
         far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
         far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['fr_attention_measures']
 
+        gate_accuracy = dict_log_values['gate_accuracy']
+
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
         mean_ar, batch_ar = ar_pairs[0]
@@ -307,11 +304,6 @@ class Tacotron2Logger(SummaryWriter):
         best_attention_quality_fr = batch_attention_quality_fr.max().item()
         worst_attention_quality_fr = batch_attention_quality_fr.min().item()
 
-        # Stop gate accuracy
-        np_output_lengths = output_lengths.cpu().numpy()
-        mel_lengths = get_mel_lengths(gate_outputs)
-        np_mel_lengths = mel_lengths.cpu().numpy()
-        gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
 
         # [#1] Logging for all val_type
         log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)

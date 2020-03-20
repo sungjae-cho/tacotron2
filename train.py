@@ -21,6 +21,7 @@ from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
+from measures import get_mel_lengths
 from utils import get_spk_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
@@ -196,18 +197,24 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 print("Val index", i)
                 # Parse inputs of each batch
                 x, y, etc = model.parse_batch(batch)
-                text_padded = x[0]
-                input_lengths = x[1]
-                output_lengths = x[4]
+                text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+                mel_padded, gate_padded = y
                 speakers, sex, emotion_vectors, lang = etc
 
                 ############################################################
                 # TEACHER FORCING #####
                 # Forward propagation by teacher forcing
                 y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
-                gate_outputs = y_pred[2]
-                alignments = y_pred[3]
-                (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
+
+                # Forward propagtion results
+                mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
+                spk_logit_outputs, prob_speakers, pred_speakers = y_pred_speakers
+
+                # Compute stop gate accuracy
+                np_output_lengths = output_lengths.cpu().numpy()
+                mel_lengths = get_mel_lengths(gate_outputs)
+                np_mel_lengths = mel_lengths.cpu().numpy()
+                gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
 
                 loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
                 if hparams.speaker_adversarial_training:
@@ -371,6 +378,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 'losses':losses,
                 'attention_measures':attention_measures,
                 'fr_attention_measures':fr_attention_measures,
+                'gate_accuracy':gate_accuracy,
             }
 
             logger.log_validation(valset, val_type, hparams, dict_log_values)
@@ -462,10 +470,22 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             # Parse the current batch.
             x, y, etc = model.parse_batch(batch)
+            text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+            mel_padded, gate_padded = y
             speakers, sex, emotion_vectors, lang = etc
+
+            # Forward propagtion
             y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
-            (spk_logit_outputs, prob_speakers, pred_speakers) = y_pred_speakers
-            output_lengths = x[4]
+
+            # Forward propagtion results
+            mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
+            spk_logit_outputs, prob_speakers, pred_speakers = y_pred_speakers
+
+            # Compute stop gate accuracy
+            np_output_lengths = output_lengths.cpu().numpy()
+            mel_lengths = get_mel_lengths(gate_outputs)
+            np_mel_lengths = mel_lengths.cpu().numpy()
+            gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
 
             # Caculate losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
@@ -545,6 +565,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'etc':etc,
                     'y_pred':y_pred,
                     'pred_speakers':pred_speakers,
+                    'gate_accuracy':gate_accuracy,
                 }
                 logger.log_training(hparams, dict_log_values, batches_per_epoch)
 
