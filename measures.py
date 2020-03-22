@@ -46,6 +46,19 @@ def get_mel_lengths(gate_outputs):
     return mel_lengths
 
 
+def get_attention_quality(
+        batch_forward_attention_ratio,
+        batch_attention_ratio,
+        batch_attention_ratio_range,
+        batch_multiple_attention_ratio):
+
+    batch_attention_quality = batch_forward_attention_ratio \
+        * batch_attention_ratio \
+        * batch_attention_ratio_range \
+        * (1 - batch_multiple_attention_ratio)
+
+    return batch_attention_quality
+
 
 def forward_attention_ratio(alignments, input_lengths,
         output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",

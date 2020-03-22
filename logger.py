@@ -12,7 +12,9 @@ from torch.utils.tensorboard import SummaryWriter
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
     plot_embeddings_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
-from measures import forward_attention_ratio, get_mel_length, get_mel_lengths, attention_ratio, attention_range_ratio, multiple_attention_ratio
+from measures import forward_attention_ratio, get_mel_length, get_mel_lengths, \
+    get_attention_quality, attention_ratio, attention_range_ratio, \
+    multiple_attention_ratio
 from text import sequence_to_text
 from denoiser import Denoiser
 from text import text_to_sequence
@@ -147,8 +149,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
-        batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
+        mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
+        batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
         best_attention_quality = batch_attention_quality.max().item()
         worst_attention_quality = batch_attention_quality.min().item()
 
@@ -293,8 +295,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = arr_pair
         mean_mar, batch_mar = mar_pair
-        mean_attention_quality = mean_far * mean_ar * mean_arr * (1 - mean_mar)
-        batch_attention_quality = batch_far * batch_ar * batch_arr * (1 - batch_mar)
+        mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
+        batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
         best_attention_quality = batch_attention_quality.max().item()
         worst_attention_quality = batch_attention_quality.min().item()
 
@@ -306,8 +308,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_blank_ar_fr, batch_blank_ar_fr = ar_fr_pairs[3]
         mean_arr_fr, batch_arr_fr = arr_fr_pair
         mean_mar_fr, batch_mar_fr = mar_fr_pair
-        mean_attention_quality_fr = mean_far_fr * mean_ar_fr * mean_arr_fr * (1 - mean_mar_fr)
-        batch_attention_quality_fr = batch_far_fr * batch_ar_fr * batch_arr_fr * (1 - batch_mar_fr)
+        mean_attention_quality_fr = get_attention_quality(mean_far_fr, mean_ar_fr, mean_arr_fr, mean_mar_fr)
+        batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
         best_attention_quality_fr = batch_attention_quality_fr.max().item()
         worst_attention_quality_fr = batch_attention_quality_fr.min().item()
 
