@@ -621,7 +621,6 @@ class Decoder(nn.Module):
         alignments: sequence of attention weights from the decoder
         - Size: [batch_size, max_decoder_steps, batch_max_text_length]
         """
-        print("Free running starts!")
         decoder_input = self.get_go_frame(memory)
 
         #self.initialize_decoder_states(memory, mask=None)
