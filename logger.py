@@ -111,9 +111,53 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_spk_adv_accuracy = 0
 
 
-    '''def log_training(self, losses, grad_norm, learning_rate, duration,
-            x, etc, y_pred, pred_speakers, iteration, epoch, batches_per_epoch,
-            forward_attention_loss=None):'''
+    def log_synth_dict(self, synth_dict, synth_dict_type,
+            valset, val_speaker, val_emotion, iteration):
+        '''
+        synth_dict_type is one of ['random_pick', 'min_aq_tf', 'min_aq_fr']
+        '''
+        speaker_tensor = synth_dict['speaker_tensor']
+        emotion_tensor = synth_dict['emotion_tensor']
+        speaker = valset.int2speaker(speaker_tensor.item())
+        str_emotion = valset.emotion_tensor2str_emotion(emotion_tensor)
+
+        text_sequence = synth_dict['text_sequence']
+        text_string = sequence_to_text(text_sequence.tolist())
+
+        mel_true = synth_dict['mel_true']
+        mel_output_tf = synth_dict['mel_output_tf']
+        mel_output_fr = synth_dict['mel_output_fr']
+        np_mel_true = plot_spectrogram_to_numpy(mel_true.data.cpu().numpy())
+        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.data.cpu().numpy())
+        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.data.cpu().numpy())
+        np_wav_true = self.mel2wav(mel_true.unsqueeze(0).cuda().half())
+        np_wav_tf = self.mel2wav(mel_output_tf.unsqueeze(0).cuda().half())
+        np_wav_fr = self.mel2wav(mel_output_fr.unsqueeze(0).cuda().half())
+
+        alignment_tf = synth_dict['alignment_tf']
+        alignment_fr = synth_dict['alignment_fr']
+        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.data.cpu().numpy().T)
+        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.data.cpu().numpy().T)
+
+        caption_string = '[{speaker}|{emotion}] {text}'.format(
+            speaker=speaker,
+            emotion=str_emotion,
+            text=text_string
+        )
+
+        log_prefix = "val/{speaker}/{emotion}/{synth_dict_type}".format(
+            speaker=val_speaker, emotion=val_emotion, synth_dict_type=synth_dict_type)
+        wandb.log({
+            "{}/mel/true".format(log_prefix): [wandb.Image(np_mel_true)],
+            "{}/mel/teacher_forcing".format(log_prefix): [wandb.Image(np_mel_output_tf)],
+            "{}/mel/free_running".format(log_prefix): [wandb.Image(np_mel_output_fr)],
+            "{}/audio/true".format(log_prefix): [wandb.Audio(np_wav_true.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
+            "{}/audio/teacher_forcing".format(log_prefix): [wandb.Audio(np_wav_tf.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
+            "{}/audio/free_running".format(log_prefix): [wandb.Audio(np_wav_fr.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
+            "{}/alignment/teacher_forcing".format(log_prefix): [wandb.Image(np_alignment_tf, caption=caption_string)],
+            "{}/alignment/free_running".format(log_prefix): [wandb.Image(np_alignment_fr, caption=caption_string)],
+        }, step=iteration)
+
 
     def log_training(self, hparams, dict_log_values, batches_per_epoch,
             forward_attention_loss=None):
@@ -279,10 +323,14 @@ class Tacotron2Logger(SummaryWriter):
 
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = dict_log_values['losses']
         far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
-        far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['fr_attention_measures']
+        far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['attention_measures_fr']
 
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
+
+        synth_dict_rand = dict_log_values['synth_dict_rand']
+        synth_dict_min_aq_tf = dict_log_values['synth_dict_min_aq_tf']
+        synth_dict_min_aq_fr = dict_log_values['synth_dict_min_aq_fr']
 
         if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
@@ -375,63 +423,14 @@ class Tacotron2Logger(SummaryWriter):
 
         # [#2] Logging for all val_type except ('all', 'all')
         if (val_speaker, val_emotion) != ('all', 'all'):
-            # plot alignment, mel target and predicted, gate target and predicted
-            idx = random.randint(0, alignments.size(0) - 1)
+            # [2-1] synth_dict_rand
+            self.log_synth_dict(synth_dict_rand, 'random_pick', valset, val_speaker, val_emotion, iteration)
 
-            speaker_tensor = speakers[idx].view(1)
-            emotion_tensor = emotion_vectors[idx].view(1, -1)
-            speaker = valset.int2speaker(speaker_tensor.item())
-            str_emotion = valset.emotion_tensor2str_emotion(emotion_tensor)
+            # [2-2] synth_dict_min_aq_tf
+            self.log_synth_dict(synth_dict_min_aq_tf, 'min_aq_tf', valset, val_speaker, val_emotion, iteration)
 
-            text_len = input_lengths[idx].item()
-            text_sequence = text_padded[idx,:text_len].view(1, -1)
-            text_string = sequence_to_text(text_sequence.squeeze().tolist())
-
-            mel_len = get_mel_length(gate_outputs[idx])
-            mel = mel_outputs[idx:idx+1,:,:mel_len]
-            mel_target_len = output_lengths[idx].item()
-            mel_target = mel_targets[idx:idx+1,:,:mel_target_len]
-
-            _, mel_outputs_postnet_inf, _, alignments_inf = model.inference(text_sequence, speaker_tensor, emotion_tensor)
-
-            np_wav = self.mel2wav(mel.type('torch.cuda.HalfTensor'))
-            np_wav_target = self.mel2wav(mel_target.type('torch.cuda.HalfTensor'))
-            np_wav_inf = self.mel2wav(mel_outputs_postnet_inf.type('torch.cuda.HalfTensor'))
-
-            np_alignment = plot_alignment_to_numpy(
-                alignments[idx].data.cpu().numpy().T,
-                text_len,
-                decoding_len=mel_len)
-            np_alignment_inf = plot_alignment_to_numpy(
-                alignments_inf[0].data.cpu().numpy().T,
-                text_len)
-
-            np_mel_target = plot_spectrogram_to_numpy(mel_targets[idx].data.cpu().numpy())
-            np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs[idx].data.cpu().numpy())
-            np_mel_predicted_inf = plot_spectrogram_to_numpy(mel_outputs_postnet_inf[0].data.cpu().numpy())
-
-            np_gate = plot_gate_outputs_to_numpy(
-                gate_targets[idx].data.cpu().numpy(),
-                torch.sigmoid(gate_outputs[idx]).data.cpu().numpy())
-
-            # wandb log
-            caption_string = '[{speaker}|{emotion}] {text}'.format(
-                speaker=speaker,
-                emotion=str_emotion,
-                text=text_string
-            )
-
-            log_prefix = "val/{speaker}/{emotion}".format(speaker=val_speaker, emotion=val_emotion)
-            wandb.log({"{}/alignment/teacher_forcing".format(log_prefix): [wandb.Image(np_alignment, caption=caption_string)],
-                       "{}/alignment/inference".format(log_prefix): [wandb.Image(np_alignment_inf, caption=caption_string)],
-                       "{}/audio/target".format(log_prefix): [wandb.Audio(np_wav_target.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
-                       "{}/audio/teacher_forcing".format(log_prefix): [wandb.Audio(np_wav.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
-                       "{}/audio/inference".format(log_prefix): [wandb.Audio(np_wav_inf.astype(np.float32), caption=caption_string, sample_rate=hparams.sampling_rate)],
-                       "{}/mel_target".format(log_prefix): [wandb.Image(np_mel_target)],
-                       "{}/mel_predicted/teacher_forcing".format(log_prefix): [wandb.Image(np_mel_predicted)],
-                       "{}/mel_predicted/inference".format(log_prefix): [wandb.Image(np_mel_predicted_inf)],
-                       "{}/gate".format(log_prefix): [wandb.Image(np_gate)],
-                       } , step=iteration)
+            # [2-3] synth_dict_min_aq_fr
+            self.log_synth_dict(synth_dict_min_aq_fr, 'min_aq_fr', valset, val_speaker, val_emotion, iteration)
 
         # [#3] Loggings only for all validation set.
         else:

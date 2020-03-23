@@ -4,6 +4,7 @@ import argparse
 import math
 import signal
 import sys
+import random
 from numpy import finfo
 from apex import amp
 
@@ -21,7 +22,8 @@ from loss_function import Tacotron2Loss, forward_attention_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
-from measures import get_mel_lengths
+from measures import get_mel_length, get_mel_lengths
+from measures import get_attention_quality
 from utils import get_spk_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
@@ -146,6 +148,52 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler, fi
                 }, filepath)
 
 
+def fill_synth_dict(synth_dict, idx, inputs, outputs,
+        batch_attention_measures_tf, batch_attention_measures_fr):
+    # Inputs
+    (input_lengths, text_padded, speakers, emotion_vectors) = inputs
+    text_length = input_lengths[idx].item()
+    synth_dict['text_sequence'] = text_padded[idx,:text_length]
+    synth_dict['speaker_tensor'] = speakers[idx]
+    synth_dict['emotion_tensor'] = emotion_vectors[idx]
+
+    # Outputs
+    (output_lengths, gate_outputs_fr,
+        mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr,
+        alignments, alignments_fr) = outputs
+    mel_length = output_lengths[idx].item()
+    mel_length_fr = get_mel_length(gate_outputs_fr[idx])
+    synth_dict['mel_true'] = mel_padded[idx,:,:mel_length]
+    synth_dict['mel_output_tf'] = mel_outputs_postnet[idx,:,:mel_length]
+    synth_dict['mel_output_fr'] = mel_outputs_postnet_fr[idx,:,:mel_length_fr]
+    synth_dict['alignment_tf'] = alignments[idx,:mel_length,:text_length]
+    synth_dict['alignment_fr'] = alignments_fr[idx,:mel_length_fr,:text_length]
+
+    # Teacher forcing attention measures
+    (batch_attention_quality,
+        batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar,
+        batch_arr, batch_mar) = batch_attention_measures_tf
+    synth_dict['attention_quality_tf'] = batch_attention_quality[idx].item()
+    synth_dict['ar_tf'] = batch_ar[idx].item()
+    synth_dict['letter_ar_tf'] = batch_letter_ar[idx].item()
+    synth_dict['punct_ar_tf'] = batch_punct_ar[idx].item()
+    synth_dict['blank_ar_tf'] = batch_blank_ar[idx].item()
+    synth_dict['arr_tf'] = batch_arr[idx].item()
+    synth_dict['mar_tf'] = batch_mar[idx].item()
+
+    # Free running attention measures
+    (batch_attention_quality_fr,
+        batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr,
+        batch_arr_fr, batch_mar_fr) = batch_attention_measures_fr
+    synth_dict['attention_quality_fr'] = batch_attention_quality_fr[idx].item()
+    synth_dict['ar_fr'] = batch_ar_fr[idx].item()
+    synth_dict['letter_ar_fr'] = batch_letter_ar_fr[idx].item()
+    synth_dict['punct_ar_fr'] = batch_punct_ar_fr[idx].item()
+    synth_dict['blank_ar_fr'] = batch_blank_ar_fr[idx].item()
+    synth_dict['arr_fr'] = batch_arr_fr[idx].item()
+    synth_dict['mar_fr'] = batch_mar_fr[idx].item()
+
+
 def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank, hparams):
     """Handles all the validation scoring and printing"""
@@ -167,6 +215,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
             #######################
             # TEACHER FORCING #####
+            #######################
             # forward_attention_ratio
             batch_far_list = list()
             # attention_ratio
@@ -179,8 +228,20 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             # multiple_attention_ratio
             batch_mar_list = list()
 
+            # sample to synthesize\
+            i_valset = random.randint(0, len(valset) - 1)
+            i_batch_rand, i_sample_rand = divmod(i_valset, hparams.batch_size)
+
+            #sample_with_worst_attention_quality
+            min_attention_quality_tf = 2
+            synth_dict_min_aq_tf = dict()
+            min_attention_quality_fr = 2
+            synth_dict_min_aq_fr = dict()
+
+
             ####################
             # FREE RUNNING #####
+            ####################
             # forward_attention_ratio
             batch_far_fr_list = list()
             # attention_ratio
@@ -194,7 +255,6 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             batch_mar_fr_list = list()
 
             for i, batch in enumerate(val_loader):
-                print("Val index", i)
                 # Parse inputs of each batch
                 x, y, etc = model.parse_batch(batch)
                 text_padded, input_lengths, mel_padded, max_len, output_lengths = x
@@ -281,6 +341,9 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_mar_list.append(batch_mar)
 
+                # [M_total] Attention quality
+                batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
+
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
@@ -306,6 +369,37 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 # [M4] multiple_attention_ratio
                 _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
                 batch_mar_fr_list.append(batch_mar_fr)
+
+                # [M_total] Attention quality
+                batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
+
+                # Wrap up data of audios to be logged.
+                inputs = (input_lengths, text_padded, speakers, emotion_vectors)
+                outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr)
+                batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
+                batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
+                # [SynthDict 1] A random sample.
+                if i == i_batch_rand:
+                    i_rand = i_sample_rand
+                    synth_dict_rand = dict()
+                    fill_synth_dict(synth_dict_rand, i_rand, inputs, outputs,
+                            batch_attention_measures_tf, batch_attention_measures_fr)
+
+                # [SynthDict 2] A teacher-forcing sample that has the minimum attention quality.
+                if min_attention_quality_tf > batch_attention_quality.min().item():
+                    min_attention_quality_tf = batch_attention_quality.min().item()
+                    i_min = batch_attention_quality.argmin().item()
+                    fill_synth_dict(synth_dict_min_aq_tf, i_min, inputs, outputs,
+                            batch_attention_measures_tf, batch_attention_measures_fr)
+
+                # [SynthDict 3] A free-running sample that has the minimum attention quality.
+                if min_attention_quality_fr > batch_attention_quality_fr.min().item():
+                    min_attention_quality_fr = batch_attention_quality_fr.min().item()
+                    i_min = batch_attention_quality_fr.argmin().item()
+                    fill_synth_dict(synth_dict_min_aq_fr, i_min, inputs, outputs,
+                            batch_attention_measures_tf, batch_attention_measures_fr)
+
+                ############################################################
 
             ############################################################
             # TEACHER FORCING #####
@@ -375,8 +469,10 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
             attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
-            fr_attention_measures = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
+            attention_measures_fr = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
 
+            # ToDeleete
+            ###########
             dict_log_values = {
                 'iteration':iteration,
                 'epoch':epoch,
@@ -388,9 +484,12 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 'pred_speakers':pred_speakers,
                 'losses':losses,
                 'attention_measures':attention_measures,
-                'fr_attention_measures':fr_attention_measures,
+                'attention_measures_fr':attention_measures_fr,
                 'gate_accuracy':gate_accuracy,
                 'gate_mae':gate_mae,
+                'synth_dict_rand':synth_dict_rand,
+                'synth_dict_min_aq_tf':synth_dict_min_aq_tf,
+                'synth_dict_min_aq_fr':synth_dict_min_aq_fr,
             }
             if hparams.speaker_adversarial_training:
                 dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
