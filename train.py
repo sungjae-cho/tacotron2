@@ -403,11 +403,12 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
 
             ############################################################
             # TEACHER FORCING #####
-            val_loss_mel = val_loss_mel / (i + 1)
-            val_loss_gate = val_loss_gate / (i + 1)
-            val_loss_spk_adv = val_loss_spk_adv / (i + 1)
-            val_loss_att_means = val_loss_att_means / (i + 1)
-            val_loss = val_loss / (i + 1)
+            n_val_batches = (i + 1)
+            val_loss_mel = val_loss_mel / n_val_batches
+            val_loss_gate = val_loss_gate / n_val_batches
+            val_loss_spk_adv = val_loss_spk_adv / n_val_batches
+            val_loss_att_means = val_loss_att_means / n_val_batches
+            val_loss = val_loss / n_val_batches
 
             # [M1] forward_attention_ratio
             val_batch_far = torch.cat(batch_far_list)
@@ -667,13 +668,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     model.parameters(), hparams.grad_clip_thresh)
 
             learning_rate = lr_scheduler.get_lr()[0]
-            print("learning_rate:", learning_rate)
             optimizer.step()
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Iteration {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
+                print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means)
 
                 dict_log_values = {

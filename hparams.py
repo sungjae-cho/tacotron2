@@ -45,6 +45,8 @@ def create_hparams(hparams_string=None, verbose=False):
         # Speakers to use while this run
         speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
         text_cleaners=['english_cleaners'],
+        # Free-running test text
+        test_text = "Hello! This is a synthesized audio without 'teacher-forcing.' Any question?",
 
         ################################
         # Audio Parameters             #
