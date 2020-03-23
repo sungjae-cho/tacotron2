@@ -13,7 +13,7 @@ def save_figure_to_numpy(fig):
     return data
 
 
-def plot_alignment_to_numpy(alignment, encoding_len, decoding_len=None, info=None):
+def plot_alignment_to_numpy(alignment, encoding_len=None, decoding_len=None, info=None):
     # alignment.size == [txt_steps, mel_steps]
 
     '''
@@ -21,6 +21,8 @@ def plot_alignment_to_numpy(alignment, encoding_len, decoding_len=None, info=Non
     list_xticks = sorted(list(range(0, max_mel_len+1, step=100)) + [decoding_len])
     plt.xticks(ticks=x, rotation=45)
     '''
+    if encoding_len is None:
+        encoding_len = alignment.shape[0]
     if decoding_len is  None:
         decoding_len = alignment.shape[1]
     alignment = alignment[:encoding_len,:decoding_len]
