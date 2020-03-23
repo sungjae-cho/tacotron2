@@ -22,6 +22,9 @@ def create_hparams(hparams_string=None, verbose=False):
         cudnn_benchmark=False,
         ignore_layers=['embedding.weight'],
 
+        # Logging options
+        log_fr_test=False, # Control for logging free-running test
+
         ################################
         # Data Parameters             #
         ################################

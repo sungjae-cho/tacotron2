@@ -475,28 +475,29 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({tag:wandb.Histogram(value.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
             # Free-running test.
-            text = hparams.test_text
-            for speaker in valset.speaker_list:
-                for emotion in valset.emotion_list:
-                    sequence = np.array(text_to_sequence(text, hparams.text_cleaners))[None, :]
-                    sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
-                    text_len = sequence.size(1)
-                    speaker_int = valset.speaker2int(speaker)
-                    emotion_vector = valset.get_emotion(emotion)
-                    speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
-                    emotion_tensor = to_gpu(torch.tensor(emotion_vector).view(1,-1)).float()
+            if hparams.log_fr_test:
+                text = hparams.test_text
+                for speaker in valset.speaker_list:
+                    for emotion in valset.emotion_list:
+                        sequence = np.array(text_to_sequence(text, hparams.text_cleaners))[None, :]
+                        sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
+                        text_len = sequence.size(1)
+                        speaker_int = valset.speaker2int(speaker)
+                        emotion_vector = valset.get_emotion(emotion)
+                        speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
+                        emotion_tensor = to_gpu(torch.tensor(emotion_vector).view(1,-1)).float()
 
-                    _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_tensor)
+                        _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_tensor)
 
-                    np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
-                    np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T, text_len)
-                    np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].data.cpu().numpy())
+                        np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
+                        np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T, text_len)
+                        np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].data.cpu().numpy())
 
-                    group_log_name = "test_free_running/{speaker}/{emotion}".format(
-                        speaker=speaker, emotion=emotion
-                    )
-                    wandb.log({
-                        "{}/wav".format(group_log_name): [wandb.Audio(np_wav.astype(np.float32), caption=text, sample_rate=hparams.sampling_rate)],
-                        "{}/alignment".format(group_log_name): [wandb.Image(np_alignment)],
-                        "{}/mel_predicted".format(group_log_name): [wandb.Image(np_mel_predicted)]
-                    }, step=iteration)
+                        group_log_name = "test_free_running/{speaker}/{emotion}".format(
+                            speaker=speaker, emotion=emotion
+                        )
+                        wandb.log({
+                            "{}/wav".format(group_log_name): [wandb.Audio(np_wav.astype(np.float32), caption=text, sample_rate=hparams.sampling_rate)],
+                            "{}/alignment".format(group_log_name): [wandb.Image(np_alignment)],
+                            "{}/mel_predicted".format(group_log_name): [wandb.Image(np_mel_predicted)]
+                        }, step=iteration)
