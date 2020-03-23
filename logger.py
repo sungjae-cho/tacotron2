@@ -477,8 +477,8 @@ class Tacotron2Logger(SummaryWriter):
             # Free-running test.
             if hparams.log_fr_test:
                 text = hparams.test_text
-                for speaker in valset.speaker_list:
-                    for emotion in valset.emotion_list:
+                for speaker in hparams.speakers:
+                    for emotion in hparams.emotions:
                         sequence = np.array(text_to_sequence(text, hparams.text_cleaners))[None, :]
                         sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
                         text_len = sequence.size(1)
