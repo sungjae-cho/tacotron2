@@ -718,7 +718,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 print('You pressed Ctrl+C!')
                 if rank == 0:
                     checkpoint_path = os.path.join(
-                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch))
+                        os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
                     save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration,
                                     lr_scheduler, checkpoint_path)
                 sys.exit(0)
