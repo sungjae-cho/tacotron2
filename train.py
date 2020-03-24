@@ -119,7 +119,7 @@ def warm_start_model(checkpoint_path, model, ignore_layers):
     return model
 
 
-def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler):
+def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger):
     assert os.path.isfile(checkpoint_path)
     print("Loading checkpoint '{}'".format(checkpoint_path))
     checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
@@ -134,17 +134,21 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler):
     iteration = checkpoint_dict['iteration']
     print("Loaded checkpoint '{}' from iteration {}" .format(
         checkpoint_path, iteration))
+    dict_vars = checkpoint_dict['training_epoch_variables']
+    logger.set_training_epoch_variables(dict_vars)
     return model, optimizer, learning_rate, iteration
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler, filepath):
+def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler,
+        logger, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
         iteration, filepath))
     torch.save({'iteration': iteration,
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'learning_rate': learning_rate,
-                'lr_scheduler': lr_scheduler.state_dict()
+                'lr_scheduler': lr_scheduler.state_dict(),
+                'training_epoch_variables': logger.get_training_epoch_variables()
                 }, filepath)
 
 
@@ -553,7 +557,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 checkpoint_path, model, hparams.ignore_layers)
         else:
             model, optimizer, _learning_rate, iteration = load_checkpoint(
-                checkpoint_path, model, optimizer, lr_scheduler)
+                checkpoint_path, model, optimizer, lr_scheduler, logger)
             if hparams.use_saved_learning_rate:
                 learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
@@ -704,12 +708,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    lr_scheduler, checkpoint_path)
+                                    lr_scheduler, logger, checkpoint_path)
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch+1))
                     save_checkpoint(model, optimizer, learning_rate, iteration,
-                                    lr_scheduler, checkpoint_path)
+                                    lr_scheduler, logger, checkpoint_path)
 
             tmp_iteration = iteration
             tmp_learning_rate = learning_rate
@@ -720,7 +724,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
                     save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration,
-                                    lr_scheduler, checkpoint_path)
+                                    lr_scheduler, logger, checkpoint_path)
                 sys.exit(0)
 
             signal.signal(signal.SIGINT, signal_handler)

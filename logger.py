@@ -111,6 +111,62 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_spk_adv_accuracy = 0
 
 
+    def get_training_epoch_variables(self):
+        dict_vars = dict()
+        dict_vars['sum_loss'] = self.sum_loss
+        dict_vars['sum_loss_mel'] = self.sum_loss_mel
+        dict_vars['sum_loss_gate'] = self.sum_loss_gate
+        dict_vars['sum_loss_spk_adv'] = self.sum_loss_spk_adv
+        dict_vars['sum_loss_att_means'] = self.sum_loss_att_means
+
+        dict_vars['sum_gate_accuracy'] = self.sum_gate_accuracy
+        dict_vars['sum_gate_mae'] = self.sum_gate_mae
+
+        dict_vars['sum_grad_norm'] = self.sum_grad_norm
+
+        dict_vars['sum_mean_far'] = self.sum_mean_far
+        dict_vars['sum_mean_ar'] = self.sum_mean_ar
+        dict_vars['sum_mean_letter_ar'] = self.sum_mean_letter_ar
+        dict_vars['sum_mean_punct_ar'] = self.sum_mean_punct_ar
+        dict_vars['sum_mean_blank_ar'] = self.sum_mean_blank_ar
+        dict_vars['sum_mean_arr'] = self.sum_mean_arr
+        dict_vars['sum_mean_mar'] = self.sum_mean_mar
+        dict_vars['sum_mean_attention_quality'] = self.sum_mean_attention_quality
+        dict_vars['sum_best_attention_quality'] = self.sum_best_attention_quality
+        dict_vars['sum_worst_attention_quality'] = self.sum_worst_attention_quality
+
+        dict_vars['sum_spk_adv_accuracy'] = self.sum_spk_adv_accuracy
+
+        return dict_vars
+
+
+    def set_training_epoch_variables(self, dict_vars):
+        self.sum_loss = dict_vars['sum_loss']
+        self.sum_loss_mel = dict_vars['sum_loss_mel']
+        self.sum_loss_gate = dict_vars['sum_loss_gate']
+        self.sum_loss_spk_adv = dict_vars['sum_loss_spk_adv']
+        self.sum_loss_att_means = dict_vars['sum_loss_att_means']
+
+        self.sum_gate_accuracy = dict_vars['sum_gate_accuracy']
+        self.sum_gate_mae = dict_vars['sum_gate_mae']
+
+        self.sum_grad_norm = dict_vars['sum_grad_norm']
+
+        self.sum_mean_far = dict_vars['sum_mean_far']
+        self.sum_mean_ar = dict_vars['sum_mean_ar']
+        self.sum_mean_letter_ar = dict_vars['sum_mean_letter_ar']
+        self.sum_mean_punct_ar = dict_vars['sum_mean_punct_ar']
+        self.sum_mean_blank_ar = dict_vars['sum_mean_blank_ar']
+        self.sum_mean_arr = dict_vars['sum_mean_arr']
+        self.sum_mean_mar = dict_vars['sum_mean_mar']
+        self.sum_mean_attention_quality = dict_vars['sum_mean_attention_quality']
+        self.sum_best_attention_quality = dict_vars['sum_best_attention_quality']
+        self.sum_worst_attention_quality = dict_vars['sum_worst_attention_quality']
+
+        self.sum_spk_adv_accuracy = dict_vars['sum_spk_adv_accuracy']
+
+
+
     def log_synth_dict(self, synth_dict, synth_dict_type,
             valset, val_speaker, val_emotion, iteration):
         '''
