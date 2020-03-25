@@ -30,7 +30,7 @@ class Tacotron2Logger(SummaryWriter):
         else:
             wandb.init(project=prj_name, resume=resume)
         super(Tacotron2Logger, self).__init__(logdir)
-        self.waveglow = self.load_waveglow('/data2/sungjaecho/pretrained/waveglow_256channels_ljs_v2.pt')
+        self.waveglow = None
 
     def load_waveglow(self, waveglow_path):
         waveglow = torch.load(waveglow_path)['model']
@@ -41,6 +41,8 @@ class Tacotron2Logger(SummaryWriter):
         return waveglow
 
     def mel2wav(self, mel_outputs_postnet, with_denoiser=False):
+        if self.waveglow is None:
+            self.waveglow = self.load_waveglow('/data2/sungjaecho/pretrained/waveglow_256channels_ljs_v2.pt')
         with torch.no_grad():
             audio = self.waveglow.infer(mel_outputs_postnet, sigma=0.666)
         if with_denoiser:
