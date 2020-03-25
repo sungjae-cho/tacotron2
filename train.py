@@ -18,7 +18,7 @@ from torch.nn import MSELoss
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
-from loss_function import Tacotron2Loss, forward_attention_loss
+from loss_function import Tacotron2Loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
@@ -630,20 +630,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             loss = loss_taco2 + hparams.speaker_adv_weight * loss_spk_adv + \
                 hparams.loss_att_means_weight * loss_att_means
-
-            if prj_name == "forward_attention_loss":
-                input_lengths = x[1]
-                gate_outputs = y_pred[2]
-                alignments = y_pred[3]
-                mean_far, _ = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-                if mean_far > 0.95:
-                    fa_loss = forward_attention_loss(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-                    loss += fa_loss
-                    float_fa_loss = fa_loss.item()
-                else:
-                    float_fa_loss = None
-            else:
-                float_fa_loss = None
 
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()

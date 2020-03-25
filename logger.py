@@ -227,8 +227,7 @@ class Tacotron2Logger(SummaryWriter):
         }, step=iteration)
 
 
-    def log_training(self, hparams, dict_log_values, batches_per_epoch,
-            forward_attention_loss=None):
+    def log_training(self, hparams, dict_log_values, batches_per_epoch):
 
         iteration = dict_log_values['iteration']
         epoch = dict_log_values['epoch']
@@ -330,11 +329,6 @@ class Tacotron2Logger(SummaryWriter):
             self.sum_spk_adv_accuracy += spk_adv_accuracy
             wandb.log({"train/loss_spk_adv": loss_spk_adv,
                        "train/spk_adv_accuracy": spk_adv_accuracy}
-                       , step=iteration)
-
-        # Logging forward_attention_loss.
-        if forward_attention_loss is not None:
-            wandb.log({"train/forward_attention_loss": forward_attention_loss}
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
