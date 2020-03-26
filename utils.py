@@ -128,6 +128,8 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion,
 
     # Make all rows as elements of a list.
     row_list = df.values.tolist()
+    random.seed(random_seed)
+    random.shuffle(row_list)
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 
