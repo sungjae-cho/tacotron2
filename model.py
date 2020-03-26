@@ -817,7 +817,7 @@ class ResidualEncoder(nn.Module):
         self.conv2d_2 = torch.nn.Conv2d(in_channels=2*self.lstm_hidden_size, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
         self.bi_lstm = torch.nn.LSTM(hidden_size=self.lstm_hidden_size, num_layers=2, bidirectional=True)
         self.linear_proj_mean = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
-        self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
+        #self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
 
     def forward(self, inputs, is_inference=False):
         """ Residual Encoder
@@ -827,7 +827,7 @@ class ResidualEncoder(nn.Module):
 
         RETURNS
         -------
-        z: torch.Tensor. size == [batch_size, 16]. Gaussin-sampled latent vectors of a variational autoencoder.
+        z: torch.Tensor. size == [batch_size, self.out_dim]. Gaussin-sampled latent vectors of a variational autoencoder.
         """
         if is_inference:
             batch_size = inputs.size(0)
@@ -843,7 +843,8 @@ class ResidualEncoder(nn.Module):
         # out_lstm.shape == [t, batch, 2*256 == 2*hidden_size]
         avg_pooled = torch.mean(out_lstm, dim=0) # avg_pooled.shape == [batch, 2*256 == 2*hidden_size]
         mu = self.linear_proj_mean(avg_pooled)
-        logvar = self.linear_proj_logvar(avg_pooled)
+        #logvar = self.linear_proj_logvar(avg_pooled)
+        logvar = torch.zeros_like(batch_size, self.out_dim) # STD == 1
         residual_encoding = self.reparameterize(mu, logvar)
 
         return residual_encoding
