@@ -954,6 +954,34 @@ class SpeakerClassifier(nn.Module):
         GradientReverse.max_grad_norm = max_grad_norm
         return GradientReverse.apply(x)
 
+class EmotionRevGradClassifier(nn.Module):
+    def __init__(self, hparams):
+        super(EmotionRevGradClassifier, self).__init__()
+
+        self.text_embedding_size = hparams.encoder_embedding_dim
+        self.n_hidden_units = hparams.n_hidden_units
+        self.max_emotions = len(hparams.all_emotions)
+        self.revgrad_lambda = hparams.revgrad_lambda
+        self.revgrad_max_grad_norm = hparams.revgrad_max_grad_norm
+
+        self.linear_1 = torch.nn.Linear(in_features=self.text_embedding_size, out_features=self.n_hidden_units)
+        self.linear_2 = torch.nn.Linear(in_features=self.n_hidden_units, out_features=self.max_emotions)
+
+    def forward(self, inputs):
+        revgrad_inputs = self.revgrad_layer(inputs, self.revgrad_lambda, self.revgrad_max_grad_norm)
+        h = F.relu(self.linear_1(revgrad_inputs))
+        logit_outputs = self.linear_2(h)
+        prob_emotions = F.softmax(logit_outputs, dim=1)
+        int_emotions = torch.argmax(prob_emotions, dim=1)
+
+        return logit_outputs, prob_emotions, int_emotions
+
+    # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
+    def revgrad_layer(self, x, scale=1.0, max_grad_norm=0.5):
+        GradientReverse.scale = scale
+        GradientReverse.max_grad_norm = max_grad_norm
+        return GradientReverse.apply(x)
+
 # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
 class GradientReverse(torch.autograd.Function):
     scale = 1.0
