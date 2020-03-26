@@ -702,7 +702,7 @@ class Tacotron2(nn.Module):
         self.speaker_embedding_layer = SpeakerEncoder(hparams)
         self.emotion_embedding_layer = EmotionEncoder(hparams)
         if hparams.speaker_adversarial_training:
-            self.speaker_adversarial_training_layers = SpeakerClassifier(hparams)
+            self.speaker_adversarial_training_layers = SpeakerRevGradClassifier(hparams)
         else:
             self.speaker_adversarial_training_layers = None
 
@@ -926,9 +926,9 @@ class LanguageEncoder(nn.Module):
         return language_embeddings
 
 
-class SpeakerClassifier(nn.Module):
+class SpeakerRevGradClassifier(nn.Module):
     def __init__(self, hparams):
-        super(SpeakerClassifier, self).__init__()
+        super(SpeakerRevGradClassifier, self).__init__()
 
         self.text_embedding_size = hparams.encoder_embedding_dim
         self.n_hidden_units = hparams.n_hidden_units
