@@ -155,11 +155,11 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler,
 def fill_synth_dict(synth_dict, idx, inputs, outputs,
         batch_attention_measures_tf, batch_attention_measures_fr):
     # Inputs
-    (input_lengths, text_padded, speakers, emotion_vectors) = inputs
+    (input_lengths, text_padded, speakers, emotion_input_vectors) = inputs
     text_length = input_lengths[idx].item()
     synth_dict['text_sequence'] = text_padded[idx,:text_length]
     synth_dict['speaker_tensor'] = speakers[idx]
-    synth_dict['emotion_tensor'] = emotion_vectors[idx]
+    synth_dict['emotion_input_tensor'] = emotion_input_vectors[idx]
 
     # Outputs
     (output_lengths, gate_outputs_fr,
@@ -263,12 +263,12 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 x, y, etc = model.parse_batch(batch)
                 text_padded, input_lengths, mel_padded, max_len, output_lengths = x
                 mel_padded, gate_padded = y
-                speakers, sex, emotion_vectors, lang = etc
+                speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
 
                 ############################################################
                 # TEACHER FORCING #####
                 # Forward propagation by teacher forcing
-                y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
+                y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_input_vectors)
 
                 # Forward propagtion results
                 mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
@@ -351,7 +351,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr = model.free_running(text_padded, input_lengths, speakers, emotion_vectors)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr = model.free_running(text_padded, input_lengths, speakers, emotion_input_vectors)
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
@@ -378,7 +378,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
 
                 # Wrap up data of audios to be logged.
-                inputs = (input_lengths, text_padded, speakers, emotion_vectors)
+                inputs = (input_lengths, text_padded, speakers, emotion_input_vectors)
                 outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr)
                 batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                 batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
@@ -590,10 +590,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             x, y, etc = model.parse_batch(batch)
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
             mel_padded, gate_padded = y
-            speakers, sex, emotion_vectors, lang = etc
+            speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
 
             # Forward propagtion
-            y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_vectors)
+            y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_input_vectors)
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred

@@ -708,7 +708,7 @@ class Tacotron2(nn.Module):
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
-            speakers, sex, emotion_vectors, lang = batch
+            speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = batch
         text_padded = to_gpu(text_padded).long()
         input_lengths = to_gpu(input_lengths).long()
         max_len = torch.max(input_lengths.data).item()
@@ -717,13 +717,14 @@ class Tacotron2(nn.Module):
         output_lengths = to_gpu(output_lengths).long()
         speakers = to_gpu(speakers).long()
         sex = to_gpu(sex).long()
-        emotion_vectors = to_gpu(emotion_vectors).float()
+        emotion_input_vectors = to_gpu(emotion_input_vectors).float()
+        emotion_target_vectors = to_gpu(emotion_target_vectors).float()
         lang = to_gpu(lang).long()
 
         return (
             (text_padded, input_lengths, mel_padded, max_len, output_lengths),
             (mel_padded, gate_padded),
-            (speakers, sex, emotion_vectors, lang))
+            (speakers, sex, emotion_input_vectors, emotion_target_vectors, lang))
 
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:

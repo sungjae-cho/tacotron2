@@ -62,7 +62,7 @@ class Tacotron2Logger(SummaryWriter):
 
         emotion_vectors = list()
         for emotion in valset.emotion_list:
-            emotion_vector = valset.get_emotion(emotion)
+            emotion_vector = valset.get_emotion(emotion, is_input=True)
             emotion_vectors.append(emotion_vector)
         emotion_tensors = torch.stack(emotion_vectors)
 
@@ -176,9 +176,9 @@ class Tacotron2Logger(SummaryWriter):
         synth_dict_type is one of ['random_pick', 'min_aq_tf', 'min_aq_fr']
         '''
         speaker_tensor = synth_dict['speaker_tensor']
-        emotion_tensor = synth_dict['emotion_tensor']
+        emotion_input_tensor = synth_dict['emotion_input_tensor']
         speaker = valset.int2speaker(speaker_tensor.item())
-        str_emotion = valset.emotion_tensor2str_emotion(emotion_tensor)
+        str_emotion = valset.emotion_tensor2str_emotion(emotion_input_tensor)
 
         text_sequence = synth_dict['text_sequence']
         text_string = sequence_to_text(text_sequence.tolist())
@@ -251,7 +251,7 @@ class Tacotron2Logger(SummaryWriter):
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
-        speakers, sex, emotion_vectors, lang = etc
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
 
         # Compute forward_attention_ratio.
@@ -381,7 +381,7 @@ class Tacotron2Logger(SummaryWriter):
         model = dict_log_values['model']
 
         text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
-        speakers, sex, emotion_vectors, lang = dict_log_values['etc']
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
         _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
         pred_speakers = dict_log_values['pred_speakers']
@@ -536,11 +536,11 @@ class Tacotron2Logger(SummaryWriter):
                         sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
                         text_len = sequence.size(1)
                         speaker_int = valset.speaker2int(speaker)
-                        emotion_vector = valset.get_emotion(emotion)
+                        emotion_input_vector = valset.get_emotion(emotion, is_input=True)
                         speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
-                        emotion_tensor = to_gpu(torch.tensor(emotion_vector).view(1,-1)).float()
+                        emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 
-                        _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_tensor)
+                        _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_input_tensor)
 
                         np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
                         np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T, text_len)
