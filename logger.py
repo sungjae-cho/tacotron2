@@ -31,7 +31,7 @@ class Tacotron2Logger(SummaryWriter):
             wandb.init(project=prj_name, resume=resume)
         super(Tacotron2Logger, self).__init__(logdir)
         self.waveglow = None
-        self.waveglow_path = hparam.waveglow_path
+        self.waveglow_path = hparams.waveglow_path
 
     def load_waveglow(self, waveglow_path):
         waveglow = torch.load(waveglow_path)['model']
