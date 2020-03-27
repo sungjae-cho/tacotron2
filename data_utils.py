@@ -58,10 +58,10 @@ class TextMelLoader(torch.utils.data.Dataset):
         mel = self.get_mel(wavpath)
         speaker = self.get_speaker(speaker)
         sex = self.get_sex(sex)
-        emotion_input_vector = self.get_emotion(emotion, is_input=True)
-        emotion_target_vector = self.get_emotion(emotion, is_input=False)
+        emotion_input_vector = self.get_emotion_input(emotion)
+        emotion_target = self.get_emotion_target(emotion)
         lang = self.get_lang(lang)
-        return (text, mel, speaker, sex, emotion_input_vector, emotion_target_vector, lang)
+        return (text, mel, speaker, sex, emotion_input_vector, emotion_target, lang)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -104,17 +104,21 @@ class TextMelLoader(torch.utils.data.Dataset):
         sex_tensor = self.sex2int(sex)
         return sex_tensor
 
-    def get_emotion(self, emotion, is_input=True):
-        if self.neutral_zero_vector and is_input:
+    def get_emotion_input(self, emotion):
+        if self.neutral_zero_vector:
             one_hot_vector_size = self.max_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)
             else:
                 emotion_tensor = one_hot_encoding(
-                    self.emotion2int(emotion, is_input), one_hot_vector_size)
+                    self.emotion2int(emotion, is_input=True), one_hot_vector_size)
         else:
             emotion_tensor = one_hot_encoding(
-                self.emotion2int(emotion, is_input), self.max_emotions)
+                self.emotion2int(emotion, is_input=False), self.max_emotions)
+        return emotion_tensor
+
+    def get_emotion_target(self, emotion):
+        emotion_tensor = torch.IntTensor([self.emotion2int(emotion, is_input=False)])
         return emotion_tensor
 
     def get_lang(self, lang):
@@ -248,8 +252,7 @@ class TextMelCollate():
         sex = torch.LongTensor(len(batch))
         emotion_input_vector_dim = batch[0][4].size(0)
         emotion_input_vectors = torch.FloatTensor(len(batch), emotion_input_vector_dim)
-        emotion_target_vector_dim = batch[0][5].size(0)
-        emotion_target_vectors = torch.FloatTensor(len(batch), emotion_target_vector_dim)
+        emotion_targets = torch.LongTensor(len(batch))
         lang = torch.LongTensor(len(batch))
 
         for i in range(len(ids_sorted_decreasing)):
@@ -261,9 +264,9 @@ class TextMelCollate():
             speakers[i] = batch[ids_sorted_decreasing[i]][2]
             sex[i] = batch[ids_sorted_decreasing[i]][3]
             emotion_input_vectors[i,:] = batch[ids_sorted_decreasing[i]][4]
-            emotion_target_vectors[i,:] = batch[ids_sorted_decreasing[i]][5]
-            print("emotion_target_vectors[i,:]", emotion_target_vectors[i,:])
+            emotion_targets[i] = batch[ids_sorted_decreasing[i]][5]
             lang = batch[ids_sorted_decreasing[i]][6]
 
+
         return text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
-            speakers, sex, emotion_input_vectors, emotion_target_vectors, lang
+            speakers, sex, emotion_input_vectors, emotion_targets, lang

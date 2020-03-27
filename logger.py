@@ -62,7 +62,7 @@ class Tacotron2Logger(SummaryWriter):
 
         emotion_vectors = list()
         for emotion in valset.emotion_list:
-            emotion_vector = valset.get_emotion(emotion, is_input=True)
+            emotion_vector = valset.get_emotion_input(emotion)
             emotion_vectors.append(emotion_vector)
         emotion_tensors = torch.stack(emotion_vectors)
 
@@ -536,7 +536,7 @@ class Tacotron2Logger(SummaryWriter):
                         sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
                         text_len = sequence.size(1)
                         speaker_int = valset.speaker2int(speaker)
-                        emotion_input_vector = valset.get_emotion(emotion, is_input=True)
+                        emotion_input_vector = valset.get_emotion_input(emotion)
                         speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
                         emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 

@@ -718,13 +718,13 @@ class Tacotron2(nn.Module):
         speakers = to_gpu(speakers).long()
         sex = to_gpu(sex).long()
         emotion_input_vectors = to_gpu(emotion_input_vectors).float()
-        emotion_target_vectors = to_gpu(emotion_target_vectors).float()
+        emotion_targets = to_gpu(emotion_target_vectors).long()
         lang = to_gpu(lang).long()
 
         return (
             (text_padded, input_lengths, mel_padded, max_len, output_lengths),
             (mel_padded, gate_padded),
-            (speakers, sex, emotion_input_vectors, emotion_target_vectors, lang))
+            (speakers, sex, emotion_input_vectors, emotion_targets, lang))
 
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
