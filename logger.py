@@ -236,7 +236,7 @@ class Tacotron2Logger(SummaryWriter):
         }, step=iteration)
 
 
-    def log_training(self, hparams, dict_log_values, batches_per_epoch):
+    def log_training(self, trainset, hparams, dict_log_values, batches_per_epoch):
 
         iteration = dict_log_values['iteration']
         epoch = dict_log_values['epoch']
@@ -251,10 +251,12 @@ class Tacotron2Logger(SummaryWriter):
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
 
-        if hparams.speaker_adversarial_training:
+        if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
-        if hparams.emotion_adversarial_training:
+            speaker_clsf_report = dict_log_values['speaker_clsf_report']
+        if self.hparams.emotion_adversarial_training:
             emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
+            emotion_clsf_report = dict_log_values['emotion_clsf_report']
 
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_spk_adv, loss_emo_adv, loss_att_means = losses
@@ -339,17 +341,35 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.speaker_adversarial_training:
             # Update training_epoch_variables
             self.sum_spk_adv_accuracy += spk_adv_accuracy
-            wandb.log({"train/loss_spk_adv": loss_spk_adv,
-                       "train/spk_adv_accuracy": spk_adv_accuracy}
+            wandb.log({"train/spk_adv/loss": loss_spk_adv,
+                       "train/spk_adv/accuracy": spk_adv_accuracy}
                        , step=iteration)
+
+            for str_speaker in hparams.speakers:
+                spk_measure_dict = speaker_clsf_report[str_speaker]
+                for measure, m_value in spk_measure_dict.items():
+                    if measure == 'support':
+                        continue
+                    wandb.log({"train/spk_adv/{speaker}/{measure}".format(
+                            speaker=str_speaker, measure=measure): m_value
+                        }, step=iteration)
 
         # Logging values concerning emotion adversarial training.
         if self.hparams.emotion_adversarial_training:
             # Update training_epoch_variables
             self.sum_emo_adv_accuracy += emo_adv_accuracy
-            wandb.log({"train/loss_emo_adv": loss_emo_adv,
-                       "train/emo_adv_accuracy": emo_adv_accuracy}
+            wandb.log({"train/emo_adv/loss": loss_emo_adv,
+                       "train/emo_adv/accuracy": emo_adv_accuracy}
                        , step=iteration)
+
+            for str_emotion in hparams.emotions:
+                emo_measure_dict = emotion_clsf_report[str_emotion]
+                for measure, m_value in emo_measure_dict.items():
+                    if measure == 'support':
+                        continue
+                    wandb.log({"train/emo_adv/{emotion}/{measure}".format(
+                            emotion=str_emotion, measure=measure): m_value
+                        }, step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
         if self.hparams.monotonic_attention:
@@ -378,21 +398,45 @@ class Tacotron2Logger(SummaryWriter):
                        }, step=iteration)
 
             if self.hparams.speaker_adversarial_training:
-                wandb.log({"train_epoch/loss_spk_adv": (self.sum_loss_spk_adv / self.batches_per_epoch),
-                           "train_epoch/spk_adv_accuracy": (self.sum_spk_adv_accuracy / self.batches_per_epoch)
+                wandb.log({"train_epoch/spk_adv/loss": (self.sum_loss_spk_adv / self.batches_per_epoch),
+                           "train_epoch/spk_adv/accuracy": (self.sum_spk_adv_accuracy / self.batches_per_epoch)
                            }, step=iteration)
 
+                speaker_clsf_report_train_epoch = dict_log_values['speaker_clsf_report_train_epoch']
+                for str_speaker in hparams.speakers:
+                    spk_measure_dict = speaker_clsf_report_train_epoch[str_speaker]
+                    for measure, m_value in spk_measure_dict.items():
+                        if measure == 'support':
+                            continue
+                        wandb.log({"train_epoch/spk_adv/{speaker}/{measure}".format(
+                                speaker=str_speaker, measure=measure): m_value
+                            }, step=iteration)
+                        print("train_epoch/spk_adv/{speaker}/{measure}".format(
+                                speaker=str_speaker, measure=measure), m_value)
+
             if self.hparams.emotion_adversarial_training:
-                wandb.log({"train_epoch/loss_emo_adv": (self.sum_loss_emo_adv / self.batches_per_epoch),
-                           "train_epoch/emo_adv_accuracy": (self.sum_emo_adv_accuracy / self.batches_per_epoch)
+                wandb.log({"train_epoch/emo_adv/loss": (self.sum_loss_emo_adv / self.batches_per_epoch),
+                           "train_epoch/emo_adv/accuracy": (self.sum_emo_adv_accuracy / self.batches_per_epoch)
                            }, step=iteration)
+
+                emotion_clsf_report_train_epoch = dict_log_values['emotion_clsf_report_train_epoch']
+                for str_emotion in hparams.emotions:
+                    emo_measure_dict = emotion_clsf_report_train_epoch[str_emotion]
+                    for measure, m_value in emo_measure_dict.items():
+                        if measure == 'support':
+                            continue
+                        wandb.log({"train_epoch/emo_adv/{emotion}/{measure}".format(
+                                emotion=str_emotion, measure=measure): m_value
+                            }, step=iteration)
+                        print("train_epoch/emo_adv/{emotion}/{measure}".format(
+                                emotion=str_emotion, measure=measure), m_value)
 
             if self.hparams.monotonic_attention:
                 wandb.log({"train_epoch/loss_monotonic_attention_MSE": (self.sum_loss_att_means / self.batches_per_epoch)
                            }, step=iteration)
 
 
-    def log_validation(self, valset, val_type, hparams, dict_log_values):
+    def log_validation(self, trainset, valset, val_type, hparams, dict_log_values):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}
         (val_speaker, val_emotion) = val_type
@@ -421,8 +465,12 @@ class Tacotron2Logger(SummaryWriter):
 
         if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
+            if val_type == ('all', 'all'):
+                speaker_clsf_report = dict_log_values['speaker_clsf_report']
         if self.hparams.emotion_adversarial_training:
             emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
+            if val_type == ('all', 'all'):
+                emotion_clsf_report = dict_log_values['emotion_clsf_report']
 
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
@@ -482,14 +530,14 @@ class Tacotron2Logger(SummaryWriter):
 
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
-            wandb.log({"{}/loss_spk_adv".format(log_prefix): loss_spk_adv,
-                       "{}/spk_adv_accuracy".format(log_prefix): spk_adv_accuracy}
+            wandb.log({"{}/spk_adv/loss".format(log_prefix): loss_spk_adv,
+                       "{}/spk_adv/accuracy".format(log_prefix): spk_adv_accuracy}
                        , step=iteration)
 
         # Logging values concerning emotion adversarial training.
         if self.hparams.emotion_adversarial_training:
-            wandb.log({"{}/loss_emo_adv".format(log_prefix): loss_emo_adv,
-                       "{}/emo_adv_accuracy".format(log_prefix): emo_adv_accuracy}
+            wandb.log({"{}/emo_adv/loss".format(log_prefix): loss_emo_adv,
+                       "{}/emo_adv/accuracy".format(log_prefix): emo_adv_accuracy}
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
@@ -551,6 +599,36 @@ class Tacotron2Logger(SummaryWriter):
                 np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.data.cpu().numpy())
                 wandb.log({"emotion_embeddings": [wandb.Image(np_plot_emotion_embeddings)]}
                            , step=iteration)
+
+            if self.hparams.speaker_adversarial_training:
+                log_prefix = "val/{speaker}/{emotion}".format(
+                    speaker=val_speaker, emotion=val_emotion)
+
+                for str_speaker in hparams.speakers:
+                    spk_measure_dict = speaker_clsf_report[str_speaker]
+                    for measure, m_value in spk_measure_dict.items():
+                        if measure == 'support':
+                            continue
+                        wandb.log({"{prefix}/spk_adv/{speaker}/{measure}".format(
+                                prefix=log_prefix, speaker=str_speaker, measure=measure): m_value}
+                            , step=iteration)
+                        print("{prefix}/spk_adv/{speaker}/{measure}".format(
+                                prefix=log_prefix, speaker=str_speaker, measure=measure), m_value)
+
+            if self.hparams.emotion_adversarial_training:
+                log_prefix = "val/{speaker}/{emotion}".format(
+                    speaker=val_speaker, emotion=val_emotion)
+
+                for str_emotion in hparams.emotions:
+                    spk_measure_dict = emotion_clsf_report[str_emotion]
+                    for measure, m_value in spk_measure_dict.items():
+                        if measure == 'support':
+                            continue
+                        wandb.log({"{prefix}/spk_adv/{emotion}/{measure}".format(
+                                prefix=log_prefix, emotion=str_emotion, measure=measure): m_value}
+                            , step=iteration)
+                        print("{prefix}/emo_adv/{emotion}/{measure}".format(
+                                prefix=log_prefix, emotion=str_emotion, measure=measure), m_value)
 
             # plot distribution of parameters
             for tag, value in model.named_parameters():

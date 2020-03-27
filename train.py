@@ -5,6 +5,7 @@ import math
 import signal
 import sys
 import random
+import numpy as np
 from numpy import finfo
 from apex import amp
 
@@ -13,7 +14,7 @@ from distributed import apply_gradient_allreduce
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score, mean_absolute_error
+from sklearn.metrics import accuracy_score, mean_absolute_error, classification_report
 from torch.nn import MSELoss
 
 from model import Tacotron2
@@ -198,7 +199,7 @@ def fill_synth_dict(synth_dict, idx, inputs, outputs,
     synth_dict['mar_fr'] = batch_mar_fr[idx].item()
 
 
-def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
+def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank, hparams):
     """Handles all the validation scoring and printing"""
     for val_type, valset in valsets.items():
@@ -217,6 +218,14 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             val_loss_emo_adv = 0.0
             val_loss_att_means = 0.0
             val_loss = 0.0
+
+            if hparams.speaker_adversarial_training:
+                list_np_target_speakers = list()
+                list_np_pred_speakers = list()
+
+            if hparams.emotion_adversarial_training:
+                list_np_target_emotions = list()
+                list_np_pred_emotions = list()
 
             #######################
             # TEACHER FORCING #####
@@ -296,6 +305,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     np_target_speakers = spk_adv_targets.cpu().numpy()
                     np_pred_speakers = int_pred_speakers.cpu().numpy()
                     spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
+                    list_np_target_speakers.append(np_target_speakers)
+                    list_np_pred_speakers.append(np_pred_speakers)
                 else:
                     loss_spk_adv = torch.zeros(1).cuda()
 
@@ -308,6 +319,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                     np_target_emotions = emo_adv_targets.cpu().numpy()
                     np_pred_emotions = int_pred_emotions.cpu().numpy()
                     emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
+                    list_np_target_emotions.append(np_target_emotions)
+                    list_np_pred_emotions.append(np_pred_emotions)
                 else:
                     loss_emo_adv = torch.zeros(1).cuda()
 
@@ -434,6 +447,21 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             val_loss_att_means = val_loss_att_means / n_val_batches
             val_loss = val_loss / n_val_batches
 
+            if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
+                np_target_speakers = np.concatenate(list_np_target_speakers)
+                np_pred_speakers = np.concatenate(list_np_pred_speakers)
+                speaker_clsf_report = classification_report(
+                    np_target_speakers, np_pred_speakers,
+                    target_names=trainset.speaker_list, output_dict=True)
+
+            if hparams.emotion_adversarial_training and val_type == ('all', 'all'):
+                np_target_emotions = np.concatenate(list_np_target_emotions)
+                np_pred_emotions = np.concatenate(list_np_pred_emotions)
+                emotion_clsf_report = classification_report(
+                    np_target_emotions, np_pred_emotions,
+                    target_names=trainset.emotion_list, output_dict=True)
+
+
             # [M1] forward_attention_ratio
             val_batch_far = torch.cat(batch_far_list)
             val_mean_far = val_batch_far.mean().item()
@@ -518,10 +546,14 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             }
             if hparams.speaker_adversarial_training:
                 dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
+                if val_type == ('all', 'all'):
+                    dict_log_values['speaker_clsf_report'] = speaker_clsf_report
             if hparams.emotion_adversarial_training:
                 dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
+                if val_type == ('all', 'all'):
+                    dict_log_values['emotion_clsf_report'] = emotion_clsf_report
 
-            logger.log_validation(valset, val_type, hparams, dict_log_values)
+            logger.log_validation(trainset, valset, val_type, hparams, dict_log_values)
 
 
 def train(output_directory, log_directory, checkpoint_path, pretrained_path,
@@ -600,6 +632,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Start Epoch {}:".format(epoch+1))
+        list_np_target_speakers = list()
+        list_np_pred_speakers = list()
+        list_np_target_emotions = list()
+        list_np_pred_emotions = list()
         for i, batch in enumerate(train_loader):
             batches_per_epoch = len(train_loader)
             float_epoch = iteration / batches_per_epoch
@@ -643,6 +679,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 np_target_speakers = spk_adv_targets.cpu().numpy()
                 np_pred_speakers = int_pred_speakers.cpu().numpy()
                 spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
+                speaker_clsf_report = classification_report(np_target_speakers, np_pred_speakers,
+                    target_names=trainset.speaker_list, output_dict=True)
+                list_np_target_speakers.append(np_target_speakers)
+                list_np_pred_speakers.append(np_pred_speakers)
             else:
                 loss_spk_adv = torch.zeros(1).cuda()
 
@@ -655,6 +695,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 np_target_emotions = emo_adv_targets.cpu().numpy()
                 np_pred_emotions = int_pred_emotions.cpu().numpy()
                 emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
+                emotion_clsf_report = classification_report(np_target_emotions, np_pred_emotions,
+                    target_names=trainset.emotion_list, output_dict=True)
+                list_np_target_emotions.append(np_target_emotions)
+                list_np_pred_emotions.append(np_pred_emotions)
             else:
                 loss_emo_adv = torch.zeros(1).cuda()
 
@@ -722,14 +766,30 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 }
                 if hparams.speaker_adversarial_training:
                     dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
+                    dict_log_values['speaker_clsf_report'] = speaker_clsf_report
+                    if (i+1 == batches_per_epoch):
+                        # If it is the last batch, ...
+                        np_target_speakers = np.concatenate(list_np_target_speakers)
+                        np_pred_speakers = np.concatenate(list_np_pred_speakers)
+                        speaker_clsf_report_train_epoch = classification_report(np_target_speakers, np_pred_speakers,
+                            target_names=trainset.speaker_list, output_dict=True)
+                        dict_log_values['speaker_clsf_report_train_epoch'] = speaker_clsf_report_train_epoch
                 if hparams.emotion_adversarial_training:
                     dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
+                    dict_log_values['emotion_clsf_report'] = emotion_clsf_report
+                    if (i+1 == batches_per_epoch):
+                        # If it is the last batch, ...
+                        np_target_emotions = np.concatenate(list_np_target_emotions)
+                        np_pred_emotions = np.concatenate(list_np_pred_emotions)
+                        emotion_clsf_report_train_epoch = classification_report(np_target_emotions, np_pred_emotions,
+                            target_names=trainset.emotion_list, output_dict=True)
+                        dict_log_values['emotion_clsf_report_train_epoch'] = emotion_clsf_report_train_epoch
 
-                logger.log_training(hparams, dict_log_values, batches_per_epoch)
+                logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
                 criterions = (criterion, criterion_spk_adv, criterion_emo_adv)
-                validate(model, criterions, valsets, iteration, float_epoch,
+                validate(model, criterions, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams)
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
