@@ -93,6 +93,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_mel = 0
         self.sum_loss_gate = 0
         self.sum_loss_spk_adv = 0
+        self.sum_loss_emo_adv = 0
         self.sum_loss_att_means = 0
 
         self.sum_gate_accuracy = 0
@@ -112,6 +113,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_worst_attention_quality = 0
 
         self.sum_spk_adv_accuracy = 0
+        self.sum_emo_adv_accuracy = 0
 
 
     def get_training_epoch_variables(self):
@@ -120,6 +122,7 @@ class Tacotron2Logger(SummaryWriter):
         dict_vars['sum_loss_mel'] = self.sum_loss_mel
         dict_vars['sum_loss_gate'] = self.sum_loss_gate
         dict_vars['sum_loss_spk_adv'] = self.sum_loss_spk_adv
+        dict_vars['sum_loss_emo_adv'] = self.sum_loss_emo_adv
         dict_vars['sum_loss_att_means'] = self.sum_loss_att_means
 
         dict_vars['sum_gate_accuracy'] = self.sum_gate_accuracy
@@ -139,6 +142,7 @@ class Tacotron2Logger(SummaryWriter):
         dict_vars['sum_worst_attention_quality'] = self.sum_worst_attention_quality
 
         dict_vars['sum_spk_adv_accuracy'] = self.sum_spk_adv_accuracy
+        dict_vars['sum_emo_adv_accuracy'] = self.sum_emo_adv_accuracy
 
         return dict_vars
 
@@ -148,6 +152,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_mel = dict_vars['sum_loss_mel']
         self.sum_loss_gate = dict_vars['sum_loss_gate']
         self.sum_loss_spk_adv = dict_vars['sum_loss_spk_adv']
+        self.sum_loss_emo_adv = dict_vars['sum_loss_emo_adv']
         self.sum_loss_att_means = dict_vars['sum_loss_att_means']
 
         self.sum_gate_accuracy = dict_vars['sum_gate_accuracy']
@@ -167,6 +172,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_worst_attention_quality = dict_vars['sum_worst_attention_quality']
 
         self.sum_spk_adv_accuracy = dict_vars['sum_spk_adv_accuracy']
+        self.sum_emo_adv_accuracy = dict_vars['sum_emo_adv_accuracy']
 
 
 
@@ -241,15 +247,17 @@ class Tacotron2Logger(SummaryWriter):
         x = dict_log_values['x']
         etc = dict_log_values['etc']
         y_pred = dict_log_values['y_pred']
-        pred_speakers = dict_log_values['pred_speakers']
+        int_pred_speakers = dict_log_values['int_pred_speakers']
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
 
         if hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
+        if hparams.emotion_adversarial_training:
+            emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
 
         self.batches_per_epoch = batches_per_epoch
-        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = losses
+        loss, loss_mel, loss_gate, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -277,6 +285,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_mel += loss_mel
         self.sum_loss_gate += loss_gate
         self.sum_loss_spk_adv += loss_spk_adv
+        self.sum_loss_emo_adv += loss_emo_adv
         self.sum_loss_att_means += loss_att_means
 
         self.sum_gate_accuracy += gate_accuracy
@@ -334,6 +343,14 @@ class Tacotron2Logger(SummaryWriter):
                        "train/spk_adv_accuracy": spk_adv_accuracy}
                        , step=iteration)
 
+        # Logging values concerning emotion adversarial training.
+        if self.hparams.emotion_adversarial_training:
+            # Update training_epoch_variables
+            self.sum_emo_adv_accuracy += emo_adv_accuracy
+            wandb.log({"train/loss_emo_adv": loss_emo_adv,
+                       "train/emo_adv_accuracy": emo_adv_accuracy}
+                       , step=iteration)
+
         # Logging loss_monotonic_attention_MSE.
         if self.hparams.monotonic_attention:
             wandb.log({"train/loss_monotonic_attention_MSE": loss_att_means}
@@ -365,6 +382,11 @@ class Tacotron2Logger(SummaryWriter):
                            "train_epoch/spk_adv_accuracy": (self.sum_spk_adv_accuracy / self.batches_per_epoch)
                            }, step=iteration)
 
+            if self.hparams.emotion_adversarial_training:
+                wandb.log({"train_epoch/loss_emo_adv": (self.sum_loss_emo_adv / self.batches_per_epoch),
+                           "train_epoch/emo_adv_accuracy": (self.sum_emo_adv_accuracy / self.batches_per_epoch)
+                           }, step=iteration)
+
             if self.hparams.monotonic_attention:
                 wandb.log({"train_epoch/loss_monotonic_attention_MSE": (self.sum_loss_att_means / self.batches_per_epoch)
                            }, step=iteration)
@@ -384,9 +406,9 @@ class Tacotron2Logger(SummaryWriter):
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
         _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
-        pred_speakers = dict_log_values['pred_speakers']
+        int_pred_speakers = dict_log_values['int_pred_speakers']
 
-        loss, loss_mel, loss_gate, loss_spk_adv, loss_att_means = dict_log_values['losses']
+        loss, loss_mel, loss_gate, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
         far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
         far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['attention_measures_fr']
 
@@ -399,6 +421,8 @@ class Tacotron2Logger(SummaryWriter):
 
         if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
+        if self.hparams.emotion_adversarial_training:
+            emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
 
         # Attention quality measures (teacher forcing)
         mean_far, batch_far = far_pair
@@ -460,6 +484,12 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.speaker_adversarial_training:
             wandb.log({"{}/loss_spk_adv".format(log_prefix): loss_spk_adv,
                        "{}/spk_adv_accuracy".format(log_prefix): spk_adv_accuracy}
+                       , step=iteration)
+
+        # Logging values concerning emotion adversarial training.
+        if self.hparams.emotion_adversarial_training:
+            wandb.log({"{}/loss_emo_adv".format(log_prefix): loss_emo_adv,
+                       "{}/emo_adv_accuracy".format(log_prefix): emo_adv_accuracy}
                        , step=iteration)
 
         # Logging loss_monotonic_attention_MSE.

@@ -230,6 +230,40 @@ def to_gpu(x):
         x = x.cuda(non_blocking=True)
     return torch.autograd.Variable(x)
 
+
+def get_adv_inputs(padded_encoder_outputs, input_lengths):
+    '''
+    Get a batch for the speaker and emotion adversarial training modules.
+
+    PARAMS
+    -----
+    padded_encoder_outputs
+    - type: torch.cuda.FloatTensor
+    - size: [batch_size, max_text_len(=variable), encoder_embedding_dim]
+    input_lengths
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+
+    RETURNS
+    -----
+    adv_inputs
+    - type: torch.cuda.LongTensor
+    - size: [sum_max_text_len, encoder_embedding_dim]
+    '''
+    input_lengths = input_lengths.tolist()
+    batch_size = padded_encoder_outputs.size(0)
+    text_dim = padded_encoder_outputs.size(2)
+    encoder_output_list = list()
+    for i in range(batch_size):
+        input_length = input_lengths[i]
+        padded_encoder_output = padded_encoder_outputs[i,:,:]
+        encoder_output = padded_encoder_output[:input_length,:]
+        encoder_output_per_step = encoder_output.view(-1, text_dim)
+        encoder_output_list.append(encoder_output_per_step)
+    adv_inputs = torch.cat(encoder_output_list)
+
+    return adv_inputs
+
 def get_spk_adv_inputs(padded_encoder_outputs, input_lengths):
     '''
     Get a batch for the speaker adversarial training module.
@@ -249,19 +283,32 @@ def get_spk_adv_inputs(padded_encoder_outputs, input_lengths):
     - type: torch.cuda.LongTensor
     - size: [sum_max_text_len, encoder_embedding_dim]
     '''
-    input_lengths = input_lengths.tolist()
-    batch_size = padded_encoder_outputs.size(0)
-    text_dim = padded_encoder_outputs.size(2)
-    encoder_output_list = list()
-    for i in range(batch_size):
-        input_length = input_lengths[i]
-        padded_encoder_output = padded_encoder_outputs[i,:,:]
-        encoder_output = padded_encoder_output[:input_length,:]
-        encoder_output_per_step = encoder_output.view(-1, text_dim)
-        encoder_output_list.append(encoder_output_per_step)
-    spk_adv_inputs = torch.cat(encoder_output_list)
+    spk_adv_inputs = get_adv_inputs(padded_encoder_outputs, input_lengths)
 
     return spk_adv_inputs
+
+def get_emo_adv_inputs(padded_encoder_outputs, input_lengths):
+    '''
+    Get a batch for the emotion adversarial training module.
+
+    PARAMS
+    -----
+    padded_encoder_outputs
+    - type: torch.cuda.FloatTensor
+    - size: [batch_size, max_text_len(=variable), encoder_embedding_dim]
+    input_lengths
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+
+    RETURNS
+    -----
+    spk_adv_inputs
+    - type: torch.cuda.LongTensor
+    - size: [sum_max_text_len, encoder_embedding_dim]
+    '''
+    emo_adv_inputs = get_adv_inputs(padded_encoder_outputs, input_lengths)
+
+    return emo_adv_inputs
 
 def get_spk_adv_targets(speaker_targets, input_lengths):
     '''
@@ -291,6 +338,35 @@ def get_spk_adv_targets(speaker_targets, input_lengths):
     spk_adv_targets = torch.cat(spk_adv_target_list)
 
     return spk_adv_targets
+
+def get_emo_adv_targets(emotion_targets, input_lengths):
+    '''
+    Get a batch for the emotion adversarial training module.
+
+    PARAMS
+    -----
+    emotion_targets
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+    input_lengths
+    - type: torch.cuda.LongTensor
+    - size: [batch_size]
+
+    RETURNS
+    -----
+    emo_adv_targets
+    - type: torch.cuda.LongTensor
+    - size: [sum_max_text_len]
+    '''
+    batch_size = input_lengths.size(0)
+    input_lengths = input_lengths.tolist()
+    emo_adv_target_list = list()
+    for i in range(batch_size):
+        input_length = input_lengths[i]
+        emo_adv_target_list.append(emotion_targets[i].expand(input_length))
+    emo_adv_targets = torch.cat(emo_adv_target_list)
+
+    return emo_adv_targets
 
 def hard_clip(input):
     return F.hardtanh(input + 0.5 , min_val=0, max_val=1)

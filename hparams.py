@@ -73,6 +73,7 @@ def create_hparams(hparams_string=None, verbose=False):
 
         # With modules
         speaker_adversarial_training=False,
+        emotion_adversarial_training=False,
         residual_encoder=False,
         monotonic_attention=False,
 
@@ -129,6 +130,11 @@ def create_hparams(hparams_string=None, verbose=False):
         speaker_adv_weight=0.02,
         speaker_gradrev_lambda=1,
         speaker_gradrev_grad_max_norm=0.5,
+
+        # Adversarial training with the emotion classfier
+        emotion_adv_weight=0.02,
+        emotion_gradrev_lambda=1,
+        emotion_gradrev_grad_max_norm=0.5,
 
         ################################
         # Optimization Hyperparameters #

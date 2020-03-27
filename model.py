@@ -8,7 +8,7 @@ from torch.distributions.normal import Normal
 from layers import ConvNorm, LinearNorm
 from utils import to_gpu, get_mask_from_lengths
 import time
-from utils import get_spk_adv_inputs
+from utils import get_spk_adv_inputs, get_emo_adv_inputs
 from utils import hard_clip, soft_clip
 
 
@@ -687,6 +687,7 @@ class Tacotron2(nn.Module):
     def __init__(self, hparams):
         super(Tacotron2, self).__init__()
         self.speaker_adversarial_training = hparams.speaker_adversarial_training
+        self.emotion_adversarial_training = hparams.emotion_adversarial_training
         self.mask_padding = hparams.mask_padding
         self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels
@@ -705,6 +706,10 @@ class Tacotron2(nn.Module):
             self.speaker_advgrad_classifier = SpeakerRevGradClassifier(hparams)
         else:
             self.speaker_advgrad_classifier = None
+        if hparams.emotion_adversarial_training:
+            self.emotion_advgrad_classifier = EmotionRevGradClassifier(hparams)
+        else:
+            self.emotion_advgrad_classifier = None
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -759,13 +764,20 @@ class Tacotron2(nn.Module):
 
         if self.speaker_adversarial_training:
             spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
-            logit_outputs, prob_speakers, pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
+            logit_speakers, prob_speakers, int_pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
         else:
-            logit_outputs, prob_speakers, pred_speakers = None, None, None
+            logit_speakers, prob_speakers, int_pred_speakers = None, None, None
 
-        return self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments],
-            output_lengths), (logit_outputs, prob_speakers, pred_speakers), att_means
+        if self.emotion_adversarial_training:
+            emo_adv_batch = get_emo_adv_inputs(encoder_outputs, text_lengths)
+            logit_emotions, prob_emotions, int_pred_emotions = self.emotion_advgrad_classifier(emo_adv_batch)
+        else:
+            logit_emotions, prob_emotions, int_pred_emotions = None, None, None
+
+        return (self.parse_output([mel_outputs, mel_outputs_postnet, gate_outputs, alignments], output_lengths),
+                (logit_speakers, prob_speakers, int_pred_speakers),
+                (logit_emotions, prob_emotions, int_pred_emotions),
+                att_means)
 
     def free_running(self, inputs, text_lengths, speakers, emotion_vectors):
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
@@ -944,9 +956,9 @@ class SpeakerRevGradClassifier(nn.Module):
         h = F.relu(self.linear_1(revgrad_inputs))
         logit_outputs = self.linear_2(h)
         prob_speakers = F.softmax(logit_outputs, dim=1)
-        speakers = torch.argmax(prob_speakers, dim=1)
+        int_pred_speakers = torch.argmax(prob_speakers, dim=1)
 
-        return logit_outputs, prob_speakers, speakers
+        return logit_outputs, prob_speakers, int_pred_speakers
 
     # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
     def revgrad_layer(self, x, scale=1.0, max_grad_norm=0.5):
@@ -972,9 +984,9 @@ class EmotionRevGradClassifier(nn.Module):
         h = F.relu(self.linear_1(revgrad_inputs))
         logit_outputs = self.linear_2(h)
         prob_emotions = F.softmax(logit_outputs, dim=1)
-        int_emotions = torch.argmax(prob_emotions, dim=1)
+        int_pred_emotions = torch.argmax(prob_emotions, dim=1)
 
-        return logit_outputs, prob_emotions, int_emotions
+        return logit_outputs, prob_emotions, int_pred_emotions
 
     # From https://discuss.pytorch.org/t/solved-reverse-gradients-in-backward-pass/3589/19
     def revgrad_layer(self, x, scale=1.0, max_grad_norm=0.5):

@@ -24,7 +24,7 @@ from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
-from utils import get_spk_adv_targets, load_pretrained_model
+from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, n_gpus):
     rt = tensor.clone()
@@ -210,10 +210,11 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                                     shuffle=False, batch_size=batch_size,
                                     pin_memory=False, collate_fn=collate_fn)
 
-            criterion, criterion_dom = criterions
+            criterion, criterion_spk_adv, criterion_emo_adv = criterions
             val_loss_mel = 0.0
             val_loss_gate = 0.0
             val_loss_spk_adv = 0.0
+            val_loss_emo_adv = 0.0
             val_loss_att_means = 0.0
             val_loss = 0.0
 
@@ -268,11 +269,12 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 ############################################################
                 # TEACHER FORCING #####
                 # Forward propagation by teacher forcing
-                y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_input_vectors)
+                y_pred, y_pred_speakers, y_pred_emotions, att_means = model(x, speakers, emotion_input_vectors)
 
                 # Forward propagtion results
                 mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
-                spk_logit_outputs, prob_speakers, pred_speakers = y_pred_speakers
+                logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
+                logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -285,17 +287,29 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 # Caculate Tacotron2 losses.
                 loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
 
-                # Forward the speaker adversarial module.
+                # Forward the speaker adversarial training module.
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                     # Compute the speaker adversarial loss
-                    loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
-                    # Compute the accuracy of the adversarial speaker classifier.
-                    np_speakers = spk_adv_targets.cpu().numpy()
-                    np_pred_speakers = pred_speakers.cpu().numpy()
-                    spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+                    loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
+                    # Compute the accuracy of the speaker adversarial classifier.
+                    np_target_speakers = spk_adv_targets.cpu().numpy()
+                    np_pred_speakers = int_pred_speakers.cpu().numpy()
+                    spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
                 else:
                     loss_spk_adv = torch.zeros(1).cuda()
+
+                # Forward the emotion adversarial training module.
+                if hparams.emotion_adversarial_training:
+                    emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
+                    # Compute the emotion adversarial loss
+                    loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
+                    # Compute the accuracy of the emotion adversarial classifier.
+                    np_target_emotions = emo_adv_targets.cpu().numpy()
+                    np_pred_emotions = int_pred_emotions.cpu().numpy()
+                    emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
+                else:
+                    loss_emo_adv = torch.zeros(1).cuda()
 
                 if hparams.monotonic_attention:
                     input_lengths = x[1]
@@ -303,25 +317,30 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 else:
                     loss_att_means = torch.zeros(1).cuda()
 
-                loss = loss_taco2 + hparams.speaker_adv_weight * loss_spk_adv + \
+                loss = loss_taco2 + \
+                    hparams.speaker_adv_weight * loss_spk_adv + \
+                    hparams.emotion_adv_weight * loss_emo_adv + \
                     hparams.loss_att_means_weight * loss_att_means
 
                 if distributed_run:
                     reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                     reduced_val_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
                     reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
                     reduced_val_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
                     reduced_val_loss = reduce_tensor(loss.data, n_gpus).item()
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
+                    reduced_val_loss_emo_adv = loss_emo_adv.item()
                     reduced_val_loss_att_means = loss_att_means.item()
                     reduced_val_loss = loss.item()
 
                 val_loss_mel += reduced_val_loss_mel
                 val_loss_gate += reduced_val_loss_gate
                 val_loss_spk_adv += reduced_val_loss_spk_adv
+                val_loss_emo_adv += reduced_val_loss_emo_adv
                 val_loss_att_means += reduced_val_loss_att_means
                 val_loss += reduced_val_loss
 
@@ -411,6 +430,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             val_loss_mel = val_loss_mel / n_val_batches
             val_loss_gate = val_loss_gate / n_val_batches
             val_loss_spk_adv = val_loss_spk_adv / n_val_batches
+            val_loss_emo_adv = val_loss_emo_adv / n_val_batches
             val_loss_att_means = val_loss_att_means / n_val_batches
             val_loss = val_loss / n_val_batches
 
@@ -472,7 +492,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
-            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_att_means)
+            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
             attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
             attention_measures_fr = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
 
@@ -486,7 +506,7 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
                 'etc':etc,
                 'y':y,
                 'y_pred':y_pred,
-                'pred_speakers':pred_speakers,
+                'int_pred_speakers':int_pred_speakers,
                 'losses':losses,
                 'attention_measures':attention_measures,
                 'attention_measures_fr':attention_measures_fr,
@@ -498,6 +518,8 @@ def validate(model, criterions, valsets, iteration, epoch, batch_size, n_gpus,
             }
             if hparams.speaker_adversarial_training:
                 dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
+            if hparams.emotion_adversarial_training:
+                dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
 
             logger.log_validation(valset, val_type, hparams, dict_log_values)
 
@@ -540,7 +562,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         model = apply_gradient_allreduce(model)
 
     criterion = Tacotron2Loss()
-    criterion_dom = torch.nn.CrossEntropyLoss()
+    criterion_spk_adv = torch.nn.CrossEntropyLoss()
+    criterion_emo_adv = torch.nn.CrossEntropyLoss()
 
     logger = prepare_directories_and_logger(
         hparams,
@@ -593,11 +616,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             speakers, sex, emotion_input_vectors, emotion_targets, lang = etc
 
             # Forward propagtion
-            y_pred, y_pred_speakers, att_means = model(x, speakers, emotion_input_vectors)
+            y_pred, y_pred_speakers, y_pred_emotions, att_means = model(x, speakers, emotion_input_vectors)
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
-            spk_logit_outputs, prob_speakers, pred_speakers = y_pred_speakers
+            logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
+            logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
 
             # Compute stop gate accuracy
             np_output_lengths = output_lengths.cpu().numpy()
@@ -610,17 +634,29 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
 
-            # Forward the speaker adversarial module.
+            # Forward the speaker adversarial training module.
             if hparams.speaker_adversarial_training:
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                # Compute the speaker adversarial loss.
-                loss_spk_adv = criterion_dom(spk_logit_outputs, spk_adv_targets)
-                # Compute the accuracy of the adversarial speaker classifier.
-                np_speakers = spk_adv_targets.cpu().numpy()
-                np_pred_speakers = pred_speakers.cpu().numpy()
-                spk_adv_accuracy = accuracy_score(np_speakers, np_pred_speakers)
+                # Compute the speaker adversarial loss
+                loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
+                # Compute the accuracy of the speaker adversarial classifier.
+                np_target_speakers = spk_adv_targets.cpu().numpy()
+                np_pred_speakers = int_pred_speakers.cpu().numpy()
+                spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
             else:
                 loss_spk_adv = torch.zeros(1).cuda()
+
+            # Forward the emotion adversarial training module.
+            if hparams.emotion_adversarial_training:
+                emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
+                # Compute the emotion adversarial loss
+                loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
+                # Compute the accuracy of the emotion adversarial classifier.
+                np_target_emotions = emo_adv_targets.cpu().numpy()
+                np_pred_emotions = int_pred_emotions.cpu().numpy()
+                emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
+            else:
+                loss_emo_adv = torch.zeros(1).cuda()
 
             if hparams.monotonic_attention:
                 input_lengths = x[1]
@@ -628,19 +664,23 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             else:
                 loss_att_means = torch.zeros(1).cuda()
 
-            loss = loss_taco2 + hparams.speaker_adv_weight * loss_spk_adv + \
+            loss = loss_taco2 + \
+                hparams.speaker_adv_weight * loss_spk_adv + \
+                hparams.emotion_adv_weight * loss_emo_adv + \
                 hparams.loss_att_means_weight * loss_att_means
 
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                 reduced_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
                 reduced_loss_att_means = reduce_tensor(reduced_loss_att_means.data, n_gpus).item()
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
                 reduced_loss_spk_adv = loss_spk_adv.item()
+                reduced_loss_emo_adv = loss_emo_adv.item()
                 reduced_loss_att_means = loss_att_means.item()
                 reduced_loss = loss.item()
             if hparams.fp16_run:
@@ -662,9 +702,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means, grad_norm, duration))
-                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_att_means)
+                print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
 
                 dict_log_values = {
                     'iteration':iteration,
@@ -676,17 +716,19 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'x':x,
                     'etc':etc,
                     'y_pred':y_pred,
-                    'pred_speakers':pred_speakers,
+                    'int_pred_speakers':int_pred_speakers,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
                 }
                 if hparams.speaker_adversarial_training:
                     dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
+                if hparams.emotion_adversarial_training:
+                    dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
 
                 logger.log_training(hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
-                criterions = (criterion, criterion_dom)
+                criterions = (criterion, criterion_spk_adv, criterion_emo_adv)
                 validate(model, criterions, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          hparams.distributed_run, rank, hparams)
