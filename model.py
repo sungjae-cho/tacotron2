@@ -702,9 +702,9 @@ class Tacotron2(nn.Module):
         self.speaker_embedding_layer = SpeakerEncoder(hparams)
         self.emotion_embedding_layer = EmotionEncoder(hparams)
         if hparams.speaker_adversarial_training:
-            self.speaker_adversarial_training_layers = SpeakerRevGradClassifier(hparams)
+            self.speaker_advgrad_classifier = SpeakerRevGradClassifier(hparams)
         else:
-            self.speaker_adversarial_training_layers = None
+            self.speaker_advgrad_classifier = None
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -759,7 +759,7 @@ class Tacotron2(nn.Module):
 
         if self.speaker_adversarial_training:
             spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
-            logit_outputs, prob_speakers, pred_speakers = self.speaker_adversarial_training_layers(spk_adv_batch)
+            logit_outputs, prob_speakers, pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
         else:
             logit_outputs, prob_speakers, pred_speakers = None, None, None
 
