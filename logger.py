@@ -624,7 +624,7 @@ class Tacotron2Logger(SummaryWriter):
                     for measure, m_value in spk_measure_dict.items():
                         if measure == 'support':
                             continue
-                        wandb.log({"{prefix}/spk_adv/{emotion}/{measure}".format(
+                        wandb.log({"{prefix}/emo_adv/{emotion}/{measure}".format(
                                 prefix=log_prefix, emotion=str_emotion, measure=measure): m_value}
                             , step=iteration)
                         print("{prefix}/emo_adv/{emotion}/{measure}".format(
