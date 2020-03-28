@@ -104,13 +104,15 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_far = 0
         self.sum_mean_ar = 0
         self.sum_mean_letter_ar = 0
+        self.best_letter_ar = -2
+        self.worst_letter_ar = 2
         self.sum_mean_punct_ar = 0
         self.sum_mean_blank_ar = 0
         self.sum_mean_arr = 0
         self.sum_mean_mar = 0
         self.sum_mean_attention_quality = 0
-        self.sum_best_attention_quality = 0
-        self.sum_worst_attention_quality = 0
+        self.best_attention_quality = -2
+        self.worst_attention_quality = 2
 
         self.sum_spk_adv_accuracy = 0
         self.sum_emo_adv_accuracy = 0
@@ -133,13 +135,15 @@ class Tacotron2Logger(SummaryWriter):
         dict_vars['sum_mean_far'] = self.sum_mean_far
         dict_vars['sum_mean_ar'] = self.sum_mean_ar
         dict_vars['sum_mean_letter_ar'] = self.sum_mean_letter_ar
+        dict_vars['best_letter_ar'] = self.best_letter_ar
+        dict_vars['worst_letter_ar'] = self.worst_letter_ar
         dict_vars['sum_mean_punct_ar'] = self.sum_mean_punct_ar
         dict_vars['sum_mean_blank_ar'] = self.sum_mean_blank_ar
         dict_vars['sum_mean_arr'] = self.sum_mean_arr
         dict_vars['sum_mean_mar'] = self.sum_mean_mar
         dict_vars['sum_mean_attention_quality'] = self.sum_mean_attention_quality
-        dict_vars['sum_best_attention_quality'] = self.sum_best_attention_quality
-        dict_vars['sum_worst_attention_quality'] = self.sum_worst_attention_quality
+        dict_vars['best_attention_quality'] = self.best_attention_quality
+        dict_vars['worst_attention_quality'] = self.worst_attention_quality
 
         dict_vars['sum_spk_adv_accuracy'] = self.sum_spk_adv_accuracy
         dict_vars['sum_emo_adv_accuracy'] = self.sum_emo_adv_accuracy
@@ -163,13 +167,15 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_far = dict_vars['sum_mean_far']
         self.sum_mean_ar = dict_vars['sum_mean_ar']
         self.sum_mean_letter_ar = dict_vars['sum_mean_letter_ar']
+        self.best_letter_ar = dict_vars['best_letter_ar']
+        self.worst_letter_ar = dict_vars['worst_letter_ar']
         self.sum_mean_punct_ar = dict_vars['sum_mean_punct_ar']
         self.sum_mean_blank_ar = dict_vars['sum_mean_blank_ar']
         self.sum_mean_arr = dict_vars['sum_mean_arr']
         self.sum_mean_mar = dict_vars['sum_mean_mar']
         self.sum_mean_attention_quality = dict_vars['sum_mean_attention_quality']
-        self.sum_best_attention_quality = dict_vars['sum_best_attention_quality']
-        self.sum_worst_attention_quality = dict_vars['sum_worst_attention_quality']
+        self.best_attention_quality = dict_vars['best_attention_quality']
+        self.worst_attention_quality = dict_vars['worst_attention_quality']
 
         self.sum_spk_adv_accuracy = dict_vars['sum_spk_adv_accuracy']
         self.sum_emo_adv_accuracy = dict_vars['sum_emo_adv_accuracy']
@@ -269,6 +275,8 @@ class Tacotron2Logger(SummaryWriter):
         ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
         mean_ar, batch_ar = ar_pairs[0]
         mean_letter_ar, batch_letter_ar = ar_pairs[1]
+        best_letter_ar = batch_letter_ar.max().item()
+        worst_letter_ar = batch_letter_ar.min().item()
         mean_punct_ar, batch_punct_ar = ar_pairs[2]
         mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
@@ -298,13 +306,15 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_mean_far += mean_far
         self.sum_mean_ar += mean_ar
         self.sum_mean_letter_ar += mean_letter_ar
+        self.best_letter_ar = np.max([self.best_letter_ar, best_letter_ar])
+        self.worst_letter_ar = np.min([self.worst_letter_ar, worst_letter_ar])
         self.sum_mean_punct_ar += mean_punct_ar
         self.sum_mean_blank_ar += mean_blank_ar
         self.sum_mean_arr += mean_arr
         self.sum_mean_mar += mean_mar
         self.sum_mean_attention_quality += mean_attention_quality
-        self.sum_best_attention_quality += best_attention_quality
-        self.sum_worst_attention_quality += worst_attention_quality
+        self.best_attention_quality = np.max([self.best_attention_quality, best_attention_quality])
+        self.worst_attention_quality = np.min([self.worst_attention_quality, worst_attention_quality])
 
         # wandb log
         wandb.log({"epoch": epoch,
@@ -320,6 +330,8 @@ class Tacotron2Logger(SummaryWriter):
                    "train/mean_forward_attention_ratio":mean_far,
                    "train/mean_attention_ratio":mean_ar,
                    "train/mean_letter_attention_ratio":mean_letter_ar,
+                   "train/best_letter_attention_ratio":best_letter_ar,
+                   "train/worst_letter_attention_ratio":worst_letter_ar,
                    "train/mean_punctuation_attention_ratio":mean_punct_ar,
                    "train/mean_blank_attention_ratio":mean_blank_ar,
                    "train/mean_attention_range_ratio":mean_arr,
@@ -388,13 +400,15 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
                        "train_epoch/mean_letter_attention_ratio":(self.sum_mean_letter_ar / self.batches_per_epoch),
+                       "train_epoch/best_letter_attention_ratio":self.best_letter_ar,
+                       "train_epoch/worst_letter_attention_ratio":self.worst_letter_ar,
                        "train_epoch/mean_punctuation_attention_ratio":(self.sum_mean_punct_ar / self.batches_per_epoch),
                        "train_epoch/mean_blank_attention_ratio":(self.sum_mean_blank_ar / self.batches_per_epoch),
                        "train_epoch/mean_attention_range_ratio":(self.sum_mean_arr / self.batches_per_epoch),
                        "train_epoch/mean_multiple_attention_ratio":(self.sum_mean_mar / self.batches_per_epoch),
                        "train_epoch/mean_attention_quality":(self.sum_mean_attention_quality / self.batches_per_epoch),
-                       "train_epoch/best_attention_quality":(self.sum_best_attention_quality / self.batches_per_epoch),
-                       "train_epoch/worst_attention_quality":(self.sum_worst_attention_quality / self.batches_per_epoch)
+                       "train_epoch/best_attention_quality":self.best_attention_quality,
+                       "train_epoch/worst_attention_quality":self.worst_attention_quality
                        }, step=iteration)
 
             if self.hparams.speaker_adversarial_training:
@@ -476,6 +490,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_far, batch_far = far_pair
         mean_ar, batch_ar = ar_pairs[0]
         mean_letter_ar, batch_letter_ar = ar_pairs[1]
+        best_letter_ar = batch_letter_ar.max().item()
+        worst_letter_ar = batch_letter_ar.min().item()
         mean_punct_ar, batch_punct_ar = ar_pairs[2]
         mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = arr_pair
@@ -511,6 +527,8 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
+                   "{}/best_letter_attention_ratio".format(log_prefix):best_letter_ar,
+                   "{}/worst_letter_attention_ratio".format(log_prefix):worst_letter_ar,
                    "{}/mean_punctuation_attention_ratio".format(log_prefix):mean_punct_ar,
                    "{}/mean_blank_attention_ratio".format(log_prefix):mean_blank_ar,
                    "{}/mean_attention_range_ratio".format(log_prefix):mean_arr,
@@ -551,6 +569,8 @@ class Tacotron2Logger(SummaryWriter):
         wandb.log({"{}/mean_forward_attention_ratio".format(log_prefix_fr):mean_far_fr,
                    "{}/mean_attention_ratio".format(log_prefix_fr):mean_ar_fr,
                    "{}/mean_letter_attention_ratio".format(log_prefix_fr):mean_letter_ar_fr,
+                   "{}/best_letter_attention_ratio".format(log_prefix_fr):batch_letter_ar_fr.max().item(),
+                   "{}/worst_letter_attention_ratio".format(log_prefix_fr):batch_letter_ar_fr.min().item(),
                    "{}/mean_punctuation_attention_ratio".format(log_prefix_fr):mean_punct_ar_fr,
                    "{}/mean_blank_attention_ratio".format(log_prefix_fr):mean_blank_ar_fr,
                    "{}/mean_attention_range_ratio".format(log_prefix_fr):mean_arr_fr,
