@@ -832,7 +832,7 @@ class ResidualEncoder(nn.Module):
         self.conv2d_2 = torch.nn.Conv2d(in_channels=2*self.lstm_hidden_size, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
         self.bi_lstm = torch.nn.LSTM(hidden_size=self.lstm_hidden_size, num_layers=2, bidirectional=True)
         self.linear_proj_mean = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
-        #self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
+        self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
 
     def forward(self, inputs):
         """ Residual Encoder
@@ -842,7 +842,7 @@ class ResidualEncoder(nn.Module):
 
         RETURNS
         -------
-        z: torch.Tensor. size == [batch_size, self.out_dim]. Gaussin-sampled latent vectors of a variational autoencoder.
+        z: torch.Tensor. size == [batch_size, self.out_dim]. Gaussian-sampled latent vectors of a variational autoencoder.
         """
         h_conv = F.relu(self.conv2d_1(inputs))
         out_conv = F.relu(self.conv2d_2(h_conv)) # out_conv.shape == [batch_size, 512, freq, t]
@@ -851,28 +851,29 @@ class ResidualEncoder(nn.Module):
         out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero.
         # out_lstm.shape == [t, batch, 2*256 == 2*hidden_size]
         avg_pooled = torch.mean(out_lstm, dim=0) # avg_pooled.shape == [batch, 2*256 == 2*hidden_size]
+
         mu = self.linear_proj_mean(avg_pooled)
-        #logvar = self.linear_proj_logvar(avg_pooled)
-        logvar = torch.zeros_like(batch_size, self.out_dim) # STD == 1
+        logvar = self.linear_proj_logvar(avg_pooled)
         residual_encoding = self.reparameterize(mu, logvar)
 
-        return residual_encoding
+        return residual_encoding, mu, logvar
 
-    def inference(self, inputs):
+    def inference(self, z=torch.zeros([self.batch_size, self.out_dim])):
         """ Residual Encoder
         PARAMS
         ------
-        inputs: torch.Tensor. size == [batch_size, freq_len, time_len]. Mel spectrograms of mini-batch samples.
+        z: torch.Tensor. size == [batch_size, self.out_dim].
+        - z follows the i.i.d. multivariate standard Gaussian (its means are 0 and the STDs are 1).
+        - Zero tensors are the default choice of z.
 
         RETURNS
         -------
-        z: torch.Tensor. size == [batch_size, self.out_dim]. Gaussin-sampled latent vectors of a variational autoencoder.
-        - The means are 0 and the STDs are 1.
+        z: torch.Tensor. size == [batch_size, self.out_dim].
         """
-        batch_size = inputs.size(0)
-        residual_encoding = torch.randn([batch_size, self.out_dim])
+        assert inputs.size(0) == self.batch_size
+        assert inputs.size(1) == self.out_dim
 
-        return residual_encoding
+        return z
 
     def reparameterize(self, mu, logvar):
         ''' Reparameterization trick in VAE
