@@ -32,6 +32,7 @@ class Tacotron2Logger(SummaryWriter):
         super(Tacotron2Logger, self).__init__(logdir)
         self.waveglow = None
         self.waveglow_path = hparams.waveglow_path
+        self.init_training_epoch_variables()
 
     def load_waveglow(self, waveglow_path):
         waveglow = torch.load(waveglow_path)['model']
