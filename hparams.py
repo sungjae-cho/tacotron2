@@ -98,6 +98,10 @@ def create_hparams(hparams_string=None, verbose=False):
         revgrad_lambda=1.0,
         revgrad_max_grad_norm=0.5,
 
+        # Residual encoder parameters
+        res_en_out_dim = 16,
+        res_en_lstm_dim = 256,
+
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported
         decoder_rnn_dim=1024,

@@ -822,10 +822,12 @@ class ResidualEncoder(nn.Module):
     '''
     Reference: https://github.com/pytorch/examples/blob/master/vae/main.py
     '''
-    def __init__(self):
+    def __init__(self, hparams):
         super(ResidualEncoder, self).__init__()
-        self.out_dim = 16
-        self.lstm_hidden_size = 256
+        self.hparams = hparams
+        self.batch_size = self.hparams.batch_size
+        self.out_dim = hparmas.res_en_out_dim
+        self.lstm_hidden_size = hparmas.res_en_lstm_dim
         self.conv2d_1 = torch.nn.Conv2d(in_channels=1, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
         self.conv2d_2 = torch.nn.Conv2d(in_channels=2*self.lstm_hidden_size, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
         self.bi_lstm = torch.nn.LSTM(hidden_size=self.lstm_hidden_size, num_layers=2, bidirectional=True)
