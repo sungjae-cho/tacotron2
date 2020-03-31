@@ -452,6 +452,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 np_pred_speakers = np.concatenate(list_np_pred_speakers)
                 speaker_clsf_report = classification_report(
                     np_target_speakers, np_pred_speakers,
+                    labels=list(range(len(trainset.speaker_list))),
                     target_names=trainset.speaker_list, output_dict=True)
 
             if hparams.emotion_adversarial_training and val_type == ('all', 'all'):
@@ -459,6 +460,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 np_pred_emotions = np.concatenate(list_np_pred_emotions)
                 emotion_clsf_report = classification_report(
                     np_target_emotions, np_pred_emotions,
+                    labels=list(range(len(trainset.emotion_list))),
                     target_names=trainset.emotion_list, output_dict=True)
 
 
@@ -679,7 +681,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 np_target_speakers = spk_adv_targets.cpu().numpy()
                 np_pred_speakers = int_pred_speakers.cpu().numpy()
                 spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
-                speaker_clsf_report = classification_report(np_target_speakers, np_pred_speakers,
+                speaker_clsf_report = classification_report(
+                    np_target_speakers, np_pred_speakers,
+                    labels=list(range(len(trainset.speaker_list))),
                     target_names=trainset.speaker_list, output_dict=True)
                 list_np_target_speakers.append(np_target_speakers)
                 list_np_pred_speakers.append(np_pred_speakers)
@@ -695,7 +699,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 np_target_emotions = emo_adv_targets.cpu().numpy()
                 np_pred_emotions = int_pred_emotions.cpu().numpy()
                 emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
-                emotion_clsf_report = classification_report(np_target_emotions, np_pred_emotions,
+                emotion_clsf_report = classification_report(
+                    np_target_emotions, np_pred_emotions,
+                    labels=list(range(len(trainset.emotion_list))),
                     target_names=trainset.emotion_list, output_dict=True)
                 list_np_target_emotions.append(np_target_emotions)
                 list_np_pred_emotions.append(np_pred_emotions)
@@ -771,7 +777,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                         # If it is the last batch, ...
                         np_target_speakers = np.concatenate(list_np_target_speakers)
                         np_pred_speakers = np.concatenate(list_np_pred_speakers)
-                        speaker_clsf_report_train_epoch = classification_report(np_target_speakers, np_pred_speakers,
+                        speaker_clsf_report_train_epoch = classification_report(
+                            np_target_speakers, np_pred_speakers,
+                            labels=list(range(len(trainset.speaker_list))),
                             target_names=trainset.speaker_list, output_dict=True)
                         dict_log_values['speaker_clsf_report_train_epoch'] = speaker_clsf_report_train_epoch
                 if hparams.emotion_adversarial_training:
@@ -781,7 +789,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                         # If it is the last batch, ...
                         np_target_emotions = np.concatenate(list_np_target_emotions)
                         np_pred_emotions = np.concatenate(list_np_pred_emotions)
-                        emotion_clsf_report_train_epoch = classification_report(np_target_emotions, np_pred_emotions,
+                        emotion_clsf_report_train_epoch = classification_report(
+                            np_target_emotions, np_pred_emotions,
+                            labels=list(range(len(trainset.emotion_list))),
                             target_names=trainset.emotion_list, output_dict=True)
                         dict_log_values['emotion_clsf_report_train_epoch'] = emotion_clsf_report_train_epoch
 
