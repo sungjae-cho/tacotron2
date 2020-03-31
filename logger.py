@@ -258,6 +258,10 @@ class Tacotron2Logger(SummaryWriter):
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
 
+        if self.hparams.residual_encoder:
+            residual_encoding = dict_log_values['residual_encoding']
+            mu = dict_log_values['mu']
+            logvar = dict_log_values['logvar']
         if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
             speaker_clsf_report = dict_log_values['speaker_clsf_report']
@@ -266,7 +270,7 @@ class Tacotron2Logger(SummaryWriter):
             emotion_clsf_report = dict_log_values['emotion_clsf_report']
 
         self.batches_per_epoch = batches_per_epoch
-        loss, loss_mel, loss_gate, loss_spk_adv, loss_emo_adv, loss_att_means = losses
+        loss, loss_mel, loss_gate, loss_KLD, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -349,6 +353,16 @@ class Tacotron2Logger(SummaryWriter):
                    "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
                    "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                    }, step=iteration)
+
+        # Logging values concerning the residual encoder.
+        if self.hparams.residual_encoder:
+            wandb.log({"train/res_en/loss_KLD": loss_KLD,
+                       "train/res_en/residual_encoding": wandb.Histogram(residual_encoding.data.cpu().numpy()),
+                       "train/res_en/mu": wandb.Histogram(mu.data.cpu().numpy()),
+                       "train/res_en/var": wandb.Histogram(logvar.exp().data.cpu().numpy()),
+                       "train/res_en/mean_mu": mu.mean().data.cpu().numpy(),
+                       "train/res_en/mean_var": logvar.exp().mean().data.cpu().numpy(),
+                       }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
@@ -467,7 +481,7 @@ class Tacotron2Logger(SummaryWriter):
         _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']
 
-        loss, loss_mel, loss_gate, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
+        loss, loss_mel, loss_gate, loss_KLD, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
         far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
         far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['attention_measures_fr']
 
@@ -477,6 +491,11 @@ class Tacotron2Logger(SummaryWriter):
         synth_dict_rand = dict_log_values['synth_dict_rand']
         synth_dict_min_aq_tf = dict_log_values['synth_dict_min_aq_tf']
         synth_dict_min_aq_fr = dict_log_values['synth_dict_min_aq_fr']
+
+        if self.hparams.residual_encoder:
+            residual_encoding = dict_log_values['residual_encoding']
+            mu = dict_log_values['mu']
+            logvar = dict_log_values['logvar']
 
         if self.hparams.speaker_adversarial_training:
             spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
@@ -546,6 +565,19 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
                    "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
                    } , step=iteration)
+
+        # Logging values concerning the residual encoder.
+        if self.hparams.residual_encoder:
+            residual_encoding = dict_log_values['residual_encoding']
+            mu = dict_log_values['mu']
+            logvar = dict_log_values['logvar']
+            wandb.log({"{}/res_en/loss_KLD".format(log_prefix): loss_KLD,
+                       "{}/res_en/residual_encoding".format(log_prefix): wandb.Histogram(residual_encoding.data.cpu().numpy()),
+                       "{}/res_en/mu".format(log_prefix): wandb.Histogram(mu.data.cpu().numpy()),
+                       "{}/res_en/var".format(log_prefix): wandb.Histogram(logvar.exp().data.cpu().numpy()),
+                       "{}/res_en/mean_mu".format(log_prefix): mu.mean().data.cpu().numpy(),
+                       "{}/res_en/mean_var".format(log_prefix): logvar.exp().mean().data.cpu().numpy(),
+                       }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:

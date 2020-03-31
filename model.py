@@ -341,6 +341,7 @@ class Encoder(nn.Module):
 class Decoder(nn.Module):
     def __init__(self, hparams):
         super(Decoder, self).__init__()
+        self.hparams = hparams
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
         self.encoder_embedding_dim = hparams.encoder_embedding_dim
@@ -355,20 +356,8 @@ class Decoder(nn.Module):
         self.has_style_token_lstm_2 = hparams.has_style_token_lstm_2
         self.monotonic_attention = hparams.monotonic_attention
 
-        if self.has_style_token_lstm_1:
-            self.attention_rnn_input_dim = (hparams.prenet_dim
-                + hparams.encoder_embedding_dim
-                + hparams.emotion_embedding_dim + hparams.speaker_embedding_dim)
-        else:
-            self.attention_rnn_input_dim = hparams.prenet_dim + hparams.encoder_embedding_dim
-
-        if self.has_style_token_lstm_2:
-            self.decoder_rnn_input_dim = (hparams.attention_rnn_dim
-                + hparams.encoder_embedding_dim
-                + hparams.emotion_embedding_dim + hparams.speaker_embedding_dim)
-        else:
-            self.decoder_rnn_input_dim = (hparams.attention_rnn_dim
-                + hparams.encoder_embedding_dim)
+        self.attention_rnn_input_dim = self.get_attention_rnn_input_dim()
+        self.decoder_rnn_input_dim = self.get_decoder_rnn_input_dim()
 
         self.prenet = Prenet(
             hparams.n_mel_channels * hparams.n_frames_per_step,
@@ -401,6 +390,30 @@ class Decoder(nn.Module):
         self.gate_layer = LinearNorm(
             hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
             bias=True, w_init_gain='sigmoid')
+
+    def get_attention_rnn_input_dim(self):
+        attention_rnn_input_dim = (self.hparams.prenet_dim
+            + self.hparams.encoder_embedding_dim)
+
+        if self.hparams.has_style_token_lstm_1:
+            attention_rnn_input_dim += self.hparams.speaker_embedding_dim
+            attention_rnn_input_dim += self.hparams.emotion_embedding_dim
+            if self.hparams.residual_encoder:
+                attention_rnn_input_dim += self.hparams.res_en_out_dim
+
+        return attention_rnn_input_dim
+
+    def get_decoder_rnn_input_dim(self):
+        decoder_rnn_input_dim = (self.hparams.attention_rnn_dim
+            + self.hparams.encoder_embedding_dim)
+
+        if self.hparams.has_style_token_lstm_2:
+            decoder_rnn_input_dim += self.hparams.speaker_embedding_dim
+            decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
+            if self.hparams.residual_encoder:
+                decoder_rnn_input_dim += self.hparams.res_en_out_dim
+
+        return decoder_rnn_input_dim
 
     def get_attention_means(self):
         if self.monotonic_attention:
@@ -512,7 +525,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments, attention_contexts
 
-    def decode(self, decoder_input, speaker_embedding, emotion_embedding):
+    def decode(self, decoder_input, speaker_embedding, emotion_embedding, residual_encoding):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -524,11 +537,13 @@ class Decoder(nn.Module):
         gate_output: gate output energies
         attention_weights:
         """
+        cell_inputs = [decoder_input, self.attention_context]
         if self.has_style_token_lstm_1:
-            cell_input = torch.cat((decoder_input, self.attention_context,
-                speaker_embedding, emotion_embedding), -1)
-        else:
-            cell_input = torch.cat((decoder_input, self.attention_context), -1)
+            cell_inputs.append(speaker_embedding)
+            cell_inputs.append(emotion_embedding)
+            if self.hparams.residual_encoder:
+                cell_inputs.append(residual_encoding)
+        cell_input = torch.cat(cell_inputs, -1)
 
         self.attention_hidden, self.attention_cell = self.attention_rnn(
             cell_input, (self.attention_hidden, self.attention_cell))
@@ -544,12 +559,13 @@ class Decoder(nn.Module):
 
         self.attention_weights_cum += self.attention_weights
 
+        decoder_inputs = [self.attention_hidden, self.attention_context]
         if self.has_style_token_lstm_2:
-            decoder_input = torch.cat(
-                (self.attention_hidden, self.attention_context, speaker_embedding, emotion_embedding), -1)
-        else:
-            decoder_input = torch.cat(
-                (self.attention_hidden, self.attention_context), -1)
+            decoder_inputs.append(speaker_embedding)
+            decoder_inputs.append(emotion_embedding)
+            if self.hparams.residual_encoder:
+                decoder_inputs.append(residual_encoding)
+        decoder_input = torch.cat(decoder_inputs, -1)
 
         self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
             decoder_input, (self.decoder_hidden, self.decoder_cell))
@@ -565,7 +581,7 @@ class Decoder(nn.Module):
         return decoder_output, gate_prediction, self.attention_weights, self.attention_context
 
     def forward(self, memory, decoder_inputs, memory_lengths,
-        speaker_embeddings, emotion_embeddings):
+        speaker_embeddings, emotion_embeddings, residual_encoding):
         """ Decoder forward pass for training
         PARAMS
         ------
@@ -592,7 +608,7 @@ class Decoder(nn.Module):
         while len(mel_outputs) < decoder_inputs.size(0) - 1:
             decoder_input = decoder_inputs[len(mel_outputs)]
             mel_output, gate_output, attention_weights, attention_context = self.decode(
-                decoder_input, speaker_embeddings, emotion_embeddings)
+                decoder_input, speaker_embeddings, emotion_embeddings, residual_encoding)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [attention_weights]
@@ -606,7 +622,8 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
 
-    def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors):
+    def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors,
+            residual_encoding):
         """ Decoder inference
         PARAMS
         ------
@@ -631,7 +648,7 @@ class Decoder(nn.Module):
         while len(mel_outputs) < self.max_decoder_steps:
             decoder_input = self.prenet(decoder_input)
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
-                speaker_indices, emotion_vectors)
+                speaker_indices, emotion_vectors, residual_encoding)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
             alignments += [alignment]
@@ -643,7 +660,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def inference(self, memory, speaker_indices, emotion_vectors):
+    def inference(self, memory, speaker_indices, emotion_vectors, residual_encoding):
         """ Decoder inference
         PARAMS
         ------
@@ -663,7 +680,7 @@ class Decoder(nn.Module):
         while True:
             decoder_input = self.prenet(decoder_input)
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
-                speaker_indices, emotion_vectors)
+                speaker_indices, emotion_vectors, residual_encoding)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
             alignments += [alignment]
@@ -686,6 +703,7 @@ class Decoder(nn.Module):
 class Tacotron2(nn.Module):
     def __init__(self, hparams):
         super(Tacotron2, self).__init__()
+        self.hparams = hparams
         self.speaker_adversarial_training = hparams.speaker_adversarial_training
         self.emotion_adversarial_training = hparams.emotion_adversarial_training
         self.mask_padding = hparams.mask_padding
@@ -710,6 +728,10 @@ class Tacotron2(nn.Module):
             self.emotion_advgrad_classifier = EmotionRevGradClassifier(hparams)
         else:
             self.emotion_advgrad_classifier = None
+        if hparams.residual_encoder:
+            self.residual_encoder = ResidualEncoder(hparams)
+        else:
+            self.residual_encoder = None
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -743,7 +765,7 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def forward(self, inputs, speakers, emotion_vectors):
+    def forward(self, inputs, speakers, emotion_vectors, zero_res_en=False):
         text_inputs, text_lengths, mels, max_len, output_lengths = inputs
         text_lengths, output_lengths = text_lengths.data, output_lengths.data
 
@@ -754,10 +776,21 @@ class Tacotron2(nn.Module):
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
 
+        if self.hparams.residual_encoder:
+            if zero_res_en:
+                batch_size = text_inputs.size(0)
+                residual_encoding = self.residual_encoder.inference(batch_size)
+                mu = torch.zeros_like(residual_encoding)
+                logvar = torch.zeros_like(residual_encoding)
+            else:
+                residual_encoding, mu, logvar = self.residual_encoder(mels)
+        else:
+            residual_encoding, mu, logvar = None, None, None
+
         (mel_outputs, gate_outputs, alignments,
             attention_contexts, att_means) = self.decoder(
                 encoder_outputs, mels, text_lengths,
-                    speaker_embeddings, emotion_embeddings)
+                    speaker_embeddings, emotion_embeddings, residual_encoding)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -777,15 +810,22 @@ class Tacotron2(nn.Module):
         return (self.parse_output([mel_outputs, mel_outputs_postnet, gate_outputs, alignments], output_lengths),
                 (logit_speakers, prob_speakers, int_pred_speakers),
                 (logit_emotions, prob_emotions, int_pred_emotions),
+                (residual_encoding, mu, logvar),
                 att_means)
 
-    def free_running(self, inputs, text_lengths, speakers, emotion_vectors):
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
+    def free_running(self, text_inputs, text_lengths, speakers, emotion_vectors):
+        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        if self.hparams.residual_encoder:
+            batch_size = text_inputs.size(0)
+            residual_encoding = self.residual_encoder.inference(batch_size)
+        else:
+            residual_encoding = None
+
         mel_outputs, gate_outputs, alignments = self.decoder.free_running(
-            encoder_outputs, text_lengths, speaker_embeddings, emotion_embeddings)
+            encoder_outputs, text_lengths, speaker_embeddings, emotion_embeddings, residual_encoding)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -795,13 +835,19 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def inference(self, inputs, speakers, emotion_vectors):
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
+    def inference(self, text_inputs, speakers, emotion_vectors):
+        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        if self.hparams.residual_encoder:
+            batch_size = text_inputs.size(0)
+            residual_encoding = self.residual_encoder.inference(batch_size)
+        else:
+            residual_encoding = None
+
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
-            encoder_outputs, speaker_embeddings, emotion_embeddings)
+            encoder_outputs, speaker_embeddings, emotion_embeddings, residual_encoding)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -825,12 +871,16 @@ class ResidualEncoder(nn.Module):
     def __init__(self, hparams):
         super(ResidualEncoder, self).__init__()
         self.hparams = hparams
-        self.batch_size = self.hparams.batch_size
-        self.out_dim = hparmas.res_en_out_dim
-        self.lstm_hidden_size = hparmas.res_en_lstm_dim
-        self.conv2d_1 = torch.nn.Conv2d(in_channels=1, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
-        self.conv2d_2 = torch.nn.Conv2d(in_channels=2*self.lstm_hidden_size, out_channels=2*self.lstm_hidden_size, kernel_size=(3,1))
-        self.bi_lstm = torch.nn.LSTM(hidden_size=self.lstm_hidden_size, num_layers=2, bidirectional=True)
+        self.conv_in_channels = hparams.n_mel_channels * hparams.n_frames_per_step
+        self.conv_out_channels = hparams.res_en_conv_kernels
+        self.lstm_hidden_size = hparams.res_en_lstm_dim
+        self.out_dim = hparams.res_en_out_dim
+        self.conv_kernel_size = hparams.res_en_conv_kernel_size
+        self.padding = self.conv_kernel_size // 2
+
+        self.conv1d_1 = torch.nn.Conv1d(in_channels=self.conv_in_channels, out_channels=self.conv_out_channels, kernel_size=self.conv_kernel_size, padding=self.padding)
+        self.conv1d_2 = torch.nn.Conv1d(in_channels=self.conv_out_channels, out_channels=self.conv_out_channels, kernel_size=self.conv_kernel_size, padding=self.padding)
+        self.bi_lstm = torch.nn.LSTM(input_size=self.conv_out_channels,hidden_size=self.lstm_hidden_size, num_layers=2, batch_first=True, bidirectional=True)
         self.linear_proj_mean = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
         self.linear_proj_logvar = torch.nn.Linear(in_features=2*self.lstm_hidden_size, out_features=self.out_dim, bias=False)
 
@@ -844,13 +894,11 @@ class ResidualEncoder(nn.Module):
         -------
         z: torch.Tensor. size == [batch_size, self.out_dim]. Gaussian-sampled latent vectors of a variational autoencoder.
         """
-        h_conv = F.relu(self.conv2d_1(inputs))
-        out_conv = F.relu(self.conv2d_2(h_conv)) # out_conv.shape == [batch_size, 512, freq, t]
-        out_conv = out_conv.view(out_conv.size(0), -1, out_conv.size(3)) # out_conv.shape == [batch_size, 512*freq, t]
-        out_conv = out_conv.permute(2, 0, 1) # out_conv.shape == [t, batch_size, 512*freq]
-        out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero.
-        # out_lstm.shape == [t, batch, 2*256 == 2*hidden_size]
-        avg_pooled = torch.mean(out_lstm, dim=0) # avg_pooled.shape == [batch, 2*256 == 2*hidden_size]
+        h_conv = F.relu(self.conv1d_1(inputs))
+        out_conv = F.relu(self.conv1d_2(h_conv)) # out_conv.shape == [batch_size, 512, mel_step]
+        out_conv = out_conv.permute(0, 2, 1) # lstm gets inputs of shape [batch_size, seq_len, 2*256]
+        out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero. out_lstm.size == [out_lstm, seq_len, 2*256]
+        avg_pooled = torch.mean(out_lstm, dim=1) # avg_pooled.shape == [batch, 2*256]
 
         mu = self.linear_proj_mean(avg_pooled)
         logvar = self.linear_proj_logvar(avg_pooled)
@@ -858,20 +906,17 @@ class ResidualEncoder(nn.Module):
 
         return residual_encoding, mu, logvar
 
-    def inference(self, z=torch.zeros([self.batch_size, self.out_dim])):
+    def inference(self, batch_size):
         """ Residual Encoder
         PARAMS
         ------
-        z: torch.Tensor. size == [batch_size, self.out_dim].
-        - z follows the i.i.d. multivariate standard Gaussian (its means are 0 and the STDs are 1).
-        - Zero tensors are the default choice of z.
+        batch_size: int.
 
         RETURNS
         -------
         z: torch.Tensor. size == [batch_size, self.out_dim].
         """
-        assert inputs.size(0) == self.batch_size
-        assert inputs.size(1) == self.out_dim
+        z = torch.zeros([batch_size, self.out_dim]).cuda()
 
         return z
 

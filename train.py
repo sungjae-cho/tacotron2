@@ -19,7 +19,7 @@ from torch.nn import MSELoss
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
-from loss_function import Tacotron2Loss
+from loss_function import Tacotron2Loss, KLD_loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
@@ -214,10 +214,16 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
             criterion, criterion_spk_adv, criterion_emo_adv = criterions
             val_loss_mel = 0.0
             val_loss_gate = 0.0
+            val_loss_KLD = 0.0
             val_loss_spk_adv = 0.0
             val_loss_emo_adv = 0.0
             val_loss_att_means = 0.0
             val_loss = 0.0
+
+            if hparams.residual_encoder:
+                list_residual_encoding = list()
+                list_mu = list()
+                list_logvar = list()
 
             if hparams.speaker_adversarial_training:
                 list_np_target_speakers = list()
@@ -278,12 +284,15 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 ############################################################
                 # TEACHER FORCING #####
                 # Forward propagation by teacher forcing
-                y_pred, y_pred_speakers, y_pred_emotions, att_means = model(x, speakers, emotion_input_vectors)
+                (y_pred, y_pred_speakers, y_pred_emotions, y_pred_res_en,
+                    att_means) = model(x, speakers, emotion_input_vectors,
+                        zero_res_en=hparams.val_tf_zero_res_en)
 
                 # Forward propagtion results
                 mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
                 logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
                 logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
+                residual_encoding, mu, logvar = y_pred_res_en
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -295,6 +304,12 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
                 # Caculate Tacotron2 losses.
                 loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
+
+                # Calculate the KL-divergence loss.
+                if hparams.residual_encoder:
+                    loss_KLD = KLD_loss(mu, logvar)
+                else:
+                    loss_KLD = torch.zeros(1).cuda()
 
                 # Forward the speaker adversarial training module.
                 if hparams.speaker_adversarial_training:
@@ -331,6 +346,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     loss_att_means = torch.zeros(1).cuda()
 
                 loss = loss_taco2 + \
+                    hparams.res_en_KLD_weight * loss_KLD + \
                     hparams.speaker_adv_weight * loss_spk_adv + \
                     hparams.emotion_adv_weight * loss_emo_adv + \
                     hparams.loss_att_means_weight * loss_att_means
@@ -338,6 +354,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 if distributed_run:
                     reduced_val_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                     reduced_val_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
+                    reduced_loss_KLD = reduce_tensor(loss_KLD.data, n_gpus).item()
                     reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                     reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
                     reduced_val_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
@@ -345,6 +362,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
+                    reduced_loss_KLD = loss_KLD.item()
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss_emo_adv = loss_emo_adv.item()
                     reduced_val_loss_att_means = loss_att_means.item()
@@ -352,10 +370,16 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
                 val_loss_mel += reduced_val_loss_mel
                 val_loss_gate += reduced_val_loss_gate
+                val_loss_KLD += reduced_loss_KLD
                 val_loss_spk_adv += reduced_val_loss_spk_adv
                 val_loss_emo_adv += reduced_val_loss_emo_adv
                 val_loss_att_means += reduced_val_loss_att_means
                 val_loss += reduced_val_loss
+
+                if hparams.residual_encoder:
+                    list_residual_encoding.append(residual_encoding)
+                    list_mu.append(mu)
+                    list_logvar.append(logvar)
 
                 # [M1] forward_attention_ratio
                 _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
@@ -442,10 +466,16 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
             n_val_batches = (i + 1)
             val_loss_mel = val_loss_mel / n_val_batches
             val_loss_gate = val_loss_gate / n_val_batches
+            val_loss_KLD = val_loss_KLD / n_val_batches
             val_loss_spk_adv = val_loss_spk_adv / n_val_batches
             val_loss_emo_adv = val_loss_emo_adv / n_val_batches
             val_loss_att_means = val_loss_att_means / n_val_batches
             val_loss = val_loss / n_val_batches
+
+            if hparams.residual_encoder:
+                residual_encoding = torch.cat(list_residual_encoding)
+                mu = torch.cat(list_mu)
+                logvar = torch.cat(list_logvar)
 
             if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
                 np_target_speakers = np.concatenate(list_np_target_speakers)
@@ -522,7 +552,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
-            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
+            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_KLD, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
             attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
             attention_measures_fr = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
 
@@ -546,6 +576,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 'synth_dict_min_aq_tf':synth_dict_min_aq_tf,
                 'synth_dict_min_aq_fr':synth_dict_min_aq_fr,
             }
+            if hparams.residual_encoder:
+                dict_log_values['residual_encoding'] = residual_encoding
+                dict_log_values['mu'] = mu
+                dict_log_values['logvar'] = logvar
             if hparams.speaker_adversarial_training:
                 dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                 if val_type == ('all', 'all'):
@@ -654,12 +688,14 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             speakers, sex, emotion_input_vectors, emotion_targets, lang = etc
 
             # Forward propagtion
-            y_pred, y_pred_speakers, y_pred_emotions, att_means = model(x, speakers, emotion_input_vectors)
+            (y_pred, y_pred_speakers, y_pred_emotions,
+                y_pred_res_en, att_means) = model(x, speakers, emotion_input_vectors)
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
             logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
+            residual_encoding, mu, logvar = y_pred_res_en
 
             # Compute stop gate accuracy
             np_output_lengths = output_lengths.cpu().numpy()
@@ -671,6 +707,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
+
+            # Calculate the KL-divergence loss.
+            if hparams.residual_encoder:
+                loss_KLD = KLD_loss(mu, logvar)
+            else:
+                loss_KLD = torch.zeros(1).cuda()
 
             # Forward the speaker adversarial training module.
             if hparams.speaker_adversarial_training:
@@ -715,6 +757,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 loss_att_means = torch.zeros(1).cuda()
 
             loss = loss_taco2 + \
+                hparams.res_en_KLD_weight * loss_KLD + \
                 hparams.speaker_adv_weight * loss_spk_adv + \
                 hparams.emotion_adv_weight * loss_emo_adv + \
                 hparams.loss_att_means_weight * loss_att_means
@@ -722,6 +765,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
                 reduced_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
+                reduced_loss_KLD = reduce_tensor(loss_KLD.data, n_gpus).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                 reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
                 reduced_loss_att_means = reduce_tensor(reduced_loss_att_means.data, n_gpus).item()
@@ -729,6 +773,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
+                reduced_loss_KLD = loss_KLD.item()
                 reduced_loss_spk_adv = loss_spk_adv.item()
                 reduced_loss_emo_adv = loss_emo_adv.item()
                 reduced_loss_att_means = loss_att_means.item()
@@ -752,9 +797,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
-                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
+                print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
 
                 dict_log_values = {
                     'iteration':iteration,
@@ -770,6 +815,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
                 }
+                if hparams.residual_encoder:
+                    dict_log_values['residual_encoding'] = residual_encoding
+                    dict_log_values['mu'] = mu
+                    dict_log_values['logvar'] = logvar
                 if hparams.speaker_adversarial_training:
                     dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                     dict_log_values['speaker_clsf_report'] = speaker_clsf_report

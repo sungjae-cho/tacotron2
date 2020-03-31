@@ -76,6 +76,7 @@ def create_hparams(hparams_string=None, verbose=False):
         emotion_adversarial_training=False,
         residual_encoder=False,
         monotonic_attention=False,
+        val_tf_zero_res_en=False,
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,
@@ -99,8 +100,11 @@ def create_hparams(hparams_string=None, verbose=False):
         revgrad_max_grad_norm=0.5,
 
         # Residual encoder parameters
-        res_en_out_dim = 16,
-        res_en_lstm_dim = 256,
+        res_en_out_dim=16,
+        res_en_conv_kernels=512,
+        res_en_conv_kernel_size=3,
+        res_en_lstm_dim=256,
+        res_en_KLD_weight=1.0,
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported

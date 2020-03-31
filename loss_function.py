@@ -20,3 +20,17 @@ class Tacotron2Loss(nn.Module):
         taco2_loss = mel_loss + gate_loss
 
         return taco2_loss, mel_loss, gate_loss
+
+
+def KLD_loss(mu, logvar):
+    '''
+    References
+    - https://github.com/pytorch/examples/blob/master/vae/main.py#L73
+    - https://github.com/hwalsuklee/tensorflow-mnist-VAE/blob/master/vae.py#L82
+    - https://github.com/hwalsuklee/tensorflow-mnist-VAE/blob/master/vae.py#L85
+    '''
+    log_lb = 1e-8 # log lower bound
+    KLD = 0.5 * torch.sum(logvar.exp() + mu.pow(2) - 1 - torch.log(log_lb + logvar.exp()), dim=1)
+    loss_KLD = KLD.mean()
+
+    return loss_KLD
