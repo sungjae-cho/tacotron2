@@ -876,7 +876,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             signal.signal(signal.SIGINT, signal_handler)
 
-            if iteration > round(50000 * (64 / hparams.batch_size)):
+            if iteration > round(50000 * (256 / hparams.batch_size)):
                 lr_scheduler.step()
 
             iteration += 1
