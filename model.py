@@ -650,7 +650,7 @@ class Decoder(nn.Module):
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding)
             mel_outputs += [mel_output.squeeze(1)]
-            gate_outputs += [gate_output]
+            gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
             decoder_input = mel_output
@@ -682,7 +682,7 @@ class Decoder(nn.Module):
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding)
             mel_outputs += [mel_output.squeeze(1)]
-            gate_outputs += [gate_output]
+            gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
 
