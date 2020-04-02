@@ -769,7 +769,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss_KLD = reduce_tensor(loss_KLD.data, n_gpus).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
                 reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
-                reduced_loss_att_means = reduce_tensor(reduced_loss_att_means.data, n_gpus).item()
+                reduced_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
                 reduced_loss = reduce_tensor(loss.data, n_gpus).item()
             else:
                 reduced_loss_mel = loss_mel.item()
