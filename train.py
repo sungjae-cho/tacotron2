@@ -679,6 +679,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_scheduler.get_lr()[0]
 
+            # Clears the gradients of all optimized torch.Tensor s.
             model.zero_grad()
 
             # Parse the current batch.
@@ -778,6 +779,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss_emo_adv = loss_emo_adv.item()
                 reduced_loss_att_means = loss_att_means.item()
                 reduced_loss = loss.item()
+
+            # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
+            # These are accumulated into x.grad for every parameter x
             if hparams.fp16_run:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
@@ -793,6 +797,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     model.parameters(), hparams.grad_clip_thresh)
 
             learning_rate = lr_scheduler.get_lr()[0]
+            # optimizer.step is performs a parameter update based on the current
+            # gradient (stored in .grad attribute of a parameter) and the update rule.
             optimizer.step()
 
             if not is_overflow and rank == 0:
