@@ -618,7 +618,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                                  weight_decay=hparams.weight_decay)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         optimizer,
-        0.5**(1 / (125000 * (64 / hparams.batch_size))),
+        0.5**(1 / (125000 * (256 / (hparams.batch_size * n_gpus)))),
         -1
     )
 
@@ -876,7 +876,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             signal.signal(signal.SIGINT, signal_handler)
 
-            if iteration > round(50000 * (256 / hparams.batch_size)):
+            if iteration > round(50000 * (256 / (hparams.batch_size * n_gpus))):
                 lr_scheduler.step()
 
             iteration += 1
