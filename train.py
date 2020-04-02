@@ -33,6 +33,11 @@ def reduce_tensor(tensor, n_gpus):
     rt /= n_gpus
     return rt
 
+def gather_all_tensor(tensor):
+    tensor_list = [tensor.clone() for _ in range(dist.get_world_size())]
+    dist.all_gather(tensor_list, tensor)
+    one_tensor = torch.cat(tensor_list)
+    return one_tensor
 
 def init_distributed(hparams, n_gpus, rank, group_name):
     assert torch.cuda.is_available(), "Distributed mode requires CUDA."
