@@ -714,14 +714,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
             residual_encoding, mu, logvar = y_pred_res_en
 
-            # Compute stop gate accuracy
-            np_output_lengths = output_lengths.cpu().numpy()
-            mel_lengths = get_mel_lengths(gate_outputs)
-            np_mel_lengths = mel_lengths.cpu().numpy()
-            gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
-            # Compute stop gate MAE(pred_lengths, true_lengths)
-            gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
-
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
 
@@ -779,6 +771,15 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # optimizer.step is performs a parameter update based on the current
             # gradient (stored in .grad attribute of a parameter) and the update rule.
             optimizer.step()
+
+            # Compute stop gate performance.
+            np_output_lengths = output_lengths.cpu().numpy()
+            mel_lengths = get_mel_lengths(gate_outputs)
+            np_mel_lengths = mel_lengths.cpu().numpy()
+            # Compute stop gate accuracy
+            gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
+            # Compute stop gate MAE(pred_lengths, true_lengths)
+            gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel)
