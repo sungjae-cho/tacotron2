@@ -357,13 +357,13 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     hparams.loss_att_means_weight * loss_att_means
 
                 if distributed_run:
-                    reduced_val_loss_mel = reduce_tensor(loss_mel.data).item()
-                    reduced_val_loss_gate = reduce_tensor(loss_gate.data).item()
-                    reduced_loss_KLD = reduce_tensor(loss_KLD.data).item()
-                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.data).item()
-                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv.data).item()
-                    reduced_val_loss_att_means = reduce_tensor(loss_att_means.data).item()
-                    reduced_val_loss = reduce_tensor(loss.data).item()
+                    reduced_val_loss_mel = reduce_tensor(loss_mel.detach()).item()
+                    reduced_val_loss_gate = reduce_tensor(loss_gate.detach()).item()
+                    reduced_loss_KLD = reduce_tensor(loss_KLD.detach()).item()
+                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.detach()).item()
+                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv.detach()).item()
+                    reduced_val_loss_att_means = reduce_tensor(loss_att_means.detach()).item()
+                    reduced_val_loss = reduce_tensor(loss.detach()).item()
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
@@ -790,13 +790,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             optimizer.step()
 
             if hparams.distributed_run:
-                reduced_loss_mel = reduce_tensor(loss_mel.data).item()
-                reduced_loss_gate = reduce_tensor(loss_gate.data).item()
-                reduced_loss_KLD = reduce_tensor(loss_KLD.data).item()
-                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data).item()
-                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data).item()
-                reduced_loss_att_means = reduce_tensor(loss_att_means.data).item()
-                reduced_loss = reduce_tensor(loss.data).item()
+                reduced_loss_mel = reduce_tensor(loss_mel.detach()).item()
+                reduced_loss_gate = reduce_tensor(loss_gate.detach()).item()
+                reduced_loss_KLD = reduce_tensor(loss_KLD.detach()).item()
+                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.detach()).item()
+                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.detach()).item()
+                reduced_loss_att_means = reduce_tensor(loss_att_means.detach()).item()
+                reduced_loss = reduce_tensor(loss.detach()).item()
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()

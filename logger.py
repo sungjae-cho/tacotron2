@@ -50,7 +50,7 @@ class Tacotron2Logger(SummaryWriter):
         if with_denoiser:
             np_wav = denoiser(audio, strength=0.01)[:, 0].cpu().numpy()
         else:
-            np_wav = audio[0].data.cpu().numpy()
+            np_wav = audio[0].detach().cpu().numpy()
 
         return np_wav
 
@@ -199,17 +199,17 @@ class Tacotron2Logger(SummaryWriter):
         mel_true = synth_dict['mel_true']
         mel_output_tf = synth_dict['mel_output_tf']
         mel_output_fr = synth_dict['mel_output_fr']
-        np_mel_true = plot_spectrogram_to_numpy(mel_true.data.cpu().numpy())
-        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.data.cpu().numpy())
-        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.data.cpu().numpy())
+        np_mel_true = plot_spectrogram_to_numpy(mel_true.detach().cpu().numpy())
+        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.detach().cpu().numpy())
+        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.detach().cpu().numpy())
         np_wav_true = self.mel2wav(mel_true.unsqueeze(0).cuda().half())
         np_wav_tf = self.mel2wav(mel_output_tf.unsqueeze(0).cuda().half())
         np_wav_fr = self.mel2wav(mel_output_fr.unsqueeze(0).cuda().half())
 
         alignment_tf = synth_dict['alignment_tf']
         alignment_fr = synth_dict['alignment_fr']
-        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.data.cpu().numpy().T)
-        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.data.cpu().numpy().T)
+        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.detach().cpu().numpy().T)
+        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.detach().cpu().numpy().T)
 
         caption_string = '[{speaker}|{emotion}] {text}'.format(
             speaker=speaker,
@@ -344,24 +344,24 @@ class Tacotron2Logger(SummaryWriter):
                    "train/mean_attention_quality":mean_attention_quality,
                    "train/best_attention_quality":best_attention_quality,
                    "train/worst_attention_quality":worst_attention_quality,
-                   "train/forward_attention_ratio":wandb.Histogram(batch_far.data.cpu().numpy()),
-                   "train/attention_ratio":wandb.Histogram(batch_ar.data.cpu().numpy()),
-                   "train/letter_attention_ratio":wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
-                   "train/punct_attention_ratio":wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
-                   "train/blank_attention_ratio":wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
-                   "train/attention_range_ratio":wandb.Histogram(batch_arr.data.cpu().numpy()),
-                   "train/multiple_attention_ratio":wandb.Histogram(batch_mar.data.cpu().numpy()),
-                   "train/attention_quality":wandb.Histogram(batch_attention_quality.data.cpu().numpy())
+                   "train/forward_attention_ratio":wandb.Histogram(batch_far.detach().cpu().numpy()),
+                   "train/attention_ratio":wandb.Histogram(batch_ar.detach().cpu().numpy()),
+                   "train/letter_attention_ratio":wandb.Histogram(batch_letter_ar.detach().cpu().numpy()),
+                   "train/punct_attention_ratio":wandb.Histogram(batch_punct_ar.detach().cpu().numpy()),
+                   "train/blank_attention_ratio":wandb.Histogram(batch_blank_ar.detach().cpu().numpy()),
+                   "train/attention_range_ratio":wandb.Histogram(batch_arr.detach().cpu().numpy()),
+                   "train/multiple_attention_ratio":wandb.Histogram(batch_mar.detach().cpu().numpy()),
+                   "train/attention_quality":wandb.Histogram(batch_attention_quality.detach().cpu().numpy())
                    }, step=iteration)
 
         # Logging values concerning the residual encoder.
         if self.hparams.residual_encoder:
             wandb.log({"train/res_en/loss_KLD": loss_KLD,
-                       "train/res_en/residual_encoding": wandb.Histogram(residual_encoding.data.cpu().numpy()),
-                       "train/res_en/mu": wandb.Histogram(mu.data.cpu().numpy()),
-                       "train/res_en/var": wandb.Histogram(logvar.exp().data.cpu().numpy()),
-                       "train/res_en/mean_mu": mu.mean().data.cpu().numpy(),
-                       "train/res_en/mean_var": logvar.exp().mean().data.cpu().numpy(),
+                       "train/res_en/residual_encoding": wandb.Histogram(residual_encoding.detach().cpu().numpy()),
+                       "train/res_en/mu": wandb.Histogram(mu.detach().cpu().numpy()),
+                       "train/res_en/var": wandb.Histogram(logvar.exp().detach().cpu().numpy()),
+                       "train/res_en/mean_mu": mu.mean().detach().cpu().numpy(),
+                       "train/res_en/mean_var": logvar.exp().mean().detach().cpu().numpy(),
                        }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
@@ -556,14 +556,14 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/mean_attention_quality".format(log_prefix):mean_attention_quality,
                    "{}/best_attention_quality".format(log_prefix):best_attention_quality,
                    "{}/worst_attention_quality".format(log_prefix):worst_attention_quality,
-                   "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.data.cpu().numpy()),
-                   "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.data.cpu().numpy()),
-                   "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.data.cpu().numpy()),
-                   "{}/punctuation_attention_ratio".format(log_prefix):wandb.Histogram(batch_punct_ar.data.cpu().numpy()),
-                   "{}/blank_attention_ratio".format(log_prefix):wandb.Histogram(batch_blank_ar.data.cpu().numpy()),
-                   "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.data.cpu().numpy()),
-                   "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.data.cpu().numpy()),
-                   "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.data.cpu().numpy())
+                   "{}/forward_attention_ratio".format(log_prefix):wandb.Histogram(batch_far.detach().cpu().numpy()),
+                   "{}/attention_ratio".format(log_prefix):wandb.Histogram(batch_ar.detach().cpu().numpy()),
+                   "{}/letter_attention_ratio".format(log_prefix):wandb.Histogram(batch_letter_ar.detach().cpu().numpy()),
+                   "{}/punctuation_attention_ratio".format(log_prefix):wandb.Histogram(batch_punct_ar.detach().cpu().numpy()),
+                   "{}/blank_attention_ratio".format(log_prefix):wandb.Histogram(batch_blank_ar.detach().cpu().numpy()),
+                   "{}/attention_range_ratio".format(log_prefix):wandb.Histogram(batch_arr.detach().cpu().numpy()),
+                   "{}/multiple_attention_ratio".format(log_prefix):wandb.Histogram(batch_mar.detach().cpu().numpy()),
+                   "{}/attention_quality".format(log_prefix):wandb.Histogram(batch_attention_quality.detach().cpu().numpy())
                    } , step=iteration)
 
         # Logging values concerning the residual encoder.
@@ -572,11 +572,11 @@ class Tacotron2Logger(SummaryWriter):
             mu = dict_log_values['mu']
             logvar = dict_log_values['logvar']
             wandb.log({"{}/res_en/loss_KLD".format(log_prefix): loss_KLD,
-                       "{}/res_en/residual_encoding".format(log_prefix): wandb.Histogram(residual_encoding.data.cpu().numpy()),
-                       "{}/res_en/mu".format(log_prefix): wandb.Histogram(mu.data.cpu().numpy()),
-                       "{}/res_en/var".format(log_prefix): wandb.Histogram(logvar.exp().data.cpu().numpy()),
-                       "{}/res_en/mean_mu".format(log_prefix): mu.mean().data.cpu().numpy(),
-                       "{}/res_en/mean_var".format(log_prefix): logvar.exp().mean().data.cpu().numpy(),
+                       "{}/res_en/residual_encoding".format(log_prefix): wandb.Histogram(residual_encoding.detach().cpu().numpy()),
+                       "{}/res_en/mu".format(log_prefix): wandb.Histogram(mu.detach().cpu().numpy()),
+                       "{}/res_en/var".format(log_prefix): wandb.Histogram(logvar.exp().detach().cpu().numpy()),
+                       "{}/res_en/mean_mu".format(log_prefix): mu.mean().detach().cpu().numpy(),
+                       "{}/res_en/mean_var".format(log_prefix): logvar.exp().mean().detach().cpu().numpy(),
                        }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
@@ -611,14 +611,14 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/mean_attention_quality".format(log_prefix_fr):mean_attention_quality_fr,
                    "{}/best_attention_quality".format(log_prefix_fr):best_attention_quality_fr,
                    "{}/worst_attention_quality".format(log_prefix_fr):worst_attention_quality_fr,
-                   "{}/forward_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_far_fr.data.cpu().numpy()),
-                   "{}/attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_ar_fr.data.cpu().numpy()),
-                   "{}/letter_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_letter_ar_fr.data.cpu().numpy()),
-                   "{}/punctuation_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_punct_ar_fr.data.cpu().numpy()),
-                   "{}/blank_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_blank_ar_fr.data.cpu().numpy()),
-                   "{}/attention_range_ratio".format(log_prefix_fr):wandb.Histogram(batch_arr_fr.data.cpu().numpy()),
-                   "{}/multiple_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_mar_fr.data.cpu().numpy()),
-                   "{}/attention_quality".format(log_prefix_fr):wandb.Histogram(batch_attention_quality_fr.data.cpu().numpy())
+                   "{}/forward_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_far_fr.detach().cpu().numpy()),
+                   "{}/attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_ar_fr.detach().cpu().numpy()),
+                   "{}/letter_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_letter_ar_fr.detach().cpu().numpy()),
+                   "{}/punctuation_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_punct_ar_fr.detach().cpu().numpy()),
+                   "{}/blank_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_blank_ar_fr.detach().cpu().numpy()),
+                   "{}/attention_range_ratio".format(log_prefix_fr):wandb.Histogram(batch_arr_fr.detach().cpu().numpy()),
+                   "{}/multiple_attention_ratio".format(log_prefix_fr):wandb.Histogram(batch_mar_fr.detach().cpu().numpy()),
+                   "{}/attention_quality".format(log_prefix_fr):wandb.Histogram(batch_attention_quality_fr.detach().cpu().numpy())
                    } , step=iteration)
 
 
@@ -644,12 +644,12 @@ class Tacotron2Logger(SummaryWriter):
             speaker_embeddings, emotion_embeddings = self.get_embeddings(valset, model)
 
             if len(valset.speaker_list) > 1:
-                np_plot_speaker_embeddings = plot_embeddings_to_numpy(valset.speaker_list, speaker_embeddings.data.cpu().numpy())
+                np_plot_speaker_embeddings = plot_embeddings_to_numpy(valset.speaker_list, speaker_embeddings.detach().cpu().numpy())
                 wandb.log({"speaker_embeddings": [wandb.Image(np_plot_speaker_embeddings)]}
                            , step=iteration)
 
             if len(valset.emotion_list) > 1:
-                np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.data.cpu().numpy())
+                np_plot_emotion_embeddings = plot_embeddings_to_numpy(valset.emotion_list, emotion_embeddings.detach().cpu().numpy())
                 wandb.log({"emotion_embeddings": [wandb.Image(np_plot_emotion_embeddings)]}
                            , step=iteration)
 
@@ -686,7 +686,7 @@ class Tacotron2Logger(SummaryWriter):
             # plot distribution of parameters
             for tag, value in model.named_parameters():
                 tag = tag.replace('.', '/')
-                wandb.log({tag:wandb.Histogram(value.data.cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
+                wandb.log({tag:wandb.Histogram(value.detach().cpu().numpy()), "epoch": epoch, "iteration":iteration}, step=iteration)
 
             # Free-running test.
             if hparams.log_fr_test:
@@ -704,8 +704,8 @@ class Tacotron2Logger(SummaryWriter):
                         _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_input_tensor)
 
                         np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
-                        np_alignment = plot_alignment_to_numpy(alignments[0].data.cpu().numpy().T, text_len)
-                        np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].data.cpu().numpy())
+                        np_alignment = plot_alignment_to_numpy(alignments[0].detach().cpu().numpy().T, text_len)
+                        np_mel_predicted = plot_spectrogram_to_numpy(mel_outputs_postnet[0].detach().cpu().numpy())
 
                         group_log_name = "test_free_running/{speaker}/{emotion}".format(
                             speaker=speaker, emotion=emotion
