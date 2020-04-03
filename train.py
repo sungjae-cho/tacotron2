@@ -736,16 +736,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                 # Compute the speaker adversarial loss
                 loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
-                # Compute the accuracy of the speaker adversarial classifier.
-                np_target_speakers = spk_adv_targets.cpu().numpy()
-                np_pred_speakers = int_pred_speakers.cpu().numpy()
-                spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
-                speaker_clsf_report = classification_report(
-                    np_target_speakers, np_pred_speakers,
-                    labels=list(range(len(trainset.speaker_list))),
-                    target_names=trainset.speaker_list, output_dict=True)
-                list_np_target_speakers.append(np_target_speakers)
-                list_np_pred_speakers.append(np_pred_speakers)
             else:
                 loss_spk_adv = torch.zeros(1).cuda()
 
@@ -754,16 +744,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
                 # Compute the emotion adversarial loss
                 loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
-                # Compute the accuracy of the emotion adversarial classifier.
-                np_target_emotions = emo_adv_targets.cpu().numpy()
-                np_pred_emotions = int_pred_emotions.cpu().numpy()
-                emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
-                emotion_clsf_report = classification_report(
-                    np_target_emotions, np_pred_emotions,
-                    labels=list(range(len(trainset.emotion_list))),
-                    target_names=trainset.emotion_list, output_dict=True)
-                list_np_target_emotions.append(np_target_emotions)
-                list_np_pred_emotions.append(np_pred_emotions)
             else:
                 loss_emo_adv = torch.zeros(1).cuda()
 
@@ -808,6 +788,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss_emo_adv = reduce_tensor(loss_emo_adv)
                 reduced_loss_att_means = reduce_tensor(loss_att_means)
                 reduced_loss = reduce_tensor(loss)
+                if hparams.speaker_adversarial_training:
+                    spk_adv_targets = gather_all_tensor(spk_adv_targets)
+                    int_pred_speakers = gather_all_tensor(int_pred_speakers)
+                if hparams.emotion_adversarial_training:
+                    emo_adv_targets = gather_all_tensor(emo_adv_targets)
+                    int_pred_emotions = gather_all_tensor(int_pred_emotions)
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
@@ -842,8 +828,22 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     dict_log_values['mu'] = mu
                     dict_log_values['logvar'] = logvar
                 if hparams.speaker_adversarial_training:
+                    # Compute the accuracy of the speaker adversarial classifier.
+                    np_target_speakers = spk_adv_targets.cpu().numpy()
+                    np_pred_speakers = int_pred_speakers.cpu().numpy()
+                    spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
+                    speaker_clsf_report = classification_report(
+                        np_target_speakers, np_pred_speakers,
+                        labels=list(range(len(trainset.speaker_list))),
+                        target_names=trainset.speaker_list, output_dict=True)
+
+                    # Save objects to log into dict_log_values.
                     dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                     dict_log_values['speaker_clsf_report'] = speaker_clsf_report
+
+                    # Logging for the performance of train_epoch.
+                    list_np_target_speakers.append(np_target_speakers)
+                    list_np_pred_speakers.append(np_pred_speakers)
                     if (i+1 == batches_per_epoch):
                         # If it is the last batch, ...
                         np_target_speakers = np.concatenate(list_np_target_speakers)
@@ -854,8 +854,23 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                             target_names=trainset.speaker_list, output_dict=True)
                         dict_log_values['speaker_clsf_report_train_epoch'] = speaker_clsf_report_train_epoch
                 if hparams.emotion_adversarial_training:
+                    # Compute the accuracy of the emotion adversarial classifier.
+                    np_target_emotions = emo_adv_targets.cpu().numpy()
+                    np_pred_emotions = int_pred_emotions.cpu().numpy()
+                    emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
+                    emotion_clsf_report = classification_report(
+                        np_target_emotions, np_pred_emotions,
+                        labels=list(range(len(trainset.emotion_list))),
+                        target_names=trainset.emotion_list, output_dict=True)
+
+
+                    # Save objects to log into dict_log_values.
                     dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
                     dict_log_values['emotion_clsf_report'] = emotion_clsf_report
+
+                    # Logging for the performance of train_epoch.
+                    list_np_target_emotions.append(np_target_emotions)
+                    list_np_pred_emotions.append(np_pred_emotions)
                     if (i+1 == batches_per_epoch):
                         # If it is the last batch, ...
                         np_target_emotions = np.concatenate(list_np_target_emotions)
