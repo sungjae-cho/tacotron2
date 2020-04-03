@@ -690,7 +690,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         list_np_pred_emotions = list()
         for i, batch in enumerate(train_loader):
             batches_per_epoch = len(train_loader)
-            float_epoch = iteration / batches_per_epoch
+            float_epoch = iteration / (batches_per_epoch * n_gpus)
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_scheduler.get_lr()[0]
