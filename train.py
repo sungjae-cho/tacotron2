@@ -28,7 +28,7 @@ from measures import get_attention_quality
 from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model
 
 def reduce_tensor(tensor, reduce_op='mean'):
-    rt = tensor.detach().clone()
+    rt = tensor.cuda().detach().clone()
     if reduce_op == 'mean':
         dist.all_reduce(rt, op=dist.reduce_op.SUM)
         rt /= dist.get_world_size()
@@ -45,7 +45,7 @@ def reduce_scalar(scalar, reduce_op='mean'):
     return rs
 
 def gather_all_tensor(tensor):
-    tensor_list = [tensor.clone() for _ in range(dist.get_world_size())]
+    tensor_list = [tensor.cuda().detach().clone() for _ in range(dist.get_world_size())]
     dist.all_gather(tensor_list, tensor)
     one_tensor = torch.cat(tensor_list)
     return one_tensor
