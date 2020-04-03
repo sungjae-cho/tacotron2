@@ -768,23 +768,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 hparams.emotion_adv_weight * loss_emo_adv + \
                 hparams.loss_att_means_weight * loss_att_means
 
-            if hparams.distributed_run:
-                reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
-                reduced_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
-                reduced_loss_KLD = reduce_tensor(loss_KLD.data, n_gpus).item()
-                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
-                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
-                reduced_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
-                reduced_loss = reduce_tensor(loss.data, n_gpus).item()
-            else:
-                reduced_loss_mel = loss_mel.item()
-                reduced_loss_gate = loss_gate.item()
-                reduced_loss_KLD = loss_KLD.item()
-                reduced_loss_spk_adv = loss_spk_adv.item()
-                reduced_loss_emo_adv = loss_emo_adv.item()
-                reduced_loss_att_means = loss_att_means.item()
-                reduced_loss = loss.item()
-
             # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
             # These are accumulated into x.grad for every parameter x
             if hparams.fp16_run:
@@ -805,6 +788,23 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # optimizer.step is performs a parameter update based on the current
             # gradient (stored in .grad attribute of a parameter) and the update rule.
             optimizer.step()
+
+            if hparams.distributed_run:
+                reduced_loss_mel = reduce_tensor(loss_mel.data, n_gpus).item()
+                reduced_loss_gate = reduce_tensor(loss_gate.data, n_gpus).item()
+                reduced_loss_KLD = reduce_tensor(loss_KLD.data, n_gpus).item()
+                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.data, n_gpus).item()
+                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.data, n_gpus).item()
+                reduced_loss_att_means = reduce_tensor(loss_att_means.data, n_gpus).item()
+                reduced_loss = reduce_tensor(loss.data, n_gpus).item()
+            else:
+                reduced_loss_mel = loss_mel.item()
+                reduced_loss_gate = loss_gate.item()
+                reduced_loss_KLD = loss_KLD.item()
+                reduced_loss_spk_adv = loss_spk_adv.item()
+                reduced_loss_emo_adv = loss_emo_adv.item()
+                reduced_loss_att_means = loss_att_means.item()
+                reduced_loss = loss.item()
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
