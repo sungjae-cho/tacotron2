@@ -39,6 +39,11 @@ def reduce_tensor(tensor, reduce_op='mean'):
     rt = rt.item()
     return rt
 
+def reduce_scalar(scalar, reduce_op='mean'):
+    tensor = torch.FloatTensor([scalar]).cuda()
+    rs = reduce_tensor(tensor, reduce_op)
+    return rs
+
 def gather_all_tensor(tensor):
     tensor_list = [tensor.clone() for _ in range(dist.get_world_size())]
     dist.all_gather(tensor_list, tensor)
