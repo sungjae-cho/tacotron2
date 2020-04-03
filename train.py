@@ -27,10 +27,16 @@ from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
 from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model
 
-def reduce_tensor(tensor):
-    rt = tensor.clone()
-    dist.all_reduce(rt, op=dist.reduce_op.SUM)
-    rt /= dist.get_world_size()
+def reduce_tensor(tensor, reduce_op='mean'):
+    rt = tensor.detach().clone()
+    if reduce_op == 'mean':
+        dist.all_reduce(rt, op=dist.reduce_op.SUM)
+        rt /= dist.get_world_size()
+    if reduce_op == 'max':
+        dist.all_reduce(rt, op=dist.reduce_op.MAX)
+    if reduce_op == 'min':
+        dist.all_reduce(rt, op=dist.reduce_op.MIN)
+    rt = rt.item()
     return rt
 
 def gather_all_tensor(tensor):
@@ -357,13 +363,13 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     hparams.loss_att_means_weight * loss_att_means
 
                 if distributed_run:
-                    reduced_val_loss_mel = reduce_tensor(loss_mel.detach()).item()
-                    reduced_val_loss_gate = reduce_tensor(loss_gate.detach()).item()
-                    reduced_loss_KLD = reduce_tensor(loss_KLD.detach()).item()
-                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv.detach()).item()
-                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv.detach()).item()
-                    reduced_val_loss_att_means = reduce_tensor(loss_att_means.detach()).item()
-                    reduced_val_loss = reduce_tensor(loss.detach()).item()
+                    reduced_val_loss_mel = reduce_tensor(loss_mel)
+                    reduced_val_loss_gate = reduce_tensor(loss_gate)
+                    reduced_loss_KLD = reduce_tensor(loss_KLD)
+                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv)
+                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv)
+                    reduced_val_loss_att_means = reduce_tensor(loss_att_means)
+                    reduced_val_loss = reduce_tensor(loss)
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
@@ -790,13 +796,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             optimizer.step()
 
             if hparams.distributed_run:
-                reduced_loss_mel = reduce_tensor(loss_mel.detach()).item()
-                reduced_loss_gate = reduce_tensor(loss_gate.detach()).item()
-                reduced_loss_KLD = reduce_tensor(loss_KLD.detach()).item()
-                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv.detach()).item()
-                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv.detach()).item()
-                reduced_loss_att_means = reduce_tensor(loss_att_means.detach()).item()
-                reduced_loss = reduce_tensor(loss.detach()).item()
+                reduced_loss_mel = reduce_tensor(loss_mel)
+                reduced_loss_gate = reduce_tensor(loss_gate)
+                reduced_loss_KLD = reduce_tensor(loss_KLD)
+                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv)
+                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv)
+                reduced_loss_att_means = reduce_tensor(loss_att_means)
+                reduced_loss = reduce_tensor(loss)
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
