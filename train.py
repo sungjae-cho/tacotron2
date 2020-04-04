@@ -782,6 +782,22 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # Compute stop gate MAE(pred_lengths, true_lengths)
             gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
+            # Compute forward_attention_ratio.
+            mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+            ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
+            mean_ar, batch_ar = ar_pairs[0]
+            mean_letter_ar, batch_letter_ar = ar_pairs[1]
+            best_letter_ar = batch_letter_ar.max().item()
+            worst_letter_ar = batch_letter_ar.min().item()
+            mean_punct_ar, batch_punct_ar = ar_pairs[2]
+            mean_blank_ar, batch_blank_ar = ar_pairs[3]
+            mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+            mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+            mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
+            batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
+            best_attention_quality = batch_attention_quality.max().item()
+            worst_attention_quality = batch_attention_quality.min().item()
+
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel)
                 reduced_loss_gate = reduce_tensor(loss_gate)
@@ -810,6 +826,16 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 print("Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
                     iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
+                att_measures = (
+                    (mean_far, batch_far),
+                    (mean_ar, batch_ar),
+                    (mean_letter_ar, batch_letter_ar, best_letter_ar, worst_letter_ar),
+                    (mean_punct_ar, batch_punct_ar),
+                    (mean_blank_ar, batch_blank_ar),
+                    (mean_arr, batch_arr),
+                    (mean_mar, batch_mar),
+                    (mean_attention_quality, batch_attention_quality, best_attention_quality, worst_attention_quality)
+                )
 
                 dict_log_values = {
                     'iteration':iteration,
@@ -824,6 +850,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'int_pred_speakers':int_pred_speakers,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
+                    'att_measures':att_measures,
                 }
                 if hparams.residual_encoder:
                     dict_log_values['residual_encoding'] = residual_encoding

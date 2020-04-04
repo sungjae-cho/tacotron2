@@ -257,6 +257,7 @@ class Tacotron2Logger(SummaryWriter):
         int_pred_speakers = dict_log_values['int_pred_speakers']
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
+        att_measures = dict_log_values['att_measures']
 
         if self.hparams.residual_encoder:
             residual_encoding = dict_log_values['residual_encoding']
@@ -274,22 +275,15 @@ class Tacotron2Logger(SummaryWriter):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
-
-        # Compute forward_attention_ratio.
-        mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_ar, batch_ar = ar_pairs[0]
-        mean_letter_ar, batch_letter_ar = ar_pairs[1]
-        best_letter_ar = batch_letter_ar.max().item()
-        worst_letter_ar = batch_letter_ar.min().item()
-        mean_punct_ar, batch_punct_ar = ar_pairs[2]
-        mean_blank_ar, batch_blank_ar = ar_pairs[3]
-        mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-        mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
-        batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
-        best_attention_quality = batch_attention_quality.max().item()
-        worst_attention_quality = batch_attention_quality.min().item()
+        mean_far, batch_far = att_measures[0]
+        mean_ar, batch_ar = att_measures[1]
+        mean_letter_ar, batch_letter_ar, best_letter_ar, worst_letter_ar = att_measures[2]
+        mean_punct_ar, batch_punct_ar = att_measures[3]
+        mean_blank_ar, batch_blank_ar = att_measures[4]
+        mean_arr, batch_arr = att_measures[5]
+        mean_mar, batch_mar = att_measures[6]
+        (mean_attention_quality, batch_attention_quality, best_attention_quality,
+            worst_attention_quality) = att_measures[7]
 
         # Initialize training_epoch_variables
         if self.is_first_batch(iteration):
