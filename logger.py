@@ -124,6 +124,7 @@ class Tacotron2Logger(SummaryWriter):
         dict_vars['sum_loss'] = self.sum_loss
         dict_vars['sum_loss_mel'] = self.sum_loss_mel
         dict_vars['sum_loss_gate'] = self.sum_loss_gate
+        dict_vars['sum_loss_KLD'] = self.sum_loss_KLD
         dict_vars['sum_loss_spk_adv'] = self.sum_loss_spk_adv
         dict_vars['sum_loss_emo_adv'] = self.sum_loss_emo_adv
         dict_vars['sum_loss_att_means'] = self.sum_loss_att_means
@@ -156,6 +157,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss = dict_vars['sum_loss']
         self.sum_loss_mel = dict_vars['sum_loss_mel']
         self.sum_loss_gate = dict_vars['sum_loss_gate']
+        self.sum_loss_KLD = dict_vars['sum_loss_KLD']
         self.sum_loss_spk_adv = dict_vars['sum_loss_spk_adv']
         self.sum_loss_emo_adv = dict_vars['sum_loss_emo_adv']
         self.sum_loss_att_means = dict_vars['sum_loss_att_means']
@@ -293,6 +295,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss += loss
         self.sum_loss_mel += loss_mel
         self.sum_loss_gate += loss_gate
+        self.sum_loss_KLD += loss_KLD
         self.sum_loss_spk_adv += loss_spk_adv
         self.sum_loss_emo_adv += loss_emo_adv
         self.sum_loss_att_means += loss_att_means
@@ -419,6 +422,10 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/best_attention_quality":self.best_attention_quality,
                        "train_epoch/worst_attention_quality":self.worst_attention_quality
                        }, step=iteration)
+
+            if self.hparams.residual_encoder:
+                wandb.log({"train_epoch/res_en/loss_KLD": (self.sum_loss_KLD / self.batches_per_epoch),
+                           }, step=iteration)
 
             if self.hparams.speaker_adversarial_training:
                 wandb.log({"train_epoch/spk_adv/loss": (self.sum_loss_spk_adv / self.batches_per_epoch),
