@@ -296,10 +296,6 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss += loss
         self.sum_loss_mel += loss_mel
         self.sum_loss_gate += loss_gate
-        self.sum_loss_KLD += loss_KLD
-        self.sum_loss_spk_adv += loss_spk_adv
-        self.sum_loss_emo_adv += loss_emo_adv
-        self.sum_loss_att_means += loss_att_means
 
         self.sum_gate_accuracy += gate_accuracy
         self.sum_gate_mae += gate_mae
@@ -354,6 +350,9 @@ class Tacotron2Logger(SummaryWriter):
 
         # Logging values concerning the residual encoder.
         if self.hparams.residual_encoder:
+            # Update training_epoch_variables
+            self.sum_loss_KLD += loss_KLD
+            # wandb logging
             wandb.log({"train/res_en/loss_KLD": loss_KLD,
                        "train/res_en/residual_encoding": wandb.Histogram(residual_encoding.detach().cpu().numpy()),
                        "train/res_en/mu": wandb.Histogram(mu.detach().cpu().numpy()),
@@ -365,11 +364,12 @@ class Tacotron2Logger(SummaryWriter):
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
             # Update training_epoch_variables
+            self.sum_loss_spk_adv += loss_spk_adv
             self.sum_spk_adv_accuracy += spk_adv_accuracy
+            # wandb logging
             wandb.log({"train/spk_adv/loss": loss_spk_adv,
                        "train/spk_adv/accuracy": spk_adv_accuracy}
                        , step=iteration)
-
             for str_speaker in hparams.speakers:
                 spk_measure_dict = speaker_clsf_report[str_speaker]
                 for measure, m_value in spk_measure_dict.items():
@@ -382,13 +382,12 @@ class Tacotron2Logger(SummaryWriter):
         # Logging values concerning emotion adversarial training.
         if self.hparams.emotion_adversarial_training:
             # Update training_epoch_variables
+            self.sum_loss_emo_adv += loss_emo_adv
             self.sum_emo_adv_accuracy += emo_adv_accuracy
-
             # wandb logging
             wandb.log({"train/emo_adv/loss": loss_emo_adv,
                        "train/emo_adv/accuracy": emo_adv_accuracy}
                        , step=iteration)
-
             for str_emotion in hparams.emotions:
                 emo_measure_dict = emotion_clsf_report[str_emotion]
                 for measure, m_value in emo_measure_dict.items():
@@ -400,6 +399,9 @@ class Tacotron2Logger(SummaryWriter):
 
         # Logging loss_monotonic_attention_MSE.
         if self.hparams.monotonic_attention:
+            # Update training_epoch_variables
+            self.sum_loss_att_means += loss_att_means
+            # wandb logging
             wandb.log({"train/loss_monotonic_attention_MSE": loss_att_means}
                        , step=iteration)
 
