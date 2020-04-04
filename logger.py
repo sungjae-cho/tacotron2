@@ -246,7 +246,7 @@ class Tacotron2Logger(SummaryWriter):
 
 
     def log_training(self, trainset, hparams, dict_log_values, batches_per_epoch):
-
+        # Receive values from dict_log_values. =================================
         iteration = dict_log_values['iteration']
         epoch = dict_log_values['epoch']
         losses = dict_log_values['losses']
@@ -260,7 +260,6 @@ class Tacotron2Logger(SummaryWriter):
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
         att_measures = dict_log_values['att_measures']
-
         if self.hparams.residual_encoder:
             residual_encoding = dict_log_values['residual_encoding']
             mu = dict_log_values['mu']
@@ -272,6 +271,7 @@ class Tacotron2Logger(SummaryWriter):
             emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
             emotion_clsf_report = dict_log_values['emotion_clsf_report']
 
+        # Parse given data structures to be logged. ============================
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_KLD, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
@@ -287,6 +287,7 @@ class Tacotron2Logger(SummaryWriter):
         (mean_attention_quality, batch_attention_quality, best_attention_quality,
             worst_attention_quality) = att_measures[7]
 
+        # Update training_epoch_variables ======================================
         # Initialize training_epoch_variables
         if self.is_first_batch(iteration):
             self.init_training_epoch_variables()
@@ -318,7 +319,7 @@ class Tacotron2Logger(SummaryWriter):
         self.best_attention_quality = np.max([self.best_attention_quality, best_attention_quality])
         self.worst_attention_quality = np.min([self.worst_attention_quality, worst_attention_quality])
 
-        # wandb log
+        # wandb log ============================================================
         wandb.log({"epoch": epoch,
                    "iteration":iteration,
                    "train/loss": loss,
@@ -382,6 +383,8 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.emotion_adversarial_training:
             # Update training_epoch_variables
             self.sum_emo_adv_accuracy += emo_adv_accuracy
+
+            # wandb logging
             wandb.log({"train/emo_adv/loss": loss_emo_adv,
                        "train/emo_adv/accuracy": emo_adv_accuracy}
                        , step=iteration)
@@ -402,7 +405,6 @@ class Tacotron2Logger(SummaryWriter):
 
         # Log training epoch variables
         if self.is_last_batch(iteration):
-            # wandb log
             wandb.log({"train_epoch/loss": (self.sum_loss / self.batches_per_epoch),
                        "train_epoch/loss_mel": (self.sum_loss_mel / self.batches_per_epoch),
                        "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),

@@ -828,7 +828,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 batch_attention_quality = gather_all_tensor(batch_attention_quality)
                 best_attention_quality = reduce_scalar(best_attention_quality, 'max')
                 worst_attention_quality = reduce_scalar(worst_attention_quality, 'min')
-
                 if hparams.residual_encoder:
                     residual_encoding = gather_all_tensor(residual_encoding)
                     mu = gather_all_tensor(mu)
@@ -839,7 +838,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if hparams.emotion_adversarial_training:
                     emo_adv_targets = gather_all_tensor(emo_adv_targets)
                     int_pred_emotions = gather_all_tensor(int_pred_emotions)
-
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
@@ -864,7 +862,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     (mean_mar, batch_mar),
                     (mean_attention_quality, batch_attention_quality, best_attention_quality, worst_attention_quality)
                 )
-
+                # Add logging objects into dict_log_values. ====================
                 dict_log_values = {
                     'iteration':iteration,
                     'epoch':float_epoch,
@@ -880,10 +878,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'gate_mae':gate_mae,
                     'att_measures':att_measures,
                 }
+
                 if hparams.residual_encoder:
                     dict_log_values['residual_encoding'] = residual_encoding
                     dict_log_values['mu'] = mu
                     dict_log_values['logvar'] = logvar
+
                 if hparams.speaker_adversarial_training:
                     # Compute the accuracy of the speaker adversarial classifier.
                     np_target_speakers = spk_adv_targets.cpu().numpy()
@@ -910,6 +910,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                             labels=list(range(len(trainset.speaker_list))),
                             target_names=trainset.speaker_list, output_dict=True)
                         dict_log_values['speaker_clsf_report_train_epoch'] = speaker_clsf_report_train_epoch
+
                 if hparams.emotion_adversarial_training:
                     # Compute the accuracy of the emotion adversarial classifier.
                     np_target_emotions = emo_adv_targets.cpu().numpy()
@@ -919,7 +920,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                         np_target_emotions, np_pred_emotions,
                         labels=list(range(len(trainset.emotion_list))),
                         target_names=trainset.emotion_list, output_dict=True)
-
 
                     # Save objects to log into dict_log_values.
                     dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
@@ -938,6 +938,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                             target_names=trainset.emotion_list, output_dict=True)
                         dict_log_values['emotion_clsf_report_train_epoch'] = emotion_clsf_report_train_epoch
 
+                # Pass training logging objects to logger.
                 logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
