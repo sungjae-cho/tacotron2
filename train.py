@@ -45,7 +45,7 @@ def reduce_scalar(scalar, reduce_op='mean'):
     return rs
 
 def gather_all_tensor(tensor):
-    tensor = tensor.cuda().detach()
+    tensor = tensor.cuda().detach().contiguous()
     tensor_list = [tensor.clone() for _ in range(dist.get_world_size())]
     dist.all_gather(tensor_list, tensor)
     one_tensor = torch.cat(tensor_list)
