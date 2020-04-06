@@ -267,7 +267,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
             # sample to synthesize\
             i_valset = random.randint(0, len(valset) - 1)
-            i_batch_rand, i_sample_rand = divmod(i_valset, hparams.batch_size)
 
             #sample_with_worst_attention_quality
             min_attention_quality_tf = 2
@@ -333,12 +332,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
                     # Compute the speaker adversarial loss
                     loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
-                    # Compute the accuracy of the speaker adversarial classifier.
-                    np_target_speakers = spk_adv_targets.cpu().numpy()
-                    np_pred_speakers = int_pred_speakers.cpu().numpy()
-                    spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
-                    list_np_target_speakers.append(np_target_speakers)
-                    list_np_pred_speakers.append(np_pred_speakers)
                 else:
                     loss_spk_adv = torch.zeros(1).cuda()
 
@@ -347,12 +340,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
                     # Compute the emotion adversarial loss
                     loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
-                    # Compute the accuracy of the emotion adversarial classifier.
-                    np_target_emotions = emo_adv_targets.cpu().numpy()
-                    np_pred_emotions = int_pred_emotions.cpu().numpy()
-                    emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
-                    list_np_target_emotions.append(np_target_emotions)
-                    list_np_pred_emotions.append(np_pred_emotions)
                 else:
                     loss_emo_adv = torch.zeros(1).cuda()
 
@@ -368,56 +355,18 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     hparams.emotion_adv_weight * loss_emo_adv + \
                     hparams.loss_att_means_weight * loss_att_means
 
-                if distributed_run:
-                    reduced_val_loss_mel = reduce_tensor(loss_mel)
-                    reduced_val_loss_gate = reduce_tensor(loss_gate)
-                    reduced_loss_KLD = reduce_tensor(loss_KLD)
-                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv)
-                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv)
-                    reduced_val_loss_att_means = reduce_tensor(loss_att_means)
-                    reduced_val_loss = reduce_tensor(loss)
-                else:
-                    reduced_val_loss_mel = loss_mel.item()
-                    reduced_val_loss_gate = loss_gate.item()
-                    reduced_loss_KLD = loss_KLD.item()
-                    reduced_val_loss_spk_adv = loss_spk_adv.item()
-                    reduced_val_loss_emo_adv = loss_emo_adv.item()
-                    reduced_val_loss_att_means = loss_att_means.item()
-                    reduced_val_loss = loss.item()
-
-                val_loss_mel += reduced_val_loss_mel
-                val_loss_gate += reduced_val_loss_gate
-                val_loss_KLD += reduced_loss_KLD
-                val_loss_spk_adv += reduced_val_loss_spk_adv
-                val_loss_emo_adv += reduced_val_loss_emo_adv
-                val_loss_att_means += reduced_val_loss_att_means
-                val_loss += reduced_val_loss
-
-                if hparams.residual_encoder:
-                    list_residual_encoding.append(residual_encoding)
-                    list_mu.append(mu)
-                    list_logvar.append(logvar)
-
                 # [M1] forward_attention_ratio
                 _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-                batch_far_list.append(batch_far)
                 # [M2] attention_ratio
                 ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 batch_ar = ar_pairs[0][1]
                 batch_letter_ar = ar_pairs[1][1]
                 batch_punct_ar = ar_pairs[2][1]
                 batch_blank_ar = ar_pairs[3][1]
-                batch_ar_list.append(batch_ar)
-                batch_letter_ar_list.append(batch_letter_ar)
-                batch_punct_ar_list.append(batch_punct_ar)
-                batch_blank_ar_list.append(batch_blank_ar)
                 # [M3] attention_range_ratio
                 _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-                batch_arr_list.append(batch_arr)
                 # [M4] multiple_attention_ratio
                 _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-                batch_mar_list.append(batch_mar)
-
                 # [M_total] Attention quality
                 batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
 
@@ -429,149 +378,243 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
                 _, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
-                batch_far_fr_list.append(batch_far_fr)
                 # [M2] attention_ratio
                 ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
                 batch_ar_fr = ar_fr_pairs[0][1]
                 batch_letter_ar_fr = ar_fr_pairs[1][1]
                 batch_punct_ar_fr = ar_fr_pairs[2][1]
                 batch_blank_ar_fr = ar_fr_pairs[3][1]
+                # [M3] attention_range_ratio
+                _, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                # [M4] multiple_attention_ratio
+                _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
+                # [M_total] Attention quality
+                batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
+
+                if distributed_run:
+                    # Losses
+                    reduced_val_loss_mel = reduce_tensor(loss_mel)
+                    reduced_val_loss_gate = reduce_tensor(loss_gate)
+                    reduced_loss_KLD = reduce_tensor(loss_KLD)
+                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv)
+                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv)
+                    reduced_val_loss_att_means = reduce_tensor(loss_att_means)
+                    reduced_val_loss = reduce_tensor(loss)
+                    # Inputs
+                    input_lengths = gather_all_tensor(input_lengths)
+                    text_padded = gather_all_tensor(text_padded)
+                    speakers = gather_all_tensor(speakers)
+                    emotion_input_vectors = gather_all_tensor(emotion_input_vectors)
+                    # Outputs
+                    output_lengths = gather_all_tensor(output_lengths)
+                    gate_outputs_fr = gather_all_tensor(gate_outputs_fr)
+                    mel_padded = gather_all_tensor(mel_padded)
+                    mel_outputs_postnet = gather_all_tensor(mel_outputs_postnet)
+                    mel_outputs_postnet_fr = gather_all_tensor(mel_outputs_postnet_fr)
+                    alignments = gather_all_tensor(alignments)
+                    alignments_fr = gather_all_tensor(alignments_fr)
+                    # Attention measures: Teacher-forcing
+                    batch_far = gather_all_tensor(batch_far)
+                    batch_ar = gather_all_tensor(batch_ar)
+                    batch_letter_ar = gather_all_tensor(batch_letter_ar)
+                    batch_punct_ar = gather_all_tensor(batch_punct_ar)
+                    batch_blank_ar = gather_all_tensor(batch_blank_ar)
+                    batch_arr = gather_all_tensor(batch_arr)
+                    batch_mar = gather_all_tensor(batch_mar)
+                    batch_attention_quality = gather_all_tensor(batch_attention_quality)
+                    # Attention measures: Free-running
+                    batch_far_fr = gather_all_tensor(batch_far_fr)
+                    batch_ar_fr = gather_all_tensor(batch_ar_fr)
+                    batch_letter_ar_fr = gather_all_tensor(batch_letter_ar_fr)
+                    batch_punct_ar_fr = gather_all_tensor(batch_punct_ar_fr)
+                    batch_blank_ar_fr = gather_all_tensor(batch_blank_ar_fr)
+                    batch_arr_fr = gather_all_tensor(batch_arr_fr)
+                    batch_mar_fr = gather_all_tensor(batch_mar_fr)
+                    batch_attention_quality_fr = gather_all_tensor(batch_attention_quality_fr)
+                    # Things concerning the residual encoder
+                    if hparams.residual_encoder:
+                        residual_encoding = gather_all_tensor(residual_encoding)
+                        mu = gather_all_tensor(mu)
+                        logvar = gather_all_tensor(logvar)
+                    # Things concerning speaker adversarial training
+                    if hparams.speaker_adversarial_training:
+                        spk_adv_targets = gather_all_tensor(spk_adv_targets)
+                        int_pred_speakers = gather_all_tensor(int_pred_speakers)
+                    # Things concerning emotion adversarial training
+                    if hparams.emotion_adversarial_training:
+                        emo_adv_targets = gather_all_tensor(emo_adv_targets)
+                        int_pred_emotions = gather_all_tensor(int_pred_emotions)
+                else:
+                    reduced_val_loss_mel = loss_mel.item()
+                    reduced_val_loss_gate = loss_gate.item()
+                    reduced_loss_KLD = loss_KLD.item()
+                    reduced_val_loss_spk_adv = loss_spk_adv.item()
+                    reduced_val_loss_emo_adv = loss_emo_adv.item()
+                    reduced_val_loss_att_means = loss_att_means.item()
+                    reduced_val_loss = loss.item()
+
+                # Accumulate losses.
+                val_loss_mel += reduced_val_loss_mel
+                val_loss_gate += reduced_val_loss_gate
+                val_loss_KLD += reduced_loss_KLD
+                val_loss_spk_adv += reduced_val_loss_spk_adv
+                val_loss_emo_adv += reduced_val_loss_emo_adv
+                val_loss_att_means += reduced_val_loss_att_means
+                val_loss += reduced_val_loss
+
+                # Append attention measures into lists.
+                ## Attention measures: Teacher-forcing
+                batch_far_list.append(batch_far)
+                batch_ar_list.append(batch_ar)
+                batch_letter_ar_list.append(batch_letter_ar)
+                batch_punct_ar_list.append(batch_punct_ar)
+                batch_blank_ar_list.append(batch_blank_ar)
+                batch_arr_list.append(batch_arr)
+                batch_mar_list.append(batch_mar)
+                ## Attention measures: Free-running
+                batch_far_fr_list.append(batch_far_fr)
                 batch_ar_fr_list.append(batch_ar_fr)
                 batch_letter_ar_fr_list.append(batch_letter_ar_fr)
                 batch_punct_ar_fr_list.append(batch_punct_ar_fr)
                 batch_blank_ar_fr_list.append(batch_blank_ar_fr)
-                # [M3] attention_range_ratio
-                _, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
                 batch_arr_fr_list.append(batch_arr_fr)
-                # [M4] multiple_attention_ratio
-                _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
                 batch_mar_fr_list.append(batch_mar_fr)
 
-                # [M_total] Attention quality
-                batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
+                # Append outputs of the residual encoding.
+                if hparams.residual_encoder:
+                    list_residual_encoding.append(residual_encoding)
+                    list_mu.append(mu)
+                    list_logvar.append(logvar)
 
-                # Wrap up data of audios to be logged.
-                inputs = (input_lengths, text_padded, speakers, emotion_input_vectors)
-                outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr)
-                batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
-                batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
-                # [SynthDict 1] A random sample.
-                if i == i_batch_rand:
-                    i_rand = i_sample_rand
-                    synth_dict_rand = dict()
-                    fill_synth_dict(synth_dict_rand, i_rand, inputs, outputs,
-                            batch_attention_measures_tf, batch_attention_measures_fr)
+                # Append outputs of the speaker adversarial training module.
+                if hparams.speaker_adversarial_training:
+                    np_target_speakers = spk_adv_targets.cpu().numpy()
+                    np_pred_speakers = int_pred_speakers.cpu().numpy()
+                    list_np_target_speakers.append(np_target_speakers)
+                    list_np_pred_speakers.append(np_pred_speakers)
 
-                # [SynthDict 2] A teacher-forcing sample that has the minimum attention quality.
-                if min_attention_quality_tf > batch_attention_quality.min().item():
-                    min_attention_quality_tf = batch_attention_quality.min().item()
-                    i_min = batch_attention_quality.argmin().item()
-                    fill_synth_dict(synth_dict_min_aq_tf, i_min, inputs, outputs,
-                            batch_attention_measures_tf, batch_attention_measures_fr)
+                # Append outputs of the emotion adversarial training module.
+                if hparams.emotion_adversarial_training:
+                    np_target_emotions = emo_adv_targets.cpu().numpy()
+                    np_pred_emotions = int_pred_emotions.cpu().numpy()
+                    list_np_target_emotions.append(np_target_emotions)
+                    list_np_pred_emotions.append(np_pred_emotions)
 
-                # [SynthDict 3] A free-running sample that has the minimum attention quality.
-                if min_attention_quality_fr > batch_attention_quality_fr.min().item():
-                    min_attention_quality_fr = batch_attention_quality_fr.min().item()
-                    i_min = batch_attention_quality_fr.argmin().item()
-                    fill_synth_dict(synth_dict_min_aq_fr, i_min, inputs, outputs,
-                            batch_attention_measures_tf, batch_attention_measures_fr)
+                if rank == 0:
+                    # Wrap up data of audios to be logged.
+                    inputs = (input_lengths, text_padded, speakers, emotion_input_vectors)
+                    outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr)
+                    batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
+                    batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
+
+                    # [SynthDict 1] A random sample.
+                    gathered_batch_size = text_padded.size(0)
+                    i_batch_rand, i_sample_rand = divmod(i_valset, gathered_batch_size)
+                    if i == i_batch_rand:
+                        i_rand = i_sample_rand
+                        # (i, i_rand) == (0, 0) is a random sample
+                        # b/c the validation data reshuffled at every epoch
+                        synth_dict_rand = dict()
+                        fill_synth_dict(synth_dict_rand, i_rand, inputs, outputs,
+                                batch_attention_measures_tf, batch_attention_measures_fr)
+
+                    # [SynthDict 2] A teacher-forcing sample that has the minimum attention quality.
+                    if min_attention_quality_tf > batch_attention_quality.min().item():
+                        min_attention_quality_tf = batch_attention_quality.min().item()
+                        i_min = batch_attention_quality.argmin().item()
+                        fill_synth_dict(synth_dict_min_aq_tf, i_min, inputs, outputs,
+                                batch_attention_measures_tf, batch_attention_measures_fr)
+
+                    # [SynthDict 3] A free-running sample that has the minimum attention quality.
+                    if min_attention_quality_fr > batch_attention_quality_fr.min().item():
+                        min_attention_quality_fr = batch_attention_quality_fr.min().item()
+                        i_min = batch_attention_quality_fr.argmin().item()
+                        fill_synth_dict(synth_dict_min_aq_fr, i_min, inputs, outputs,
+                                batch_attention_measures_tf, batch_attention_measures_fr)
 
                 ############################################################
 
-            ############################################################
-            # TEACHER FORCING #####
-            n_val_batches = (i + 1)
-            val_loss_mel = val_loss_mel / n_val_batches
-            val_loss_gate = val_loss_gate / n_val_batches
-            val_loss_KLD = val_loss_KLD / n_val_batches
-            val_loss_spk_adv = val_loss_spk_adv / n_val_batches
-            val_loss_emo_adv = val_loss_emo_adv / n_val_batches
-            val_loss_att_means = val_loss_att_means / n_val_batches
-            val_loss = val_loss / n_val_batches
+            if rank == 0:
+                ############################################################
+                # TEACHER FORCING #####
+                n_val_batches = (i + 1)
+                val_loss_mel = val_loss_mel / n_val_batches
+                val_loss_gate = val_loss_gate / n_val_batches
+                val_loss_KLD = val_loss_KLD / n_val_batches
+                val_loss_spk_adv = val_loss_spk_adv / n_val_batches
+                val_loss_emo_adv = val_loss_emo_adv / n_val_batches
+                val_loss_att_means = val_loss_att_means / n_val_batches
+                val_loss = val_loss / n_val_batches
 
-            if hparams.residual_encoder:
-                residual_encoding = torch.cat(list_residual_encoding)
-                mu = torch.cat(list_mu)
-                logvar = torch.cat(list_logvar)
+                if hparams.residual_encoder:
+                    residual_encoding = torch.cat(list_residual_encoding)
+                    mu = torch.cat(list_mu)
+                    logvar = torch.cat(list_logvar)
 
-            if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
-                np_target_speakers = np.concatenate(list_np_target_speakers)
-                np_pred_speakers = np.concatenate(list_np_pred_speakers)
-                speaker_clsf_report = classification_report(
-                    np_target_speakers, np_pred_speakers,
-                    labels=list(range(len(trainset.speaker_list))),
-                    target_names=trainset.speaker_list, output_dict=True)
+                # [M1] forward_attention_ratio
+                val_batch_far = torch.cat(batch_far_list)
+                val_mean_far = val_batch_far.mean().item()
+                far_pair = (val_mean_far, val_batch_far)
+                # [M2] attention_ratio
+                val_batch_ar = torch.cat(batch_ar_list)
+                val_mean_ar = val_batch_ar.mean().item()
+                val_batch_letter_ar = torch.cat(batch_letter_ar_list)
+                val_mean_letter_ar = val_batch_letter_ar.mean().item()
+                val_batch_punct_ar = torch.cat(batch_punct_ar_list)
+                val_mean_punct_ar = val_batch_punct_ar.mean().item()
+                val_batch_blank_ar = torch.cat(batch_blank_ar_list)
+                val_mean_blank_ar = val_batch_blank_ar.mean().item()
 
-            if hparams.emotion_adversarial_training and val_type == ('all', 'all'):
-                np_target_emotions = np.concatenate(list_np_target_emotions)
-                np_pred_emotions = np.concatenate(list_np_pred_emotions)
-                emotion_clsf_report = classification_report(
-                    np_target_emotions, np_pred_emotions,
-                    labels=list(range(len(trainset.emotion_list))),
-                    target_names=trainset.emotion_list, output_dict=True)
+                # [M3] attention_range_ratio
+                val_batch_arr = torch.cat(batch_arr_list)
+                val_mean_arr = val_batch_arr.mean().item()
+                arr_pair = (val_mean_arr, val_batch_arr)
+                # [M4] multiple_attention_ratio
+                val_batch_mar = torch.cat(batch_mar_list)
+                val_mean_mar = val_batch_mar.mean().item()
+                mar_pair = (val_mean_mar, val_batch_mar)
 
+                ############################################################
+                # FREE RUNNING #####
+                # [M1] forward_attention_ratio
+                val_batch_far_fr = torch.cat(batch_far_fr_list)
+                val_mean_far_fr = val_batch_far_fr.mean().item()
+                far_fr_pair = (val_mean_far_fr, val_batch_far_fr)
+                # [M2] attention_ratio
+                val_batch_ar_fr = torch.cat(batch_ar_fr_list)
+                val_mean_ar_fr = val_batch_ar_fr.mean().item()
+                val_batch_letter_ar_fr = torch.cat(batch_letter_ar_fr_list)
+                val_mean_letter_ar_fr = val_batch_letter_ar_fr.mean().item()
+                val_batch_punct_ar_fr = torch.cat(batch_punct_ar_fr_list)
+                val_mean_punct_ar_fr = val_batch_punct_ar_fr.mean().item()
+                val_batch_blank_ar_fr = torch.cat(batch_blank_ar_fr_list)
+                val_mean_blank_ar_fr = val_batch_blank_ar_fr.mean().item()
 
-            # [M1] forward_attention_ratio
-            val_batch_far = torch.cat(batch_far_list)
-            val_mean_far = val_batch_far.mean().item()
-            far_pair = (val_mean_far, val_batch_far)
-            # [M2] attention_ratio
-            val_batch_ar = torch.cat(batch_ar_list)
-            val_mean_ar = val_batch_ar.mean().item()
-            val_batch_letter_ar = torch.cat(batch_letter_ar_list)
-            val_mean_letter_ar = val_batch_letter_ar.mean().item()
-            val_batch_punct_ar = torch.cat(batch_punct_ar_list)
-            val_mean_punct_ar = val_batch_punct_ar.mean().item()
-            val_batch_blank_ar = torch.cat(batch_blank_ar_list)
-            val_mean_blank_ar = val_batch_blank_ar.mean().item()
-            ar_pairs = ((val_mean_ar, val_batch_ar),
-                        (val_mean_letter_ar, val_batch_letter_ar),
-                        (val_mean_punct_ar, val_batch_punct_ar),
-                        (val_mean_blank_ar, val_batch_blank_ar))
-            # [M3] attention_range_ratio
-            val_batch_arr = torch.cat(batch_arr_list)
-            val_mean_arr = val_batch_arr.mean().item()
-            arr_pair = (val_mean_arr, val_batch_arr)
-            # [M4] multiple_attention_ratio
-            val_batch_mar = torch.cat(batch_mar_list)
-            val_mean_mar = val_batch_mar.mean().item()
-            mar_pair = (val_mean_mar, val_batch_mar)
-
-            ############################################################
-            # FREE RUNNING #####
-            # [M1] forward_attention_ratio
-            val_batch_far_fr = torch.cat(batch_far_fr_list)
-            val_mean_far_fr = val_batch_far_fr.mean().item()
-            far_fr_pair = (val_mean_far_fr, val_batch_far_fr)
-            # [M2] attention_ratio
-            val_batch_ar_fr = torch.cat(batch_ar_fr_list)
-            val_mean_ar_fr = val_batch_ar_fr.mean().item()
-            val_batch_letter_ar_fr = torch.cat(batch_letter_ar_fr_list)
-            val_mean_letter_ar_fr = val_batch_letter_ar_fr.mean().item()
-            val_batch_punct_ar_fr = torch.cat(batch_punct_ar_fr_list)
-            val_mean_punct_ar_fr = val_batch_punct_ar_fr.mean().item()
-            val_batch_blank_ar_fr = torch.cat(batch_blank_ar_fr_list)
-            val_mean_blank_ar_fr = val_batch_blank_ar_fr.mean().item()
-            ar_fr_pairs = ((val_mean_ar_fr, val_batch_ar_fr),
-                           (val_mean_letter_ar_fr, val_batch_letter_ar_fr),
-                           (val_mean_punct_ar_fr, val_batch_punct_ar_fr),
-                           (val_mean_blank_ar_fr, val_batch_blank_ar_fr))
-            # [M3] attention_range_ratio
-            val_batch_arr_fr = torch.cat(batch_arr_fr_list)
-            val_mean_arr_fr = val_batch_arr_fr.mean().item()
-            arr_fr_pair = (val_mean_arr_fr, val_batch_arr_fr)
-            # [M4] multiple_attention_ratio
-            val_batch_mar_fr = torch.cat(batch_mar_fr_list)
-            val_mean_mar_fr = val_batch_mar_fr.mean().item()
-            mar_fr_pair = (val_mean_mar_fr, val_batch_mar_fr)
+                # [M3] attention_range_ratio
+                val_batch_arr_fr = torch.cat(batch_arr_fr_list)
+                val_mean_arr_fr = val_batch_arr_fr.mean().item()
+                arr_fr_pair = (val_mean_arr_fr, val_batch_arr_fr)
+                # [M4] multiple_attention_ratio
+                val_batch_mar_fr = torch.cat(batch_mar_fr_list)
+                val_mean_mar_fr = val_batch_mar_fr.mean().item()
+                mar_fr_pair = (val_mean_mar_fr, val_batch_mar_fr)
 
 
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_KLD, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
+            ar_pairs = ((val_mean_ar, val_batch_ar),
+                        (val_mean_letter_ar, val_batch_letter_ar),
+                        (val_mean_punct_ar, val_batch_punct_ar),
+                        (val_mean_blank_ar, val_batch_blank_ar))
+            ar_fr_pairs = ((val_mean_ar_fr, val_batch_ar_fr),
+                           (val_mean_letter_ar_fr, val_batch_letter_ar_fr),
+                           (val_mean_punct_ar_fr, val_batch_punct_ar_fr),
+                           (val_mean_blank_ar_fr, val_batch_blank_ar_fr))
             attention_measures = far_pair, ar_pairs, arr_pair, mar_pair
             attention_measures_fr = far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair
+
 
             # ToDeleete
             ###########
@@ -598,12 +641,28 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 dict_log_values['mu'] = mu
                 dict_log_values['logvar'] = logvar
             if hparams.speaker_adversarial_training:
+                np_target_speakers = np.concatenate(list_np_target_speakers)
+                np_pred_speakers = np.concatenate(list_np_pred_speakers)
+                # Compute the accuracy of the speaker adversarial classifier.
+                spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
                 dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                 if val_type == ('all', 'all'):
+                    speaker_clsf_report = classification_report(
+                        np_target_speakers, np_pred_speakers,
+                        labels=list(range(len(trainset.speaker_list))),
+                        target_names=trainset.speaker_list, output_dict=True)
                     dict_log_values['speaker_clsf_report'] = speaker_clsf_report
             if hparams.emotion_adversarial_training:
+                np_target_emotions = np.concatenate(list_np_target_emotions)
+                np_pred_emotions = np.concatenate(list_np_pred_emotions)
+                # Compute the accuracy of the emotion adversarial classifier.
+                emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
                 dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
                 if val_type == ('all', 'all'):
+                    emotion_clsf_report = classification_report(
+                        np_target_emotions, np_pred_emotions,
+                        labels=list(range(len(trainset.emotion_list))),
+                        target_names=trainset.emotion_list, output_dict=True)
                     dict_log_values['emotion_clsf_report'] = emotion_clsf_report
 
             logger.log_validation(trainset, valset, val_type, hparams, dict_log_values)
