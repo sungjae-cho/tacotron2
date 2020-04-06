@@ -93,6 +93,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss = 0
         self.sum_loss_mel = 0
         self.sum_loss_gate = 0
+        self.sum_loss_KLD = 0
         self.sum_loss_spk_adv = 0
         self.sum_loss_emo_adv = 0
         self.sum_loss_att_means = 0
