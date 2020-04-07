@@ -93,11 +93,11 @@ class TextMelLoader(torch.utils.data.Dataset):
         return melspec
 
     def get_text(self, text):
-        text_norm = torch.IntTensor(text_to_sequence(text, self.text_cleaners))
+        text_norm = torch.LongTensor(text_to_sequence(text, self.text_cleaners))
         return text_norm
 
     def get_speaker(self, speaker):
-        speaker_tensor = torch.IntTensor([self.speaker2int(speaker)])
+        speaker_tensor = torch.LongTensor([self.speaker2int(speaker)])
         return speaker_tensor
 
     def get_sex(self, sex):
@@ -118,7 +118,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return emotion_tensor
 
     def get_emotion_target(self, emotion):
-        emotion_tensor = torch.IntTensor([self.emotion2int(emotion, is_input=False)])
+        emotion_tensor = torch.LongTensor([self.emotion2int(emotion, is_input=False)])
         return emotion_tensor
 
     def get_lang(self, lang):
@@ -138,7 +138,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         return len(self.lang_list)
 
     def get_lang(self, lang):
-        lang_tensor = torch.IntTensor(self.lang2int(lang))
+        lang_tensor = torch.LongTensor(self.lang2int(lang))
         return lang_tensor
 
     def emotion_tensor2str_emotion(self, emotion_tensor, is_input=True):
