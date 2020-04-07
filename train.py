@@ -992,7 +992,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 criterions = (criterion, criterion_spk_adv, criterion_emo_adv)
                 validate(model, criterions, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
-                         hparams.distributed_run, rank, hparams)
+                         False, rank, hparams)
+                         #hparams.distributed_run, rank, hparams)
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
