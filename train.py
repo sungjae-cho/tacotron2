@@ -695,7 +695,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
     if hparams.fp16_run:
         model, optimizer = amp.initialize(
-            model, optimizer, opt_level='O1') # default: opt_level='O2'
+            model, optimizer, opt_level=hparams.fp16_opt_level) # default: opt_level='O2'
 
     if hparams.distributed_run:
         model = apply_gradient_allreduce(model)
