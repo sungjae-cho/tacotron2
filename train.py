@@ -29,6 +29,8 @@ from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_mode
 
 def reduce_tensor(tensor, reduce_op='mean'):
     rt = tensor.cuda().detach().clone()
+    if reduce_op == 'sum':
+        dist.all_reduce(rt, op=dist.reduce_op.SUM)
     if reduce_op == 'mean':
         dist.all_reduce(rt, op=dist.reduce_op.SUM)
         rt /= dist.get_world_size()
