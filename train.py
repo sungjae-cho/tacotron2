@@ -413,20 +413,23 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv).item()
                     reduced_val_loss_att_means = reduce_tensor(loss_att_means).item()
                     reduced_val_loss = reduce_tensor(loss).item()
-
                     # Inputs
                     input_lengths = gather_all_tensor(input_lengths)
-                    text_padded = gather_all_tensor(text_padded)
+                    if False:
+                        # Lines in this block cause communication failure.
+                        text_padded = gather_all_tensor(text_padded)
                     speakers = gather_all_tensor(speakers)
                     emotion_input_vectors = gather_all_tensor(emotion_input_vectors)
                     # Outputs
                     output_lengths = gather_all_tensor(output_lengths)
                     gate_outputs_fr = gather_all_tensor(gate_outputs_fr)
-                    mel_padded = gather_all_tensor(mel_padded)
-                    mel_outputs_postnet = gather_all_tensor(mel_outputs_postnet)
-                    mel_outputs_postnet_fr = gather_all_tensor(mel_outputs_postnet_fr)
-                    alignments = gather_all_tensor(alignments)
-                    alignments_fr = gather_all_tensor(alignments_fr)
+                    if False:
+                        # Lines in this block cause communication failure.
+                        mel_padded = gather_all_tensor(mel_padded)
+                        mel_outputs_postnet = gather_all_tensor(mel_outputs_postnet)
+                        mel_outputs_postnet_fr = gather_all_tensor(mel_outputs_postnet_fr)
+                        alignments = gather_all_tensor(alignments)
+                        alignments_fr = gather_all_tensor(alignments_fr)
                     # Attention measures: Teacher-forcing
                     batch_far = gather_all_tensor(batch_far)
                     batch_ar = gather_all_tensor(batch_ar)
