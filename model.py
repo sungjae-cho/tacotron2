@@ -580,8 +580,9 @@ class Decoder(nn.Module):
         gate_prediction = self.gate_layer(decoder_hidden_attention_context)
         return decoder_output, gate_prediction, self.attention_weights, self.attention_context
 
-    def forward(self, memory, decoder_inputs, memory_lengths,
-        speaker_embeddings, emotion_embeddings, residual_encoding):
+    def forward(self, memory, memory_lengths,
+        speaker_embeddings, emotion_embeddings, residual_encoding,
+        decoder_inputs=None, teacher_forcing=True):
         """ Decoder forward pass for training
         PARAMS
         ------
@@ -595,32 +596,38 @@ class Decoder(nn.Module):
         gate_outputs: gate outputs from the decoder
         alignments: sequence of attention weights from the decoder
         """
+        if teacher_forcing:
+            decoder_input = self.get_go_frame(memory).unsqueeze(0)
+            decoder_inputs = self.parse_decoder_inputs(decoder_inputs)
+            decoder_inputs = torch.cat((decoder_input, decoder_inputs), dim=0)
+            decoder_inputs = self.prenet(decoder_inputs)
 
-        decoder_input = self.get_go_frame(memory).unsqueeze(0)
-        decoder_inputs = self.parse_decoder_inputs(decoder_inputs)
-        decoder_inputs = torch.cat((decoder_input, decoder_inputs), dim=0)
-        decoder_inputs = self.prenet(decoder_inputs)
+            self.initialize_decoder_states(
+                memory, mask=~get_mask_from_lengths(memory_lengths))
 
-        self.initialize_decoder_states(
-            memory, mask=~get_mask_from_lengths(memory_lengths))
+            mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
+            while len(mel_outputs) < decoder_inputs.size(0) - 1:
+                decoder_input = decoder_inputs[len(mel_outputs)]
+                mel_output, gate_output, attention_weights, attention_context = self.decode(
+                    decoder_input, speaker_embeddings, emotion_embeddings, residual_encoding)
+                mel_outputs += [mel_output.squeeze(1)]
+                gate_outputs += [gate_output.squeeze(1)]
+                alignments += [attention_weights]
+                attention_contexts += [attention_context]
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
-        while len(mel_outputs) < decoder_inputs.size(0) - 1:
-            decoder_input = decoder_inputs[len(mel_outputs)]
-            mel_output, gate_output, attention_weights, attention_context = self.decode(
-                decoder_input, speaker_embeddings, emotion_embeddings, residual_encoding)
-            mel_outputs += [mel_output.squeeze(1)]
-            gate_outputs += [gate_output.squeeze(1)]
-            alignments += [attention_weights]
-            attention_contexts += [attention_context]
+            (mel_outputs, gate_outputs, alignments,
+                attention_contexts) = self.parse_decoder_outputs(
+                    mel_outputs, gate_outputs, alignments, attention_contexts)
 
-        (mel_outputs, gate_outputs, alignments,
-            attention_contexts) = self.parse_decoder_outputs(
-                mel_outputs, gate_outputs, alignments, attention_contexts)
+            att_means = self.get_attention_means()
 
-        att_means = self.get_attention_means()
+            return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
+        else:
+            fr_outputs = self.free_running(memory, memory_lengths,
+                speaker_embeddings, emotion_embeddings,
+                residual_encoding)
 
-        return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
+            return fr_outputs
 
     def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors,
             residual_encoding):
@@ -765,53 +772,63 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def forward(self, inputs, speakers, emotion_vectors, zero_res_en=False):
-        text_inputs, text_lengths, mels, max_len, output_lengths = inputs
-        text_lengths, output_lengths = text_lengths.data, output_lengths.data
+    def forward(self, inputs, speakers, emotion_vectors,
+            teacher_forcing=True, zero_res_en=False):
+        self.int_dtype = speakers.dtype
+        self.float_dtype = emotion_vectors.dtype
+        if teacher_forcing:
+            text_inputs, text_lengths, mels, max_len, output_lengths = inputs
+            text_lengths, output_lengths = text_lengths.data, output_lengths.data
 
-        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
+            embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
 
-        encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+            encoder_outputs = self.encoder(embedded_inputs, text_lengths)
 
-        speaker_embeddings = self.speaker_embedding_layer(speakers)
-        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+            speaker_embeddings = self.speaker_embedding_layer(speakers)
+            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
 
-        if self.hparams.residual_encoder:
-            if zero_res_en:
-                batch_size = text_inputs.size(0)
-                residual_encoding = self.residual_encoder.inference(batch_size)
-                mu = torch.zeros_like(residual_encoding)
-                logvar = torch.zeros_like(residual_encoding)
+            if self.hparams.residual_encoder:
+                if zero_res_en:
+                    batch_size = text_inputs.size(0)
+                    residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
+                    mu = torch.zeros_like(residual_encoding)
+                    logvar = torch.zeros_like(residual_encoding)
+                else:
+                    residual_encoding, mu, logvar = self.residual_encoder(mels)
             else:
-                residual_encoding, mu, logvar = self.residual_encoder(mels)
+                residual_encoding, mu, logvar = None, None, None
+
+            (mel_outputs, gate_outputs, alignments,
+                attention_contexts, att_means) = self.decoder(
+                    encoder_outputs, text_lengths,
+                        speaker_embeddings, emotion_embeddings, residual_encoding,
+                        mels, teacher_forcing=True)
+
+            mel_outputs_postnet = self.postnet(mel_outputs)
+            mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+
+            if self.speaker_adversarial_training:
+                spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
+                logit_speakers, prob_speakers, int_pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
+            else:
+                logit_speakers, prob_speakers, int_pred_speakers = None, None, None
+
+            if self.emotion_adversarial_training:
+                emo_adv_batch = get_emo_adv_inputs(encoder_outputs, text_lengths)
+                logit_emotions, prob_emotions, int_pred_emotions = self.emotion_advgrad_classifier(emo_adv_batch)
+            else:
+                logit_emotions, prob_emotions, int_pred_emotions = None, None, None
+
+            return (self.parse_output([mel_outputs, mel_outputs_postnet, gate_outputs, alignments], output_lengths),
+                    (logit_speakers, prob_speakers, int_pred_speakers),
+                    (logit_emotions, prob_emotions, int_pred_emotions),
+                    (residual_encoding, mu, logvar),
+                    att_means)
         else:
-            residual_encoding, mu, logvar = None, None, None
+            text_inputs, text_lengths = inputs
+            fr_outputs = self.free_running(text_inputs, text_lengths, speakers, emotion_vectors)
 
-        (mel_outputs, gate_outputs, alignments,
-            attention_contexts, att_means) = self.decoder(
-                encoder_outputs, mels, text_lengths,
-                    speaker_embeddings, emotion_embeddings, residual_encoding)
-
-        mel_outputs_postnet = self.postnet(mel_outputs)
-        mel_outputs_postnet = mel_outputs + mel_outputs_postnet
-
-        if self.speaker_adversarial_training:
-            spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
-            logit_speakers, prob_speakers, int_pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
-        else:
-            logit_speakers, prob_speakers, int_pred_speakers = None, None, None
-
-        if self.emotion_adversarial_training:
-            emo_adv_batch = get_emo_adv_inputs(encoder_outputs, text_lengths)
-            logit_emotions, prob_emotions, int_pred_emotions = self.emotion_advgrad_classifier(emo_adv_batch)
-        else:
-            logit_emotions, prob_emotions, int_pred_emotions = None, None, None
-
-        return (self.parse_output([mel_outputs, mel_outputs_postnet, gate_outputs, alignments], output_lengths),
-                (logit_speakers, prob_speakers, int_pred_speakers),
-                (logit_emotions, prob_emotions, int_pred_emotions),
-                (residual_encoding, mu, logvar),
-                att_means)
+            return fr_outputs
 
     def free_running(self, text_inputs, text_lengths, speakers, emotion_vectors):
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
@@ -820,12 +837,15 @@ class Tacotron2(nn.Module):
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
         if self.hparams.residual_encoder:
             batch_size = text_inputs.size(0)
-            residual_encoding = self.residual_encoder.inference(batch_size)
+            residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
         else:
             residual_encoding = None
 
-        mel_outputs, gate_outputs, alignments = self.decoder.free_running(
-            encoder_outputs, text_lengths, speaker_embeddings, emotion_embeddings, residual_encoding)
+        mel_outputs, gate_outputs, alignments = self.decoder(
+            encoder_outputs, text_lengths,
+            speaker_embeddings, emotion_embeddings,
+            residual_encoding,
+            teacher_forcing=False)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -842,7 +862,7 @@ class Tacotron2(nn.Module):
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
         if self.hparams.residual_encoder:
             batch_size = text_inputs.size(0)
-            residual_encoding = self.residual_encoder.inference(batch_size)
+            residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
         else:
             residual_encoding = None
 
@@ -859,6 +879,7 @@ class Tacotron2(nn.Module):
 
     def get_embeddings(self, speakers, emotion_vectors):
         speaker_embeddings = self.speaker_embedding_layer(speakers)
+        emotion_vectors = emotion_vectors.type(self.float_dtype)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
 
         return speaker_embeddings, emotion_embeddings
@@ -906,7 +927,7 @@ class ResidualEncoder(nn.Module):
 
         return residual_encoding, mu, logvar
 
-    def inference(self, batch_size):
+    def inference(self, batch_size, dtype=torch.float32):
         """ Residual Encoder
         PARAMS
         ------
@@ -916,7 +937,7 @@ class ResidualEncoder(nn.Module):
         -------
         z: torch.Tensor. size == [batch_size, self.out_dim].
         """
-        z = torch.zeros([batch_size, self.out_dim]).cuda()
+        z = torch.zeros([batch_size, self.out_dim], dtype=dtype).cuda()
 
         return z
 

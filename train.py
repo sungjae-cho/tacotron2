@@ -373,7 +373,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr = model.free_running(text_padded, input_lengths, speakers, emotion_input_vectors)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr = model((text_padded, input_lengths), speakers, emotion_input_vectors, teacher_forcing=False)
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
