@@ -52,12 +52,12 @@ def gather_all_tensor(tensor):
     one_tensor = torch.cat(tensor_list)
     return one_tensor
 
-def init_distributed(hparams, n_gpus, rank, group_name):
+def init_distributed(hparams, n_gpus, rank, group_name, first_device):
     assert torch.cuda.is_available(), "Distributed mode requires CUDA."
     print("Initializing Distributed")
 
     # Set cuda device so everything is done on the right GPU.
-    torch.cuda.set_device(rank % torch.cuda.device_count())
+    torch.cuda.set_device((rank + first_device) % torch.cuda.device_count())
 
     # Initialize distributed communication
     dist.init_process_group(
@@ -666,7 +666,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
 def train(output_directory, log_directory, checkpoint_path, pretrained_path,
           warm_start, n_gpus,
-          rank, group_name, hparams, run_name, prj_name, resume):
+          rank, group_name, hparams, run_name, prj_name, resume, first_device):
     """Training and validation logging results to tensorboard and stdout
 
     Params
@@ -679,7 +679,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     hparams (object): comma separated list of "name=value" pairs.
     """
     if hparams.distributed_run:
-        init_distributed(hparams, n_gpus, rank, group_name)
+        init_distributed(hparams, n_gpus, rank, group_name, first_device)
 
     torch.manual_seed(hparams.seed)
     torch.cuda.manual_seed(hparams.seed)
@@ -1046,6 +1046,8 @@ if __name__ == '__main__':
                         help='load model weights only, ignore specified layers')
     parser.add_argument('--n_gpus', type=int, default=1,
                         required=False, help='number of gpus')
+    parser.add_argument('--first_device', type=int, default=0,
+                        required=False, help='GPU device number for rank 0 process')
     parser.add_argument('--rank', type=int, default=0,
                         required=False, help='rank of current gpu')
     parser.add_argument('--visible_gpus', type=str, default="0",
@@ -1077,4 +1079,4 @@ if __name__ == '__main__':
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.pretrained_path,
           args.warm_start, args.n_gpus, args.rank, args.group_name, hparams,
-          args.run_name, args.prj_name, args.resume)
+          args.run_name, args.prj_name, args.resume, args.first_device)
