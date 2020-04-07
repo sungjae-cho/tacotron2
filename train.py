@@ -80,7 +80,7 @@ def prepare_dataloaders(hparams):
             if len(valset) != 0:
                 valsets[(speaker, emotion)] = valset
 
-    collate_fn = TextMelCollate(hparams.n_frames_per_step)
+    collate_fn = TextMelCollate(hparams)
 
     if hparams.distributed_run:
         train_sampler = DistributedSampler(trainset)
@@ -222,6 +222,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
     """Handles all the validation scoring and printing"""
     for val_type, valset in valsets.items():
         #val_type: tuple. (str_speaker, str_emotion).
+        torch.cuda.empty_cache()
         model.eval()
         with torch.no_grad():
             val_sampler = DistributedSampler(valset) if distributed_run else None
