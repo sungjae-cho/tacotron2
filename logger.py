@@ -504,11 +504,9 @@ class Tacotron2Logger(SummaryWriter):
             logvar = dict_log_values['logvar']
 
         if self.hparams.speaker_adversarial_training:
-            spk_adv_accuracy = dict_log_values['spk_adv_accuracy']
             if val_type == ('all', 'all'):
                 speaker_clsf_report = dict_log_values['speaker_clsf_report']
         if self.hparams.emotion_adversarial_training:
-            emo_adv_accuracy = dict_log_values['emo_adv_accuracy']
             if val_type == ('all', 'all'):
                 emotion_clsf_report = dict_log_values['emotion_clsf_report']
 
@@ -588,14 +586,12 @@ class Tacotron2Logger(SummaryWriter):
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
             wandb.log({"{}/spk_adv/loss".format(log_prefix): loss_spk_adv,
-                       "{}/spk_adv/accuracy".format(log_prefix): spk_adv_accuracy}
-                       , step=iteration)
+                       }, step=iteration)
 
         # Logging values concerning emotion adversarial training.
         if self.hparams.emotion_adversarial_training:
             wandb.log({"{}/emo_adv/loss".format(log_prefix): loss_emo_adv,
-                       "{}/emo_adv/accuracy".format(log_prefix): emo_adv_accuracy}
-                       , step=iteration)
+                       }, step=iteration)
 
         # Logging loss_monotonic_attention_MSE.
         if self.hparams.monotonic_attention:
@@ -662,7 +658,8 @@ class Tacotron2Logger(SummaryWriter):
             if self.hparams.speaker_adversarial_training:
                 log_prefix = "val/{speaker}/{emotion}".format(
                     speaker=val_speaker, emotion=val_emotion)
-
+                wandb.log({"{prefix}/spk_adv/accuracy".format(prefix=log_prefix): speaker_clsf_report['accuracy']
+                    }, step=iteration)
                 for str_speaker in hparams.speakers:
                     spk_measure_dict = speaker_clsf_report[str_speaker]
                     for measure, m_value in spk_measure_dict.items():
@@ -677,7 +674,8 @@ class Tacotron2Logger(SummaryWriter):
             if self.hparams.emotion_adversarial_training:
                 log_prefix = "val/{speaker}/{emotion}".format(
                     speaker=val_speaker, emotion=val_emotion)
-
+                wandb.log({"{prefix}/emo_adv/accuracy".format(prefix=log_prefix): emotion_clsf_report['accuracy']
+                    }, step=iteration)
                 for str_emotion in hparams.emotions:
                     spk_measure_dict = emotion_clsf_report[str_emotion]
                     for measure, m_value in spk_measure_dict.items():

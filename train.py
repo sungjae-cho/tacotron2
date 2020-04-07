@@ -14,7 +14,7 @@ from distributed import apply_gradient_allreduce
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score, mean_absolute_error, classification_report
+from sklearn.metrics import accuracy_score, mean_absolute_error, confusion_matrix
 from torch.nn import MSELoss
 
 from model import Tacotron2
@@ -25,7 +25,7 @@ from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
-from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model
+from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model, get_clsf_report
 
 def reduce_tensor(tensor, reduce_op='mean'):
     rt = tensor.cuda().detach().clone()
@@ -243,12 +243,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 list_logvar = list()
 
             if hparams.speaker_adversarial_training:
-                list_np_target_speakers = list()
-                list_np_pred_speakers = list()
+                np_spk_cm_sum = np.zeros((len(hparams.speakers), len(hparams.speakers)))
 
             if hparams.emotion_adversarial_training:
-                list_np_target_emotions = list()
-                list_np_pred_emotions = list()
+                np_emo_cm_sum = np.zeros((len(hparams.emotions), len(hparams.emotions)))
 
             #######################
             # TEACHER FORCING #####
@@ -391,6 +389,20 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 # [M_total] Attention quality
                 batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
 
+                if hparams.speaker_adversarial_training:
+                    np_target_speakers = spk_adv_targets.cpu().numpy()
+                    np_pred_speakers = int_pred_speakers.cpu().numpy()
+                    np_spk_cm = confusion_matrix(np_target_speakers, np_pred_speakers,
+                        labels=list(range(len(trainset.speaker_list))))
+                    tensor_spk_cm = torch.IntTensor(np_spk_cm).cuda()
+
+                if hparams.emotion_adversarial_training:
+                    np_target_emotions = emo_adv_targets.cpu().numpy()
+                    np_pred_emotions = int_pred_emotions.cpu().numpy()
+                    np_emo_cm = confusion_matrix(np_target_emotions, np_pred_emotions,
+                        labels=list(range(len(trainset.emotion_list))))
+                    tensor_emo_cm = torch.IntTensor(np_emo_cm).cuda()
+
                 if distributed_run:
                     # Losses
                     reduced_val_loss_mel = reduce_tensor(loss_mel)
@@ -438,12 +450,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                         logvar = gather_all_tensor(logvar)
                     # Things concerning speaker adversarial training
                     if hparams.speaker_adversarial_training:
-                        spk_adv_targets = gather_all_tensor(spk_adv_targets)
-                        int_pred_speakers = gather_all_tensor(int_pred_speakers)
+                        tensor_spk_cm = reduce_tensor(tensor_spk_cm, 'sum')
                     # Things concerning emotion adversarial training
                     if hparams.emotion_adversarial_training:
-                        emo_adv_targets = gather_all_tensor(emo_adv_targets)
-                        int_pred_emotions = gather_all_tensor(int_pred_emotions)
+                        tensor_emo_cm = reduce_tensor(tensor_emo_cm, 'sum')
                 else:
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
@@ -486,19 +496,15 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     list_mu.append(mu)
                     list_logvar.append(logvar)
 
-                # Append outputs of the speaker adversarial training module.
+                # Accumulate outputs of the speaker adversarial training module.
                 if hparams.speaker_adversarial_training:
-                    np_target_speakers = spk_adv_targets.cpu().numpy()
-                    np_pred_speakers = int_pred_speakers.cpu().numpy()
-                    list_np_target_speakers.append(np_target_speakers)
-                    list_np_pred_speakers.append(np_pred_speakers)
+                    np_spk_cm = tensor_spk_cm.cpu().numpy()
+                    np_spk_cm_sum += np_spk_cm
 
-                # Append outputs of the emotion adversarial training module.
+                # Accumulate outputs of the emotion adversarial training module.
                 if hparams.emotion_adversarial_training:
-                    np_target_emotions = emo_adv_targets.cpu().numpy()
-                    np_pred_emotions = int_pred_emotions.cpu().numpy()
-                    list_np_target_emotions.append(np_target_emotions)
-                    list_np_pred_emotions.append(np_pred_emotions)
+                    np_emo_cm = tensor_emo_cm.cpu().numpy()
+                    np_emo_cm_sum += np_emo_cm
 
                 if rank == 0:
                     # Wrap up data of audios to be logged.
@@ -641,29 +647,13 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 dict_log_values['mu'] = mu
                 dict_log_values['logvar'] = logvar
             if hparams.speaker_adversarial_training:
-                np_target_speakers = np.concatenate(list_np_target_speakers)
-                np_pred_speakers = np.concatenate(list_np_pred_speakers)
-                # Compute the accuracy of the speaker adversarial classifier.
-                spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
-                dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                 if val_type == ('all', 'all'):
-                    speaker_clsf_report = classification_report(
-                        np_target_speakers, np_pred_speakers,
-                        labels=list(range(len(trainset.speaker_list))),
-                        target_names=trainset.speaker_list, output_dict=True)
-                    dict_log_values['speaker_clsf_report'] = speaker_clsf_report
+                    # Compute the classification measures of the speaker adversarial classifier.
+                    dict_log_values['speaker_clsf_report'] = get_clsf_report(np_spk_cm_sum, trainset.speaker_list)
             if hparams.emotion_adversarial_training:
-                np_target_emotions = np.concatenate(list_np_target_emotions)
-                np_pred_emotions = np.concatenate(list_np_pred_emotions)
-                # Compute the accuracy of the emotion adversarial classifier.
-                emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
-                dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
                 if val_type == ('all', 'all'):
-                    emotion_clsf_report = classification_report(
-                        np_target_emotions, np_pred_emotions,
-                        labels=list(range(len(trainset.emotion_list))),
-                        target_names=trainset.emotion_list, output_dict=True)
-                    dict_log_values['emotion_clsf_report'] = emotion_clsf_report
+                    # Compute the classification measures of the emotion adversarial classifier.
+                    dict_log_values['emotion_clsf_report'] = get_clsf_report(np_emo_cm_sum, trainset.emotion_list)
 
             logger.log_validation(trainset, valset, val_type, hparams, dict_log_values)
 
@@ -744,10 +734,11 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Start Epoch {}:".format(epoch+1))
-        list_np_target_speakers = list()
-        list_np_pred_speakers = list()
-        list_np_target_emotions = list()
-        list_np_pred_emotions = list()
+        if hparams.speaker_adversarial_training:
+            np_spk_cm_sum = np.zeros((len(hparams.speakers), len(hparams.speakers)))
+        if hparams.emotion_adversarial_training:
+            np_emo_cm_sum = np.zeros((len(hparams.emotions), len(hparams.emotions)))
+
         for i, batch in enumerate(train_loader):
             batches_per_epoch = len(train_loader)
             float_epoch = iteration / (batches_per_epoch * n_gpus)
@@ -857,6 +848,20 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             best_attention_quality = batch_attention_quality.max().item()
             worst_attention_quality = batch_attention_quality.min().item()
 
+            if hparams.speaker_adversarial_training:
+                np_target_speakers = spk_adv_targets.cpu().numpy()
+                np_pred_speakers = int_pred_speakers.cpu().numpy()
+                np_spk_cm = confusion_matrix(np_target_speakers, np_pred_speakers,
+                    labels=list(range(len(trainset.speaker_list))))
+                tensor_spk_cm = torch.IntTensor(np_spk_cm).cuda()
+
+            if hparams.emotion_adversarial_training:
+                np_target_emotions = emo_adv_targets.cpu().numpy()
+                np_pred_emotions = int_pred_emotions.cpu().numpy()
+                np_emo_cm = confusion_matrix(np_target_emotions, np_pred_emotions,
+                    labels=list(range(len(trainset.emotion_list))))
+                tensor_emo_cm = torch.IntTensor(np_emo_cm).cuda()
+
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel)
                 reduced_loss_gate = reduce_tensor(loss_gate)
@@ -892,11 +897,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     mu = gather_all_tensor(mu)
                     logvar = gather_all_tensor(logvar)
                 if hparams.speaker_adversarial_training:
-                    spk_adv_targets = gather_all_tensor(spk_adv_targets)
-                    int_pred_speakers = gather_all_tensor(int_pred_speakers)
+                    tensor_spk_cm = reduce_tensor(tensor_spk_cm, 'sum')
                 if hparams.emotion_adversarial_training:
-                    emo_adv_targets = gather_all_tensor(emo_adv_targets)
-                    int_pred_emotions = gather_all_tensor(int_pred_emotions)
+                    tensor_emo_cm = reduce_tensor(tensor_emo_cm, 'sum')
             else:
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
@@ -945,56 +948,36 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
                 if hparams.speaker_adversarial_training:
                     # Compute the accuracy of the speaker adversarial classifier.
-                    np_target_speakers = spk_adv_targets.cpu().numpy()
-                    np_pred_speakers = int_pred_speakers.cpu().numpy()
-                    spk_adv_accuracy = accuracy_score(np_target_speakers, np_pred_speakers)
-                    speaker_clsf_report = classification_report(
-                        np_target_speakers, np_pred_speakers,
-                        labels=list(range(len(trainset.speaker_list))),
-                        target_names=trainset.speaker_list, output_dict=True)
+                    np_spk_cm = tensor_spk_cm.cpu().numpy()
+                    speaker_clsf_report = get_clsf_report(np_spk_cm, trainset.speaker_list)
+                    spk_adv_accuracy = speaker_clsf_report['accuracy']
 
                     # Save objects to log into dict_log_values.
                     dict_log_values['spk_adv_accuracy'] = spk_adv_accuracy
                     dict_log_values['speaker_clsf_report'] = speaker_clsf_report
 
                     # Logging for the performance of train_epoch.
-                    list_np_target_speakers.append(np_target_speakers)
-                    list_np_pred_speakers.append(np_pred_speakers)
+                    np_spk_cm_sum += np_spk_cm
                     if (i+1 == batches_per_epoch):
                         # If it is the last batch, ...
-                        np_target_speakers = np.concatenate(list_np_target_speakers)
-                        np_pred_speakers = np.concatenate(list_np_pred_speakers)
-                        speaker_clsf_report_train_epoch = classification_report(
-                            np_target_speakers, np_pred_speakers,
-                            labels=list(range(len(trainset.speaker_list))),
-                            target_names=trainset.speaker_list, output_dict=True)
+                        speaker_clsf_report_train_epoch = get_clsf_report(np_spk_cm_sum, trainset.speaker_list)
                         dict_log_values['speaker_clsf_report_train_epoch'] = speaker_clsf_report_train_epoch
 
                 if hparams.emotion_adversarial_training:
                     # Compute the accuracy of the emotion adversarial classifier.
-                    np_target_emotions = emo_adv_targets.cpu().numpy()
-                    np_pred_emotions = int_pred_emotions.cpu().numpy()
-                    emo_adv_accuracy = accuracy_score(np_target_emotions, np_pred_emotions)
-                    emotion_clsf_report = classification_report(
-                        np_target_emotions, np_pred_emotions,
-                        labels=list(range(len(trainset.emotion_list))),
-                        target_names=trainset.emotion_list, output_dict=True)
+                    np_emo_cm = tensor_emo_cm.cpu().numpy()
+                    emotion_clsf_report = get_clsf_report(np_emo_cm, trainset.emotion_list)
+                    emo_adv_accuracy = emotion_clsf_report['accuracy']
 
                     # Save objects to log into dict_log_values.
                     dict_log_values['emo_adv_accuracy'] = emo_adv_accuracy
                     dict_log_values['emotion_clsf_report'] = emotion_clsf_report
 
                     # Logging for the performance of train_epoch.
-                    list_np_target_emotions.append(np_target_emotions)
-                    list_np_pred_emotions.append(np_pred_emotions)
+                    np_emo_cm_sum += np_emo_cm
                     if (i+1 == batches_per_epoch):
                         # If it is the last batch, ...
-                        np_target_emotions = np.concatenate(list_np_target_emotions)
-                        np_pred_emotions = np.concatenate(list_np_pred_emotions)
-                        emotion_clsf_report_train_epoch = classification_report(
-                            np_target_emotions, np_pred_emotions,
-                            labels=list(range(len(trainset.emotion_list))),
-                            target_names=trainset.emotion_list, output_dict=True)
+                        emotion_clsf_report_train_epoch = get_clsf_report(np_emo_cm_sum, trainset.emotion_list)
                         dict_log_values['emotion_clsf_report_train_epoch'] = emotion_clsf_report_train_epoch
 
                 # Pass training logging objects to logger.
