@@ -38,12 +38,11 @@ def reduce_tensor(tensor, reduce_op='mean'):
         dist.all_reduce(rt, op=dist.reduce_op.MAX)
     if reduce_op == 'min':
         dist.all_reduce(rt, op=dist.reduce_op.MIN)
-    rt = rt.item()
     return rt
 
 def reduce_scalar(scalar, reduce_op='mean'):
     tensor = torch.FloatTensor([scalar]).cuda()
-    rs = reduce_tensor(tensor, reduce_op)
+    rs = reduce_tensor(tensor, reduce_op).item()
     return rs
 
 def gather_all_tensor(tensor):
@@ -407,13 +406,14 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
                 if distributed_run:
                     # Losses
-                    reduced_val_loss_mel = reduce_tensor(loss_mel)
-                    reduced_val_loss_gate = reduce_tensor(loss_gate)
-                    reduced_loss_KLD = reduce_tensor(loss_KLD)
-                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv)
-                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv)
-                    reduced_val_loss_att_means = reduce_tensor(loss_att_means)
-                    reduced_val_loss = reduce_tensor(loss)
+                    reduced_val_loss_mel = reduce_tensor(loss_mel).item()
+                    reduced_val_loss_gate = reduce_tensor(loss_gate).item()
+                    reduced_loss_KLD = reduce_tensor(loss_KLD).item()
+                    reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv).item()
+                    reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv).item()
+                    reduced_val_loss_att_means = reduce_tensor(loss_att_means).item()
+                    reduced_val_loss = reduce_tensor(loss).item()
+
                     # Inputs
                     input_lengths = gather_all_tensor(input_lengths)
                     text_padded = gather_all_tensor(text_padded)
@@ -865,13 +865,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 tensor_emo_cm = torch.IntTensor(np_emo_cm).cuda()
 
             if hparams.distributed_run:
-                reduced_loss_mel = reduce_tensor(loss_mel)
-                reduced_loss_gate = reduce_tensor(loss_gate)
-                reduced_loss_KLD = reduce_tensor(loss_KLD)
-                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv)
-                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv)
-                reduced_loss_att_means = reduce_tensor(loss_att_means)
-                reduced_loss = reduce_tensor(loss)
+                reduced_loss_mel = reduce_tensor(loss_mel).item()
+                reduced_loss_gate = reduce_tensor(loss_gate).item()
+                reduced_loss_KLD = reduce_tensor(loss_KLD).item()
+                reduced_loss_spk_adv = reduce_tensor(loss_spk_adv).item()
+                reduced_loss_emo_adv = reduce_tensor(loss_emo_adv).item()
+                reduced_loss_att_means = reduce_tensor(loss_att_means).item()
+                reduced_loss = reduce_tensor(loss).item()
                 gate_accuracy = reduce_scalar(gate_accuracy)
                 gate_mae = reduce_scalar(gate_mae)
                 mean_far = reduce_scalar(mean_far)
