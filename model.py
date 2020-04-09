@@ -858,6 +858,7 @@ class Tacotron2(nn.Module):
         return outputs
 
     def inference(self, text_inputs, speakers, emotion_vectors):
+        emotion_vectors = emotion_vectors.type(self.float_dtype)
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         speaker_embeddings = self.speaker_embedding_layer(speakers)
