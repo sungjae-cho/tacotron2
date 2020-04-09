@@ -715,6 +715,8 @@ class Tacotron2(nn.Module):
         self.emotion_adversarial_training = hparams.emotion_adversarial_training
         self.mask_padding = hparams.mask_padding
         self.fp16_run = hparams.fp16_run
+        self.int_dtype = torch.long
+        self.float_dtype = torch.float32
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
         self.embedding = nn.Embedding(
