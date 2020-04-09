@@ -21,6 +21,7 @@ def plot_alignment_to_numpy(alignment, encoding_len=None, decoding_len=None, inf
     list_xticks = sorted(list(range(0, max_mel_len+1, step=100)) + [decoding_len])
     plt.xticks(ticks=x, rotation=45)
     '''
+    alignment = alignment.astype(np.float32) # casting required when fp16_run.
     if encoding_len is None:
         encoding_len = alignment.shape[0]
     if decoding_len is  None:
@@ -50,6 +51,7 @@ def plot_alignment_to_numpy(alignment, encoding_len=None, decoding_len=None, inf
 
 
 def plot_spectrogram_to_numpy(spectrogram):
+    spectrogram = spectrogram.astype(np.float32) # casting required when fp16_run.
     fig, ax = plt.subplots(figsize=(12, 3))
     im = ax.imshow(spectrogram, aspect="auto", origin="lower",
                    interpolation='none')
