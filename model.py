@@ -926,7 +926,10 @@ class ResidualEncoder(nn.Module):
         avg_pooled = torch.mean(out_lstm, dim=1) # avg_pooled.shape == [batch, 2*256]
 
         mu = self.linear_proj_mean(avg_pooled)
-        logvar = self.linear_proj_logvar(avg_pooled)
+        log_epsilon = self.linear_proj_logvar(avg_pooled)
+        var = torch.exp(log_epsilon) + self.hparams.std_lower_bound**2
+        logvar = torch.log(var)
+
         residual_encoding = self.reparameterize(mu, logvar)
 
         return residual_encoding, mu, logvar
