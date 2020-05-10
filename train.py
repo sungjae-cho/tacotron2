@@ -152,19 +152,21 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger, ran
     else:
         lr_scheduler.load_state_dict({'base_lrs':[learning_rate]})
     iteration = checkpoint_dict['iteration']
+    float_epoch = checkpoint_dict['float_epoch']
     print("Loaded checkpoint '{}' from iteration {}" .format(
         checkpoint_path, iteration))
     if rank == 0:
         dict_vars = checkpoint_dict['training_epoch_variables']
         logger.set_training_epoch_variables(dict_vars)
-    return model, optimizer, learning_rate, iteration
+    return model, optimizer, learning_rate, iteration, float_epoch
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, lr_scheduler,
+def save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch, lr_scheduler,
         logger, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
         iteration, filepath))
     torch.save({'iteration': iteration,
+                'float_epoch': float_epoch,
                 'state_dict': model.state_dict(),
                 'optimizer': optimizer.state_dict(),
                 'learning_rate': learning_rate,
@@ -269,6 +271,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
             # sample to synthesize\
             i_valset = random.randint(0, len(valset) - 1)
+            i_batch_rand, i_sample_rand = divmod(i_valset, hparams.batch_size)
 
             #sample_with_worst_attention_quality
             min_attention_quality_tf = 2
@@ -522,8 +525,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
 
                     # [SynthDict 1] A random sample.
-                    gathered_batch_size = text_padded.size(0)
-                    i_batch_rand, i_sample_rand = divmod(i_valset, gathered_batch_size)
                     if i == i_batch_rand:
                         i_rand = i_sample_rand
                         # (i, i_rand) == (0, 0) is a random sample
@@ -721,12 +722,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             model = warm_start_model(
                 checkpoint_path, model, hparams.ignore_layers)
         else:
-            model, optimizer, _learning_rate, iteration = load_checkpoint(
+            model, optimizer, _learning_rate, iteration, float_epoch = load_checkpoint(
                 checkpoint_path, model, optimizer, lr_scheduler, logger, rank)
             if hparams.use_saved_learning_rate:
                 learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
-            epoch_offset = max(0, int(iteration / len(train_loader)))
+            epoch_offset = max(0, int(float_epoch))
 
     if pretrained_path is not None:
         model = load_pretrained_model(model, pretrained_path,
@@ -749,7 +750,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
         for i, batch in enumerate(train_loader):
             batches_per_epoch = len(train_loader)
-            float_epoch = iteration / (batches_per_epoch * n_gpus)
+            float_epoch = epoch + i / len(train_loader)
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
                 param_group['lr'] = lr_scheduler.get_lr()[0]
@@ -1002,12 +1003,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
-                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                    save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch+1))
-                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                    save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
 
             tmp_iteration = iteration
@@ -1018,7 +1019,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if rank == 0:
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
-                    save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration,
+                    save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
                 sys.exit(0)
 
