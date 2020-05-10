@@ -858,14 +858,15 @@ class Tacotron2(nn.Module):
         return outputs
 
     def inference(self, text_inputs, speakers, emotion_vectors):
-        emotion_vectors = emotion_vectors.type(self.float_dtype)
+        if self.fp16_run:
+            emotion_vectors = emotion_vectors.type(self.float_dtype)
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         speaker_embeddings = self.speaker_embedding_layer(speakers)
         emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
         if self.hparams.residual_encoder:
             batch_size = text_inputs.size(0)
-            residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
+            residual_encoding = self.residual_encoder.inference(batch_size, emotion_vectors.dtype)
         else:
             residual_encoding = None
 
