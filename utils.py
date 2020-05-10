@@ -374,7 +374,7 @@ def hard_clip(input):
 def soft_clip(input, p=10):
     return torch.log(1 + torch.exp(p * input)) / p - torch.log(1 + torch.exp(p * (input - 1))) / p
 
-def get_clsf_report(confusion_matrix, target_names):
+def get_clsf_report(confusion_matrix, target_names, all_target_names):
     report_dict = dict()
     cm = confusion_matrix
 
@@ -383,7 +383,7 @@ def get_clsf_report(confusion_matrix, target_names):
     report_dict['accuracy'] = accuracy
 
     for str_target in  target_names:
-        i_class = target_names.index(str_target)
+        i_class = all_target_names.index(str_target)
         tp = cm[i_class, i_class]
         tn = cm[i_class,:].sum() - tp
         fp = cm[:,i_class].sum() - tp
