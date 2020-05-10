@@ -259,6 +259,7 @@ class Tacotron2Logger(SummaryWriter):
         losses = dict_log_values['losses']
         grad_norm = dict_log_values['grad_norm']
         learning_rate = dict_log_values['learning_rate']
+        KLD_weight = dict_log_values['KLD_weight']
         duration = dict_log_values['duration']
         x = dict_log_values['x']
         etc = dict_log_values['etc']
@@ -332,6 +333,7 @@ class Tacotron2Logger(SummaryWriter):
                    "train/gate_mean_absolute_error":gate_mae,
                    "train/grad_norm": grad_norm,
                    "train/learning_rate": learning_rate,
+                   "train/KLD_weight": KLD_weight,
                    "train/iter_duration": duration,
                    "train/mean_forward_attention_ratio":mean_far,
                    "train/mean_attention_ratio":mean_ar,

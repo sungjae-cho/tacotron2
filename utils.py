@@ -408,3 +408,52 @@ def get_clsf_report(confusion_matrix, target_names):
         }
 
     return report_dict
+
+def get_KLD_weight(iteration, hparams):
+    if hparams.KLD_weight_scheduling == 'fixed':
+        return hparams.res_en_KLD_weight
+    elif hparams.KLD_weight_scheduling == 'pulse':
+        return get_pulse_KLD_weight(iteration, hparams)
+    elif hparams.KLD_weight_scheduling == 'cycle_linear':
+        return get_cycle_linear_KLD_weight(iteration, hparams)
+
+
+def get_pulse_KLD_weight(iteration, hparams):
+    '''
+    Rference source: https://github.com/rishikksh20/gmvae_tacotron/blob/master/tacotron/utils/util.py#L24
+    Adapt the refence source to built-in functions.
+    '''
+    warm_up_step = hparams.KLD_weight_warm_up_step
+    init_KLD_weight = hparams.init_KLD_weight
+    KLD_weight_cof = hparams.KLD_weight_cof
+
+    # Get w1.
+    w1 = 0.0
+    if iteration <= warm_up_step:
+        if (iteration % 100) < 1:
+            w1 = init_KLD_weight + (iteration / 100  * KLD_weight_cof)
+
+    # Get w2.
+    w2 = 0.0
+    if iteration > warm_up_step:
+        if (iteration % 400) < 1:
+            w2 = init_KLD_weight + ((iteration - warm_up_step) / 400 * KLD_weight_cof) + (warm_up_step / 100 * KLD_weight_cof)
+
+    return np.max([w1, w2])
+
+def get_cycle_linear_KLD_weight(iteration, hparams):
+    period = hparams.cycle_KLDW_period
+    ratio = hparams.cycle_KLDW_ratio
+    start = hparams.cycle_KLDW_min
+    stop = hparams.cycle_KLDW_max
+
+    early_period = int(period * ratio)
+    iter_in_period = iteration % period
+
+    if iter_in_period < early_period:
+        gradient = (stop - start) / early_period
+        KLD_weight = iter_in_period * gradient
+    else:
+        KLD_weight = stop
+
+    return KLD_weight

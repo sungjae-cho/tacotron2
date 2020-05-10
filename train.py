@@ -25,7 +25,8 @@ from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
 from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
-from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model, get_clsf_report
+from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model, get_clsf_report, \
+    get_KLD_weight
 
 def reduce_tensor(tensor, reduce_op='mean'):
     rt = tensor.cuda().detach().clone()
@@ -803,6 +804,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             else:
                 loss_att_means = torch.zeros(1).cuda()
 
+            hparams.res_en_KLD_weight = get_KLD_weight(iteration, hparams)
             loss = loss_taco2 + \
                 hparams.res_en_KLD_weight * loss_KLD + \
                 hparams.speaker_adv_weight * loss_spk_adv + \
@@ -938,6 +940,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'losses':reduced_losses,
                     'grad_norm':grad_norm,
                     'learning_rate':learning_rate,
+                    'KLD_weight':hparams.res_en_KLD_weight,
                     'duration':duration,
                     'x':x,
                     'etc':etc,

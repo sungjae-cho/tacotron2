@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from text import symbols
 
 
@@ -105,7 +106,19 @@ def create_hparams(hparams_string=None, verbose=False):
         res_en_conv_kernels=512,
         res_en_conv_kernel_size=3,
         res_en_lstm_dim=256,
-        res_en_KLD_weight=1.0,
+        std_lower_bound=np.exp(-2),
+        KLD_weight_scheduling='fixed', # ['fixed', 'pulse', 'cycle_linear']
+        ## fixed KLD weight (KLD_weight_scheduling == 'pulse_KLD_weight') hparams
+        res_en_KLD_weight=1e-3,
+        ## pulse KLD weight (KLD_weight_scheduling == 'pulse_KLD_weight') hparams
+        KLD_weight_warm_up_step=15000,
+        init_KLD_weight=0.001,
+        KLD_weight_cof=0.002,
+        ## cyclic linear KLD weight (KLD_weight_scheduling == 'pulse_KLD_weight') hparams
+        cycle_KLDW_period=10000,
+        cycle_KLDW_ratio=0.5,
+        cycle_KLDW_min=0.0,
+        cycle_KLDW_max=1e-5,
 
         # Decoder parameters
         n_frames_per_step=1,  # currently only 1 is supported
