@@ -205,9 +205,15 @@ class Tacotron2Logger(SummaryWriter):
         np_mel_true = plot_spectrogram_to_numpy(mel_true.detach().cpu().numpy())
         np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.detach().cpu().numpy())
         np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.detach().cpu().numpy())
-        np_wav_true = self.mel2wav(mel_true.unsqueeze(0).cuda().half())
-        np_wav_tf = self.mel2wav(mel_output_tf.unsqueeze(0).cuda().half())
-        np_wav_fr = self.mel2wav(mel_output_fr.unsqueeze(0).cuda().half())
+        if mel_true.dim() == 2:
+            mel_true = mel_true.unsqueeze(0)
+        if mel_output_tf.dim() == 2:
+            mel_output_tf = mel_output_tf.unsqueeze(0)
+        if mel_output_fr.dim() == 2:
+            mel_output_fr = mel_output_fr.unsqueeze(0)
+        np_wav_true = self.mel2wav(mel_true.cuda().half())
+        np_wav_tf = self.mel2wav(mel_output_tf.cuda().half())
+        np_wav_fr = self.mel2wav(mel_output_fr.cuda().half())
 
         alignment_tf = synth_dict['alignment_tf']
         alignment_fr = synth_dict['alignment_fr']
