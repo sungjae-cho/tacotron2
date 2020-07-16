@@ -3,7 +3,7 @@ import re
 import random
 from text import cleaners
 from text.symbols import symbols
-
+from text import cmudict
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
@@ -21,7 +21,7 @@ def get_arpabet(word, dictionary):
     return word
 
 
-def text_to_sequence(text, cleaner_names, dictionary=None, p_arpabet=1.0):
+def text_to_sequence(text, cleaner_names, dictionary=cmudict, p_arpabet=1.0):
   '''Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
 
     The text can optionally have ARPAbet sequences enclosed in curly braces embedded
