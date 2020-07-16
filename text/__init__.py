@@ -4,6 +4,7 @@ import random
 from text import cleaners
 from text.symbols import symbols
 from text import cmudict
+from g2p_en import G2p
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
@@ -12,6 +13,8 @@ _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
 
+# Init g2p for memory efficiency
+g2p = G2p()
 
 def get_arpabet(word, dictionary):
   word_arpabet = dictionary.lookup(word)
@@ -19,6 +22,17 @@ def get_arpabet(word, dictionary):
     return "{" + word_arpabet[0] + "}"
   else:
     return word
+
+def get_g2p_en_seq(text):
+  sequence = []
+  p_symbols_list = g2p(clean_text)
+  for p_symbol in p_symbols_list:
+    if p_symbol in cmudict.valid_symbols:
+      sequence += _arpabet_to_sequence(p_symbol)
+    else:
+      sequence += _symbols_to_sequence(p_symbol)
+
+  return sequence
 
 
 def text_to_sequence(text, cleaner_names, dictionary=cmudict, p_arpabet=1.0):
@@ -35,8 +49,12 @@ def text_to_sequence(text, cleaner_names, dictionary=cmudict, p_arpabet=1.0):
     Returns:
       List of integers corresponding to the symbols in the text
   '''
-  sequence = []
+  if dictionary == 'g2p_en':
+    clean_text = _clean_text(text, cleaner_names)
+    sequence = get_g2p_en_seq(clean_text)
+    return sequence
 
+  sequence = []
   space = _symbols_to_sequence(' ')
   # Check for curly braces and treat their contents as ARPAbet:
   while len(text):
