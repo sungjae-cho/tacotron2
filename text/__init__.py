@@ -43,7 +43,7 @@ def text_to_sequence(text, cleaner_names, dictionary=None, p_arpabet=1.0):
     m = _curly_re.match(text)
     if not m:
       clean_text = _clean_text(text, cleaner_names)
-      if cmudict is not None:
+      if dictionary is not None:
         clean_text = [get_arpabet(w, dictionary)
                       if random.random() < p_arpabet else w
                       for w in clean_text.split(" ")]
