@@ -1,14 +1,13 @@
-from text.symbols import _pad, _punctuation, _special, _letters, _arpabet
+from text.symbols import _pad, _punctuation, _blank, _special, _letters, _arpabet
 from text import _id_to_symbol
 
 """
 _pad        = '_'
-_punctuation = '!\'(),.:;? '
+_punctuation = '!\'(),.:;?'
+_blank = ' '
 _special = '-'
 _letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 """
-
-_blank = ' '
 
 def find_letter_locations(text_sequence):
     '''
@@ -42,7 +41,7 @@ def find_punctuation_locations(text_sequence):
     -----
     locations: int list. A sorted list of punctuation indices.
     '''
-    punctuation = _punctuation.replace(_blank, '') + _special
+    punctuation = _punctuation + _special
     locations = list()
     for i in range(len(text_sequence)):
         symbol_id = text_sequence[i]

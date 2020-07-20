@@ -8,7 +8,8 @@ from text import cmudict
 import string
 
 _pad        = '_'
-_punctuation = '!\'(),.:;? '
+_punctuation = '!\'(),.:;?'
+_blank = ' '
 _special = '-'
 #_letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 _letters = string.ascii_uppercase + string.ascii_lowercase
@@ -17,4 +18,4 @@ _letters = string.ascii_uppercase + string.ascii_lowercase
 _arpabet = ['@' + s for s in cmudict.valid_symbols]
 
 # Export all symbols:
-symbols = [_pad] + list(_special) + list(_punctuation) + list(_letters) + _arpabet
+symbols = [_pad] + list(_special) + list(_punctuation) + list(_blank) + list(_letters) + _arpabet
