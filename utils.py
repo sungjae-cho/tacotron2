@@ -4,6 +4,8 @@ from scipy.io.wavfile import read
 import torch
 import pandas as pd
 import torch.nn.functional as F
+from os import listdir
+from os.path import isfile, join
 
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
@@ -457,3 +459,22 @@ def get_cycle_linear_KLD_weight(iteration, hparams):
         KLD_weight = stop
 
     return KLD_weight
+
+def get_files(dir_path):
+    files = [f for f in listdir(dir_path) if isfile(join(dir_path, f))]
+    return files
+
+def get_checkpoint_iteration(checkpoint_name):
+    cp_iter = checkpoint_name.split('-')[0].split('_')[1]
+    return cp_iter
+
+def get_checkpoint_iter2path(outdir, prj_name, run_name, cp_iter):
+    cp_dir_path = join(outdir, prj_name, run_name)
+    cp_files = get_files(cp_dir_path)
+    for cp_file in cp_files:
+        i = get_checkpoint_iteration(cp_file)
+        if int(i) == int(cp_iter):
+            cp_path = join(cp_dir_path, cp_file)
+            break
+
+    return cp_path

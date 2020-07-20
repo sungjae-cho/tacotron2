@@ -26,7 +26,7 @@ from measures import forward_attention_ratio, attention_ratio, attention_range_r
 from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
 from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model, get_clsf_report, \
-    get_KLD_weight
+    get_KLD_weight, get_checkpoint_iter2path
 
 def reduce_tensor(tensor, reduce_op='mean'):
     rt = tensor.cuda().detach().clone()
@@ -1096,6 +1096,14 @@ if __name__ == '__main__':
     print("cuDNN Enabled:", hparams.cudnn_enabled)
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
     print("Visible GPU IDs:", args.visible_gpus)
+
+    # If checkpoint_path is given as a number, then the number is considered
+    # as an iteration number. Thus, convert that number to the checkpoint path.
+    if args.checkpoint_path.isnumeric():
+        args.checkpoint_path = get_checkpoint_iter2path(
+            args.output_directory, args.prj_name, args.run_name,
+            args.checkpoint_path)
+        print("Import the checkpoint from {}".format(args.checkpoint_path))
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.pretrained_path,
