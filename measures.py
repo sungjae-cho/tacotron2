@@ -164,7 +164,8 @@ def attention_ratio(alignments, input_lengths, text_padded,
                 continue
         text_length = input_lengths[i].item()
         text_sequence = text_padded[i,:text_length].view(1, -1)
-        text_string = sequence_to_text(text_sequence.squeeze().tolist())
+        #text_string = sequence_to_text(text_sequence.squeeze().tolist())
+        text_sequence_list = text_sequence.squeeze().tolist()
 
         alignment = alignments[i,:mel_length,:text_length]
         argmax_alignment = torch.argmax(alignment, dim=1)
@@ -175,7 +176,7 @@ def attention_ratio(alignments, input_lengths, text_padded,
         argmax_alignment_list = argmax_alignment.tolist()
 
         cnt_letters = 0
-        letter_locations = find_letter_locations(text_string)
+        letter_locations = find_letter_locations(text_sequence_list)
         for idx in letter_locations:
             if idx in argmax_alignment_list:
                 cnt_letters += 1
@@ -187,7 +188,7 @@ def attention_ratio(alignments, input_lengths, text_padded,
         batch_letter_attention_ratio[i] = letter_attention_ratio
 
         cnt_punct = 0
-        punct_locations = find_punctuation_locations(text_string)
+        punct_locations = find_punctuation_locations(text_sequence_list)
         for idx in punct_locations:
             if idx in argmax_alignment_list:
                 cnt_punct += 1
@@ -199,7 +200,7 @@ def attention_ratio(alignments, input_lengths, text_padded,
         batch_punct_attention_ratio[i] = punct_attention_ratio
 
         cnt_blanks = 0
-        blank_locations = find_blank_locations(text_string)
+        blank_locations = find_blank_locations(text_sequence_list)
         for idx in blank_locations:
             if idx in argmax_alignment_list:
                 cnt_blanks += 1
