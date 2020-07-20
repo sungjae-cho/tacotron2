@@ -40,6 +40,8 @@ def create_hparams(hparams_string=None, verbose=False):
             'ljspeech':'metadata/ljspeech.csv',
             'emovdb':'metadata/emovdb.csv'
         },
+        p_arpabet=1.0,
+        cmudict_path='text/cmu_dictionary',
         # All DBs to be used in the project
         all_dbs = ['ljspeech', 'emovdb'],
         # All speakers to be used in the project
@@ -72,6 +74,7 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         n_symbols=len(symbols),
         symbols_embedding_dim=512,
+        txt_type='g', # ['g', 'p_cmudict', 'p_g2p']
 
         # With modules
         speaker_adversarial_training=False,

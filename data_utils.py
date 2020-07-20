@@ -6,7 +6,8 @@ import torch.utils.data
 import layers
 from utils import load_wav_to_torch, load_filepaths_and_text, \
     load_wavpath_text_speaker_sex_emotion_lang, one_hot_encoding
-from text import text_to_sequence
+from text import text_to_sequence, cmudict
+from g2p_en import G2p
 
 
 class TextMelLoader(torch.utils.data.Dataset):
@@ -42,7 +43,13 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
 
-
+        if hparams.txt_type == 'g':
+            self.g2p_dictionary = None
+        elif hparams.txt_type == 'p_cmudict':
+            self.g2p_dictionary = cmudict.CMUDict(hparams.cmudict_path)
+        elif hparams.txt_type == 'p_g2p':
+            self.g2p_dictionary = G2p()
+            print("type(self.g2p_dictionary)",type(self.g2p_dictionary))
 
 
     def get_mel_text_pair(self, audiopath_and_text):
@@ -93,7 +100,9 @@ class TextMelLoader(torch.utils.data.Dataset):
         return melspec
 
     def get_text(self, text):
-        text_norm = torch.LongTensor(text_to_sequence(text, self.text_cleaners))
+        text_norm = torch.LongTensor(text_to_sequence(
+            text, self.text_cleaners, self.hparams.txt_type, self.g2p_dictionary,
+            self.hparams.p_arpabet))
         return text_norm
 
     def get_speaker(self, speaker):
@@ -140,6 +149,9 @@ class TextMelLoader(torch.utils.data.Dataset):
     def get_lang(self, lang):
         lang_tensor = torch.LongTensor(self.lang2int(lang))
         return lang_tensor
+
+    def get_g2p_dictionary(self):
+        return self.g2p_dictionary
 
     def emotion_tensor2str_emotion(self, emotion_tensor, is_input=True):
         if self.neutral_zero_vector and is_input:

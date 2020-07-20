@@ -4,7 +4,6 @@ import random
 from text import cleaners
 from text.symbols import symbols
 from text import cmudict
-from g2p_en import G2p
 
 # Mappings from symbol to numeric ID and vice versa:
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}
@@ -13,9 +12,6 @@ _id_to_symbol = {i: s for i, s in enumerate(symbols)}
 # Regular expression matching text enclosed in curly braces:
 _curly_re = re.compile(r'(.*?)\{(.+?)\}(.*)')
 
-# Init g2p for memory efficiency
-g2p = G2p()
-
 def get_arpabet(word, dictionary):
   word_arpabet = dictionary.lookup(word)
   if word_arpabet is not None:
@@ -23,9 +19,9 @@ def get_arpabet(word, dictionary):
   else:
     return word
 
-def get_g2p_en_seq(text):
+def get_g2p_en_seq(text, dictionary):
   sequence = []
-  p_symbols_list = g2p(clean_text)
+  p_symbols_list = dictionary(text)
   for p_symbol in p_symbols_list:
     if p_symbol in cmudict.valid_symbols:
       sequence += _arpabet_to_sequence(p_symbol)
@@ -35,7 +31,7 @@ def get_g2p_en_seq(text):
   return sequence
 
 
-def text_to_sequence(text, cleaner_names, dictionary=cmudict, p_arpabet=1.0):
+def text_to_sequence(text, cleaner_names, txt_type='g', dictionary=None, p_arpabet=1.0):
   '''Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
 
     The text can optionally have ARPAbet sequences enclosed in curly braces embedded
@@ -44,14 +40,19 @@ def text_to_sequence(text, cleaner_names, dictionary=cmudict, p_arpabet=1.0):
     Args:
       text: string to convert to a sequence
       cleaner_names: names of the cleaner functions to run the text through
+      txt_type: text types ['g', 'p_cmudict', 'p_g2p']
+      - 'g': grapheme
+      - 'p_cmudict': phoneme with being mapped by p_cmudict
+      - 'p_g2p': phoneme with being mapped by g2p_en
       dictionary: arpabet class with arpabet dictionary
+      p_arpabet: probability to have an arpabet instead of a character.
 
     Returns:
       List of integers corresponding to the symbols in the text
   '''
-  if dictionary == 'g2p_en':
+  if txt_type == 'p_g2p':
     clean_text = _clean_text(text, cleaner_names)
-    sequence = get_g2p_en_seq(clean_text)
+    sequence = get_g2p_en_seq(clean_text, dictionary)
     return sequence
 
   sequence = []

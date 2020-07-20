@@ -705,7 +705,10 @@ class Tacotron2Logger(SummaryWriter):
                 text = hparams.test_text
                 for speaker in hparams.speakers:
                     for emotion in hparams.emotions:
-                        sequence = np.array(text_to_sequence(text, hparams.text_cleaners))[None, :]
+                        g2p_dictionary = valset.get_g2p_dictionary()
+                        sequence = np.array(
+                            text_to_sequence(text, hparams.text_cleaners,
+                                hparams.txt_type, g2p_dictionary))[None, :]
                         sequence = torch.autograd.Variable(torch.from_numpy(sequence)).cuda().long()
                         text_len = sequence.size(1)
                         speaker_int = valset.speaker2int(speaker)
