@@ -10,6 +10,7 @@ from utils import to_gpu, get_mask_from_lengths
 import time
 from utils import get_spk_adv_inputs, get_emo_adv_inputs
 from utils import hard_clip, soft_clip
+from utils import discretize_att_w
 
 
 class LocationLayer(nn.Module):
@@ -68,7 +69,7 @@ class Attention(nn.Module):
         return energies
 
     def forward(self, attention_hidden_state, memory, processed_memory,
-                attention_weights_cat, mask):
+            attention_weights_cat, mask, discrete_attention_weight=False):
         """
         PARAMS
         ------
@@ -85,6 +86,11 @@ class Attention(nn.Module):
             alignment.data.masked_fill_(mask, self.score_mask_value)
 
         attention_weights = F.softmax(alignment, dim=1)
+        if ((discrete_attention_weight and isinstance(discrete_attention_weight, bool))
+            or isinstance(discrete_attention_weight, list)):
+            # size == (batch, max_text_step)
+            attention_weights = discretize_att_w(attention_weights,
+                discrete_attention_weight)
         attention_context = torch.bmm(attention_weights.unsqueeze(1), memory)
         attention_context = attention_context.squeeze(1)
 
@@ -525,7 +531,8 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments, attention_contexts
 
-    def decode(self, decoder_input, speaker_embedding, emotion_embedding, residual_encoding):
+    def decode(self, decoder_input, speaker_embedding, emotion_embedding,
+            residual_encoding, discrete_attention_weight=False):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -555,7 +562,7 @@ class Decoder(nn.Module):
              self.attention_weights_cum.unsqueeze(1)), dim=1)
         self.attention_context, self.attention_weights = self.attention_layer(
             self.attention_hidden, self.memory, self.processed_memory,
-            attention_weights_cat, self.mask)
+            attention_weights_cat, self.mask, discrete_attention_weight)
 
         self.attention_weights_cum += self.attention_weights
 
@@ -581,8 +588,9 @@ class Decoder(nn.Module):
         return decoder_output, gate_prediction, self.attention_weights, self.attention_context
 
     def forward(self, memory, memory_lengths,
-        speaker_embeddings, emotion_embeddings, residual_encoding,
-        decoder_inputs=None, teacher_forcing=True):
+            speaker_embeddings, emotion_embeddings, residual_encoding,
+            decoder_inputs=None, teacher_forcing=True,
+            discrete_attention_weight=False):
         """ Decoder forward pass for training
         PARAMS
         ------
@@ -625,12 +633,12 @@ class Decoder(nn.Module):
         else:
             fr_outputs = self.free_running(memory, memory_lengths,
                 speaker_embeddings, emotion_embeddings,
-                residual_encoding)
+                residual_encoding, discrete_attention_weight)
 
             return fr_outputs
 
     def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors,
-            residual_encoding):
+            residual_encoding, discrete_attention_weight=False):
         """ Decoder inference
         PARAMS
         ------
@@ -655,7 +663,8 @@ class Decoder(nn.Module):
         while len(mel_outputs) < self.max_decoder_steps:
             decoder_input = self.prenet(decoder_input)
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
-                speaker_indices, emotion_vectors, residual_encoding)
+                speaker_indices, emotion_vectors, residual_encoding,
+                discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
@@ -667,7 +676,8 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def inference(self, memory, speaker_indices, emotion_vectors, residual_encoding):
+    def inference(self, memory, speaker_indices, emotion_vectors, residual_encoding,
+            discrete_attention_weight=False):
         """ Decoder inference
         PARAMS
         ------
@@ -687,7 +697,8 @@ class Decoder(nn.Module):
         while True:
             decoder_input = self.prenet(decoder_input)
             mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
-                speaker_indices, emotion_vectors, residual_encoding)
+                speaker_indices, emotion_vectors, residual_encoding,
+                discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
@@ -775,7 +786,8 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs, speakers, emotion_vectors,
-            teacher_forcing=True, zero_res_en=False):
+            teacher_forcing=True, zero_res_en=False,
+            discrete_attention_weight=False):
         self.int_dtype = speakers.dtype
         self.float_dtype = emotion_vectors.dtype
         if teacher_forcing:
@@ -828,11 +840,13 @@ class Tacotron2(nn.Module):
                     att_means)
         else:
             text_inputs, text_lengths = inputs
-            fr_outputs = self.free_running(text_inputs, text_lengths, speakers, emotion_vectors)
+            fr_outputs = self.free_running(text_inputs, text_lengths, speakers, emotion_vectors,
+                discrete_attention_weight)
 
             return fr_outputs
 
-    def free_running(self, text_inputs, text_lengths, speakers, emotion_vectors):
+    def free_running(self, text_inputs, text_lengths, speakers, emotion_vectors,
+            discrete_attention_weight=False):
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         speaker_embeddings = self.speaker_embedding_layer(speakers)
@@ -847,7 +861,8 @@ class Tacotron2(nn.Module):
             encoder_outputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
-            teacher_forcing=False)
+            teacher_forcing=False,
+            discrete_attention_weight=discrete_attention_weight)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -857,7 +872,8 @@ class Tacotron2(nn.Module):
 
         return outputs
 
-    def inference(self, text_inputs, speakers, emotion_vectors):
+    def inference(self, text_inputs, speakers, emotion_vectors,
+            discrete_attention_weight=False):
         if self.fp16_run:
             emotion_vectors = emotion_vectors.type(self.float_dtype)
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
@@ -871,7 +887,8 @@ class Tacotron2(nn.Module):
             residual_encoding = None
 
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
-            encoder_outputs, speaker_embeddings, emotion_embeddings, residual_encoding)
+            encoder_outputs, speaker_embeddings, emotion_embeddings, residual_encoding,
+            discrete_attention_weight)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet

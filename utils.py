@@ -478,3 +478,31 @@ def get_checkpoint_iter2path(outdir, prj_name, run_name, cp_iter):
             break
 
     return cp_path
+
+def discretize_att_w(attention_weights, discrete_bound=False):
+    '''
+    PARAMS
+    -----
+    attention_weights: Attention weights of one batch.
+    - torch.Tensor. Size == (batches, max_encoding_steps).
+    discrete_bound: list. float. length == 2.
+    - discrete_bound[0]: whether to discretize nonmax values.
+    - discrete_bound[1]: whether to discretize the max values.
+
+    RETURNS
+    -----
+    discrete_att_w: Discretized attention weights of one batch.
+    - torch.Tensor. Size == (batches, max_encoding_steps).
+    '''
+    max_expanded = torch.max(attention_weights, dim=1).values.unsqueeze(-1).expand(attention_weights.size())
+    discrete_att_w = attention_weights
+    if isinstance(discrete_bound, bool) and discrete_bound:
+        discrete_att_w = discrete_att_w.masked_fill((attention_weights != max_expanded), 0)
+        discrete_att_w = discrete_att_w.masked_fill((attention_weights == max_expanded), 1)
+    if isinstance(discrete_bound, list):
+        if discrete_bound[0]:
+            discrete_att_w = discrete_att_w.masked_fill((attention_weights != max_expanded), 0)
+        if discrete_bound[1]:
+            discrete_att_w = discrete_att_w.masked_fill((attention_weights == max_expanded), 1)
+
+    return discrete_att_w
