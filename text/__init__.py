@@ -31,6 +31,20 @@ def get_g2p_en_seq(text, dictionary):
 
   return sequence
 
+def text_to_cmu_arpabets(text, cleaner_names=['english_cleaners']):
+  text = _clean_text(text, cleaner_names)
+  text = text.replace('-', ' - ')
+  dictionary = cmudict.CMUDict('text/cmu_dictionary')
+  cmu_arpabets = list()
+  for word in word_tokenize(text):
+    word_arpabet = dictionary.lookup(word)
+    if word_arpabet is not None:
+      arpabet = word_arpabet[0].split(' ')
+    else:
+      arpabet = [word]
+    cmu_arpabets += arpabet + [' ']
+
+  return cmu_arpabets[:-1]
 
 def text_to_sequence(text, cleaner_names, txt_type='g', dictionary=None, p_arpabet=1.0):
   '''Converts a string of text to a sequence of IDs corresponding to the symbols in the text.
