@@ -64,6 +64,7 @@ def text_to_sequence(text, cleaner_names, txt_type='g', dictionary=None, p_arpab
     if not m:
       clean_text = _clean_text(text, cleaner_names)
       if dictionary is not None:
+        clean_text = clean_text.replace('-', ' - ')
         clean_text = [get_arpabet(w, dictionary)
                       if random.random() < p_arpabet else w
                       for w in word_tokenize(clean_text)]
