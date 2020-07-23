@@ -1099,11 +1099,12 @@ if __name__ == '__main__':
 
     # If checkpoint_path is given as a number, then the number is considered
     # as an iteration number. Thus, convert that number to the checkpoint path.
-    if args.checkpoint_path.isnumeric():
-        args.checkpoint_path = get_checkpoint_iter2path(
-            args.output_directory, args.prj_name, args.run_name,
-            args.checkpoint_path)
-        print("Import the checkpoint from {}".format(args.checkpoint_path))
+    if args.checkpoint_path is not None:
+        if args.checkpoint_path.isnumeric():
+            args.checkpoint_path = get_checkpoint_iter2path(
+                args.output_directory, args.prj_name, args.run_name,
+                args.checkpoint_path)
+            print("Import the checkpoint from {}".format(args.checkpoint_path))
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
           args.pretrained_path,
