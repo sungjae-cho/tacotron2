@@ -82,6 +82,7 @@ def create_hparams(hparams_string=None, verbose=False):
         residual_encoder=False,
         monotonic_attention=False,
         val_tf_zero_res_en=False,
+        prosody_predictor='', # ['MLP', 'LSTM']
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,
@@ -103,6 +104,9 @@ def create_hparams(hparams_string=None, verbose=False):
         n_hidden_units=256,
         revgrad_lambda=1.0,
         revgrad_max_grad_norm=0.5,
+
+        # Prosody predictor Parameters
+        prosody_dim=512,
 
         # Residual encoder parameters
         res_en_out_dim=16,

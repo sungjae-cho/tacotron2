@@ -389,6 +389,16 @@ class Decoder(nn.Module):
             self.decoder_rnn_input_dim,
             hparams.decoder_rnn_dim, 1)
 
+        if hparams.prosody_predictor:
+            self.prosody_dim = hparams.prosody_dim
+            if hparams.prosody_predictor == 'MLP':
+                self.prosody_predictor = ProsodyPredictorMLP(hparams)
+            elif hparams.prosody_predictor == 'LSTM':
+                self.prosody_predictor = ProsodyPredictorLSTMCell(hparams)
+            else:
+                print("Incorrect input for prosody_predictor.")
+                exit()
+
         self.linear_projection = LinearNorm(
             hparams.decoder_rnn_dim + hparams.encoder_embedding_dim,
             hparams.n_mel_channels * hparams.n_frames_per_step)
@@ -418,6 +428,8 @@ class Decoder(nn.Module):
             decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
             if self.hparams.residual_encoder:
                 decoder_rnn_input_dim += self.hparams.res_en_out_dim
+            if self.hparams.prosody_predictor:
+                decoder_rnn_input_dim += self.hparams.prosody_dim
 
         return decoder_rnn_input_dim
 
@@ -454,6 +466,12 @@ class Decoder(nn.Module):
         """
         B = memory.size(0)
         MAX_TIME = memory.size(1)
+
+        if self.hparams.prosody_predictor:
+            self.prosody_hidden = Variable(memory.data.new(
+                B, self.prosody_dim).zero_())
+            self.prosody_cell = Variable(memory.data.new(
+                B, self.prosody_dim).zero_())
 
         self.attention_hidden = Variable(memory.data.new(
             B, self.attention_rnn_dim).zero_())
@@ -566,12 +584,27 @@ class Decoder(nn.Module):
 
         self.attention_weights_cum += self.attention_weights
 
+        if self.hparams.prosody_predictor:
+            detached_attention_context = self.attention_context.detach()
+            pp_inputs = [detached_attention_context, speaker_embedding,
+                emotion_embedding]
+            pp_input = torch.cat(pp_inputs, -1)
+            if self.hparams.prosody_predictor == 'MLP':
+                self.prosody_hidden = self.prosody_predictor(pp_input)
+            elif self.hparams.prosody_predictor == 'LSTM':
+                self.prosody_hidden, self.prosody_cell = self.prosody_predictor(
+                    pp_input, (self.prosody_hidden, self.prosody_cell))
+                self.prosody_hidden = F.dropout(
+                    self.prosody_hidden, self.p_decoder_dropout, self.training)
+
         decoder_inputs = [self.attention_hidden, self.attention_context]
         if self.has_style_token_lstm_2:
             decoder_inputs.append(speaker_embedding)
             decoder_inputs.append(emotion_embedding)
             if self.hparams.residual_encoder:
                 decoder_inputs.append(residual_encoding)
+            if self.hparams.prosody_predictor:
+                decoder_inputs.append(self.prosody_hidden)
         decoder_input = torch.cat(decoder_inputs, -1)
 
         self.decoder_hidden, self.decoder_cell = self.decoder_rnn(
@@ -1105,3 +1138,41 @@ class GradientReverse(torch.autograd.Function):
         if grad_norm > GradientReverse.max_grad_norm:
             grad_output = grad_output / grad_norm * GradientReverse.max_grad_norm
         return grad_output
+
+
+class ProsodyPredictorMLP(nn.Module):
+    def __init__(self, hparams):
+        super(ProsodyPredictorMLP, self).__init__()
+        self.hparams = hparams
+        in_dim = (hparams.encoder_embedding_dim
+            + hparams.emotion_embedding_dim
+            + hparams.speaker_embedding_dim)
+        out_dim = hparams.prosody_dim
+        self.linear1 = LinearNorm(in_dim, hparams.encoder_embedding_dim,
+            bias=True, w_init_gain='relu')
+        self.linear2 = LinearNorm(hparams.encoder_embedding_dim, hparams.encoder_embedding_dim,
+            bias=True, w_init_gain='relu')
+        self.linear3 = LinearNorm(hparams.encoder_embedding_dim, out_dim,
+            bias=True, w_init_gain='tanh')
+
+    def forward(self, inputs):
+        h1 = self.linear1(inputs)
+        h2 = self.linear2(h1)
+        outputs = self.linear3(h2)
+
+        return outputs
+
+
+class ProsodyPredictorLSTMCell(nn.Module):
+    def __init__(self, hparams):
+        super(ProsodyPredictorLSTMCell, self).__init__()
+        self.hparams = hparams
+        in_dim = (hparams.encoder_embedding_dim
+            + hparams.emotion_embedding_dim
+            + hparams.speaker_embedding_dim)
+        out_dim = hparams.prosody_dim
+        self.cell = nn.LSTMCell(in_dim, out_dim)
+
+    def forward(self, inputs, h_c):
+        outputs = self.cell(inputs, h_c)
+        return outputs
