@@ -11,6 +11,7 @@ import time
 from utils import get_spk_adv_inputs, get_emo_adv_inputs
 from utils import hard_clip, soft_clip
 from utils import discretize_att_w
+from coordconv import CoordConv2d
 
 
 class LocationLayer(nn.Module):
@@ -1176,3 +1177,106 @@ class ProsodyPredictorLSTMCell(nn.Module):
     def forward(self, inputs, h_c):
         outputs = self.cell(inputs, h_c)
         return outputs
+
+
+class ReferenceEncoder(nn.Module):
+    '''
+    inputs --- [N, Ty/r, n_mels*r]  mels
+    outputs --- ([N, seq_len, ref_enc_gru_size], [N, ref_enc_gru_size])
+    '''
+    def __init__(self, hparams):
+        super(ReferenceEncoder, self)).__init__()
+        K = len(hparams.ref_enc_filters)
+        filters = [1] + hparams.ref_enc_filters
+
+        #convs = [nn.Conv2d(in_channels=filters[i],
+        convs = [nn.CoordConv2d(in_channels=filters[i],
+                                out_channels=filters[i + 1],
+                                kernel_size=(3, 3),
+                                stride=hparams.ref_enc_strides,
+                                #stride=(2, 2),
+                                padding=hparams.ref_enc_pad) for i in range(K)]
+        self.convs = nn.ModuleList(convs)
+        self.bns = nn.ModuleList(
+            [nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i])
+             for i in range(K)])
+
+        out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        self.gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
+                          hidden_size=hparams.ref_enc_gru_size,
+                          batch_first=True)
+        self.n_mel_channels = hparams.n_mel_channels
+        self.ref_enc_gru_size = hparams.ref_enc_gru_size
+
+    def forward(self, inputs, input_lengths=None):
+        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out)
+            out = bn(out)
+            out = F.relu(out)
+
+        out = out.transpose(1, 2)  # [N, Ty//2^K, 128, n_mels//2^K]
+        N, T = out.size(0), out.size(1)
+        out = out.contiguous().view(N, T, -1)  # [N, Ty//2^K, 128*n_mels//2^K]
+
+        if input_lengths is not None:
+            input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
+            input_lengths = input_lengths.round().astype(int)
+            out = nn.utils.rnn.pack_padded_sequence(
+                        out, input_lengths, batch_first=True, enforce_sorted=False)
+
+        self.gru.flatten_parameters()
+        outputs, last_output = self.gru(out)
+        #_, out = self.gru(out)
+        return outputs, last_output
+        #return out.squeeze(0)
+
+    def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
+        for _ in range(n_convs):
+            L = (L - kernel_size + 2 * pad) // stride + 1
+        return L
+
+
+class ReferenceEncoder2(nn.Module):
+    '''
+    A lower part of ResidualEncoder
+    '''
+    def __init__(self, hparams):
+        super(ReferenceEncoder2, self).__init__()
+        self.hparams = hparams
+        self.conv_in_channels = hparams.n_mel_channels * hparams.n_frames_per_step
+        self.conv_out_channels = hparams.res_en_conv_kernels
+        self.lstm_hidden_size = hparams.res_en_lstm_dim
+        self.out_dim = hparams.res_en_out_dim
+        self.conv_kernel_size = hparams.res_en_conv_kernel_size
+        self.padding = (self.conv_kernel_size[0] // 2, self.conv_kernel_size[1] // 2)
+
+        self.conv2d_1 = torch.nn.CoordConv2d(in_channels=self.conv_in_channels,
+            out_channels=self.conv_out_channels,
+            kernel_size=self.conv_kernel_size, padding=self.padding)
+        self.bn1 = nn.BatchNorm2d(self.conv_out_channels)
+        self.conv2d_2 = torch.nn.CoordConv2d(in_channels=self.conv_out_channels,
+            out_channels=self.conv_out_channels,
+            kernel_size=self.conv_kernel_size, padding=self.padding)
+        self.bn2 = nn.BatchNorm2d(self.conv_out_channels)
+        self.bi_lstm = torch.nn.LSTM(input_size=self.conv_out_channels,
+            hidden_size=self.lstm_hidden_size, num_layers=2, batch_first=True,
+            bidirectional=True)
+
+    def forward(self, inputs):
+        """ Residual Encoder
+        PARAMS
+        ------
+        inputs: torch.Tensor. size == [batch_size, freq_len, time_len]. Mel spectrograms of mini-batch samples.
+
+        RETURNS
+        -------
+        out_lstm: torch.Tensor. size == [batch_size, seq_len, 2*256]. Prosody encoding at each Mel frame
+        """
+        inputs = inputs.unsqueeze(1) # Conv input should be [N, C, H, W]. [batch_size, 1, freq_len, time_len]
+        h_conv = F.relu(self.bn1(self.conv2d_1(inputs)))
+        out_conv = F.relu(self.bn2(self.conv2d_2(h_conv))) # out_conv.shape == [batch_size, 512, mel_step]
+        out_conv = out_conv.permute(0, 2, 1) # lstm gets inputs of shape [batch_size, seq_len, 2*256]
+        out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero. out_lstm.size == [batch_size, seq_len, 2*256]
+
+        return out_lstm

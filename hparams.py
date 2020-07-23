@@ -108,10 +108,18 @@ def create_hparams(hparams_string=None, verbose=False):
         # Prosody predictor Parameters
         prosody_dim=512,
 
+        # Reference encoder
+        with_gst=True,
+        ref_enc_filters=[32, 32, 64, 64, 128, 128],
+        ref_enc_size=[3, 3],
+        ref_enc_strides=[1, 1],
+        ref_enc_pad=[1, 1],
+        ref_enc_gru_size=128,
+
         # Residual encoder parameters
         res_en_out_dim=16,
         res_en_conv_kernels=512,
-        res_en_conv_kernel_size=3,
+        res_en_conv_kernel_size=(3,3),
         res_en_lstm_dim=256,
         std_lower_bound=np.exp(-2),
         KLD_weight_scheduling='fixed', # ['fixed', 'pulse', 'cycle_linear']
