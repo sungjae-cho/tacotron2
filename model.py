@@ -1207,6 +1207,14 @@ class ReferenceEncoder(nn.Module):
                           batch_first=True)
         self.n_mel_channels = hparams.n_mel_channels
         self.ref_enc_gru_size = hparams.ref_enc_gru_size
+        self.prosody_dim = hparams.prosody_dim
+
+        # 1dConv linear project at each step.
+        self.linear_projection = ConvNorm(
+            in_channels=self.ref_enc_gru_size,
+            out_channels=self.prosody_dim,
+            bias=False,
+            w_init_gain='relu')
 
     def forward(self, inputs, input_lengths=None):
         out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
@@ -1226,7 +1234,9 @@ class ReferenceEncoder(nn.Module):
                         out, input_lengths, batch_first=True, enforce_sorted=False)
 
         self.gru.flatten_parameters()
-        outputs, last_output = self.gru(out)
+        outputs, _ = self.gru(out)
+        outputs = F.relu(self.linear_projection(outputs))
+        last_output = outputs[-1,:,:]
         #_, out = self.gru(out)
         return outputs, last_output
         #return out.squeeze(0)
@@ -1263,6 +1273,13 @@ class ReferenceEncoder2(nn.Module):
             hidden_size=self.lstm_hidden_size, num_layers=2, batch_first=True,
             bidirectional=True)
 
+        # 1dConv linear project at each step.
+        self.linear_projection = ConvNorm(
+            in_channels=2*self.lstm_hidden_size,
+            out_channels=self.prosody_dim,
+            bias=False,
+            w_init_gain='relu')
+
     def forward(self, inputs):
         """ Residual Encoder
         PARAMS
@@ -1271,12 +1288,15 @@ class ReferenceEncoder2(nn.Module):
 
         RETURNS
         -------
-        out_lstm: torch.Tensor. size == [batch_size, seq_len, 2*256]. Prosody encoding at each Mel frame
+        out_lstm: torch.Tensor. size == [batch_size, seq_len, prosody_dim]. Prosody encoding at each Mel frame
         """
         inputs = inputs.unsqueeze(1) # Conv input should be [N, C, H, W]. [batch_size, 1, freq_len, time_len]
         h_conv = F.relu(self.bn1(self.conv2d_1(inputs)))
         out_conv = F.relu(self.bn2(self.conv2d_2(h_conv))) # out_conv.shape == [batch_size, 512, mel_step]
         out_conv = out_conv.permute(0, 2, 1) # lstm gets inputs of shape [batch_size, seq_len, 2*256]
         out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero. out_lstm.size == [batch_size, seq_len, 2*256]
+        out_lstm = out_lstm.transpose(1, 2) # [batch_size, 2*lstm_hidden_size, seq_len]
+        outputs = F.relu(self.linear_projection(out_lstm)) # [batch_size, prosody_dim, seq_len]
+        outputs = outputs.transpose(1, 2) # [batch_size, seq_len, prosody_dim]
 
-        return out_lstm
+        return outputs
