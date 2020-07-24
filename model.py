@@ -1181,7 +1181,7 @@ class ProsodyPredictorLSTMCell(nn.Module):
 
 class ReferenceEncoder1(nn.Module):
     '''
-    inputs --- [N, Ty, n_mels]  mels
+    inputs --- [N, n_mels, Ty]  mels
     outputs --- ([N, seq_len, ref_enc_gru_size], [N, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
@@ -1217,6 +1217,7 @@ class ReferenceEncoder1(nn.Module):
             w_init_gain='relu')
 
     def forward(self, inputs, input_lengths=None):
+        inputs = inputs.transpose(1, 2) # [N, Ty, n_mels] -> [N, n_mels, Ty]
         out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
         for conv, bn in zip(self.convs, self.bns):
             out = conv(out)
