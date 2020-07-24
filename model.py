@@ -1179,13 +1179,13 @@ class ProsodyPredictorLSTMCell(nn.Module):
         return outputs
 
 
-class ReferenceEncoder(nn.Module):
+class ReferenceEncoder1(nn.Module):
     '''
     inputs --- [N, Ty/r, n_mels*r]  mels
     outputs --- ([N, seq_len, ref_enc_gru_size], [N, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
-        super(ReferenceEncoder, self)).__init__()
+        super(ReferenceEncoder1, self)).__init__()
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
 
