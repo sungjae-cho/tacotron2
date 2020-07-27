@@ -107,7 +107,7 @@ def create_hparams(hparams_string=None, verbose=False):
         revgrad_max_grad_norm=0.5,
 
         # Prosody predictor Parameters
-        prosody_dim=512,
+        prosody_dim=4,
 
         # Reference encoder
         loss_ref_enc_weight=1.0,
