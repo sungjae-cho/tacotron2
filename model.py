@@ -533,7 +533,7 @@ class Decoder(nn.Module):
         gate_outpust: gate output energies
         alignments:
         """
-        # (T_out, B, context_dim) -> (T_out, B, context_dim)
+        # (T_out, B, context_dim) -> (B, T_out, context_dim)
         attention_contexts = torch.stack(attention_contexts).transpose(0, 1)
         # (T_out, B) -> (B, T_out)
         alignments = torch.stack(alignments).transpose(0, 1)
