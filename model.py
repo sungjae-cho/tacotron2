@@ -1201,7 +1201,8 @@ class ReferenceEncoder1(nn.Module):
             [nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i])
              for i in range(K)])
 
-        out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        #out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        out_channels = hparams.n_mel_channels
         self.gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
                           hidden_size=hparams.ref_enc_gru_size,
                           batch_first=True)
@@ -1236,7 +1237,9 @@ class ReferenceEncoder1(nn.Module):
 
         self.gru.flatten_parameters()
         outputs, _ = self.gru(out)
-        outputs = F.relu(self.linear_projection(outputs))
+        outputs = outputs.transpose(1, 2) #  [N, Ty, ref_enc_gru_size] -> [N, ref_enc_gru_size, Ty]
+        outputs = F.relu(self.linear_projection(outputs)) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
+        outputs = outputs.transpose(1, 2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
         last_output = outputs[-1,:,:]
         #_, out = self.gru(out)
         return outputs
