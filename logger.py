@@ -202,38 +202,37 @@ class Tacotron2Logger(SummaryWriter):
         text_sequence = synth_dict['text_sequence']
         text_string = sequence_to_text(text_sequence.tolist())
 
-        mel_true = synth_dict['mel_true']
-        mel_output_tf = synth_dict['mel_output_tf']
-        mel_output_fr = synth_dict['mel_output_fr']
-        np_mel_true = plot_spectrogram_to_numpy(mel_true.detach().cpu().numpy())
-        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.detach().cpu().numpy())
-        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.detach().cpu().numpy())
-        if mel_true.dim() == 2:
-            mel_true = mel_true.unsqueeze(0)
-        if mel_output_tf.dim() == 2:
-            mel_output_tf = mel_output_tf.unsqueeze(0)
-        if mel_output_fr.dim() == 2:
-            mel_output_fr = mel_output_fr.unsqueeze(0)
-        np_wav_true = self.mel2wav(mel_true.cuda().half())
-        np_wav_tf = self.mel2wav(mel_output_tf.cuda().half())
-        np_wav_fr = self.mel2wav(mel_output_fr.cuda().half())
-
-        alignment_tf = synth_dict['alignment_tf']
-        alignment_fr = synth_dict['alignment_fr']
-        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.detach().cpu().numpy().T)
-        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.detach().cpu().numpy().T)
-
+        # Strings to be used for logging
         caption_string = '[{speaker}|{emotion}] {text}'.format(
             speaker=speaker,
             emotion=str_emotion,
             text=text_string
         )
-
         log_prefix = "val/{speaker}/{emotion}/{synth_dict_type}".format(
             speaker=val_speaker, emotion=val_emotion, synth_dict_type=synth_dict_type)
+
+        # [1] Logging data for true data #######################################
+        mel_true = synth_dict['mel_true']
+        np_mel_true = plot_spectrogram_to_numpy(mel_true.detach().cpu().numpy())
+        if mel_true.dim() == 2:
+            mel_true = mel_true.unsqueeze(0)
+        np_wav_true = self.mel2wav(mel_true.cuda().half())
+
         wandb.log({
             "{}/true/mel".format(log_prefix): [wandb.Image(np_mel_true)],
             "{}/true/wav".format(log_prefix): [wandb.Audio(np_wav_true.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
+        }, step=iteration)
+
+        # [2] Logging data for teacher-forcing data ############################
+        mel_output_tf = synth_dict['mel_output_tf']
+        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.detach().cpu().numpy())
+        if mel_output_tf.dim() == 2:
+            mel_output_tf = mel_output_tf.unsqueeze(0)
+        np_wav_tf = self.mel2wav(mel_output_tf.cuda().half())
+        alignment_tf = synth_dict['alignment_tf']
+        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.detach().cpu().numpy().T)
+
+        wandb.log({
             "{}/teacher_forcing/mel".format(log_prefix): [wandb.Image(np_mel_output_tf)],
             "{}/teacher_forcing/wav".format(log_prefix): [wandb.Audio(np_wav_tf.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
             "{}/teacher_forcing/alignment".format(log_prefix): [wandb.Image(np_alignment_tf, caption=caption_string)],
@@ -243,6 +242,21 @@ class Tacotron2Logger(SummaryWriter):
             "{}/teacher_forcing/blank_attention_ratio".format(log_prefix): synth_dict['blank_ar_tf'],
             "{}/teacher_forcing/attention_range_ratio".format(log_prefix): synth_dict['arr_tf'],
             "{}/teacher_forcing/multiple_attention_ratio".format(log_prefix): synth_dict['mar_tf'],
+        }, step=iteration)
+
+        # [3] Logging data for free-running data ##############################
+        mel_output_fr = synth_dict['mel_output_fr']
+        decoding_steps = mel_output_fr.size(-1)
+        if decoding_steps == 0:
+            return
+        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.detach().cpu().numpy())
+        if mel_output_fr.dim() == 2:
+            mel_output_fr = mel_output_fr.unsqueeze(0)
+        np_wav_fr = self.mel2wav(mel_output_fr.cuda().half())
+        alignment_fr = synth_dict['alignment_fr']
+        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.detach().cpu().numpy().T)
+
+        wandb.log({
             "{}/free_running/mel".format(log_prefix): [wandb.Image(np_mel_output_fr)],
             "{}/free_running/wav".format(log_prefix): [wandb.Audio(np_wav_fr.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
             "{}/free_running/alignment".format(log_prefix): [wandb.Image(np_alignment_fr, caption=caption_string)],
@@ -736,6 +750,10 @@ class Tacotron2Logger(SummaryWriter):
                         emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 
                         _, mel_outputs_postnet, _, alignments, prosody_preds = model.inference(sequence, speaker_tensor, emotion_input_tensor)
+
+                        decoding_steps = mel_outputs_postnet.size(-1)
+                        if decoding_steps == 0:
+                            continue
 
                         np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
                         np_alignment = plot_alignment_to_numpy(alignments[0].detach().cpu().numpy().T, text_len)
