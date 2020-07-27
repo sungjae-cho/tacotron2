@@ -1190,7 +1190,7 @@ class ReferenceEncoder1(nn.Module):
         filters = [1] + hparams.ref_enc_filters
 
         #convs = [nn.Conv2d(in_channels=filters[i],
-        convs = [nn.CoordConv2d(in_channels=filters[i],
+        convs = [CoordConv2d(in_channels=filters[i],
                                 out_channels=filters[i + 1],
                                 kernel_size=(3, 3),
                                 stride=hparams.ref_enc_strides,
@@ -1262,11 +1262,11 @@ class ReferenceEncoder2(nn.Module):
         self.conv_kernel_size = hparams.res_en_conv_kernel_size
         self.padding = (self.conv_kernel_size[0] // 2, self.conv_kernel_size[1] // 2)
 
-        self.conv2d_1 = torch.nn.CoordConv2d(in_channels=self.conv_in_channels,
+        self.conv2d_1 = CoordConv2d(in_channels=self.conv_in_channels,
             out_channels=self.conv_out_channels,
             kernel_size=self.conv_kernel_size, padding=self.padding)
         self.bn1 = nn.BatchNorm2d(self.conv_out_channels)
-        self.conv2d_2 = torch.nn.CoordConv2d(in_channels=self.conv_out_channels,
+        self.conv2d_2 = CoordConv2d(in_channels=self.conv_out_channels,
             out_channels=self.conv_out_channels,
             kernel_size=self.conv_kernel_size, padding=self.padding)
         self.bn2 = nn.BatchNorm2d(self.conv_out_channels)
