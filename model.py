@@ -1185,7 +1185,7 @@ class ReferenceEncoder1(nn.Module):
     outputs --- ([N, seq_len, ref_enc_gru_size], [N, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
-        super(ReferenceEncoder1, self)).__init__()
+        super(ReferenceEncoder1, self).__init__()
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
 
