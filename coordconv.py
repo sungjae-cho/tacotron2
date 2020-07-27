@@ -28,6 +28,7 @@ class AddCoords(nn.Module):
             if torch.cuda.is_available and self.use_cuda:
                 input_tensor = input_tensor.cuda()
                 xx_channel = xx_channel.cuda()
+            xx_channel = xx_channel.type(input_tensor.type())
             out = torch.cat([input_tensor, xx_channel], dim=1)
 
             if self.with_r:
@@ -63,6 +64,8 @@ class AddCoords(nn.Module):
                 input_tensor = input_tensor.cuda()
                 xx_channel = xx_channel.cuda()
                 yy_channel = yy_channel.cuda()
+            xx_channel = xx_channel.type(input_tensor.type())
+            yy_channel = yy_channel.type(input_tensor.type())
             out = torch.cat([input_tensor, xx_channel, yy_channel], dim=1)
 
             if self.with_r:
@@ -100,6 +103,9 @@ class AddCoords(nn.Module):
                 xx_channel = xx_channel.cuda()
                 yy_channel = yy_channel.cuda()
                 zz_channel = zz_channel.cuda()
+            xx_channel = xx_channel.type(input_tensor.type())
+            yy_channel = yy_channel.type(input_tensor.type())
+            zz_channel = zz_channel.type(input_tensor.type())
             out = torch.cat([input_tensor, xx_channel, yy_channel, zz_channel], dim=1)
 
             if self.with_r:
