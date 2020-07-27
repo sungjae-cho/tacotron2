@@ -1258,12 +1258,13 @@ class ReferenceEncoder2(nn.Module):
     def __init__(self, hparams):
         super(ReferenceEncoder2, self).__init__()
         self.hparams = hparams
-        self.conv_in_channels = hparams.n_mel_channels * hparams.n_frames_per_step
+        self.conv_in_channels = 1
         self.conv_out_channels = hparams.res_en_conv_kernels
-        self.lstm_hidden_size = hparams.res_en_lstm_dim
         self.out_dim = hparams.res_en_out_dim
         self.conv_kernel_size = hparams.res_en_conv_kernel_size
         self.padding = (self.conv_kernel_size[0] // 2, self.conv_kernel_size[1] // 2)
+        self.lstm_input_dim = self.conv_out_channels * hparams.n_mel_channels
+        self.lstm_hidden_size = hparams.res_en_lstm_dim
 
         self.conv2d_1 = CoordConv2d(in_channels=self.conv_in_channels,
             out_channels=self.conv_out_channels,
@@ -1273,14 +1274,14 @@ class ReferenceEncoder2(nn.Module):
             out_channels=self.conv_out_channels,
             kernel_size=self.conv_kernel_size, padding=self.padding)
         self.bn2 = nn.BatchNorm2d(self.conv_out_channels)
-        self.bi_lstm = torch.nn.LSTM(input_size=self.conv_out_channels,
+        self.bi_lstm = torch.nn.LSTM(input_size=self.lstm_input_dim,
             hidden_size=self.lstm_hidden_size, num_layers=2, batch_first=True,
             bidirectional=True)
 
         # 1dConv linear project at each step.
         self.linear_projection = ConvNorm(
             in_channels=2*self.lstm_hidden_size,
-            out_channels=self.prosody_dim,
+            out_channels=hparams.prosody_dim,
             bias=False,
             w_init_gain='relu')
 
@@ -1297,7 +1298,8 @@ class ReferenceEncoder2(nn.Module):
         inputs = inputs.unsqueeze(1) # Conv input should be [N, C, H, W]. [batch_size, 1, freq_len, time_len]
         h_conv = F.relu(self.bn1(self.conv2d_1(inputs)))
         out_conv = F.relu(self.bn2(self.conv2d_2(h_conv))) # out_conv.shape == [batch_size, 512, mel_step]
-        out_conv = out_conv.permute(0, 2, 1) # lstm gets inputs of shape [batch_size, seq_len, 2*256]
+        out_conv = out_conv.view(out_conv.size(0), -1, out_conv.size(-1))
+        out_conv = out_conv.transpose(1, 2)
         out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero. out_lstm.size == [batch_size, seq_len, 2*256]
         out_lstm = out_lstm.transpose(1, 2) # [batch_size, 2*lstm_hidden_size, seq_len]
         outputs = F.relu(self.linear_projection(out_lstm)) # [batch_size, prosody_dim, seq_len]
