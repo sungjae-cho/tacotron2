@@ -83,6 +83,7 @@ def create_hparams(hparams_string=None, verbose=False):
         monotonic_attention=False,
         val_tf_zero_res_en=False,
         prosody_predictor='', # ['MLP', 'LSTM']
+        reference_encoder='', # ['ref1', 'ref2']
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,

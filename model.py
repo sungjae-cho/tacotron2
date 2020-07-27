@@ -519,7 +519,7 @@ class Decoder(nn.Module):
         return decoder_inputs
 
     def parse_decoder_outputs(self, mel_outputs, gate_outputs, alignments,
-            attention_contexts):
+            attention_contexts, prosody_hiddens):
         """ Prepares decoder outputs for output
         PARAMS
         ------
@@ -547,8 +547,12 @@ class Decoder(nn.Module):
             mel_outputs.size(0), -1, self.n_mel_channels)
         # (B, T_out, n_mel_channels) -> (B, n_mel_channels, T_out)
         mel_outputs = mel_outputs.transpose(1, 2)
+        # (T_out, B, prosody_dim) -> (B, T_out, prosody_dim)
+        prosody_hiddens =  torch.stack(prosody_hiddens).transpose(0, 1)
 
-        return mel_outputs, gate_outputs, alignments, attention_contexts
+
+        return mel_outputs, gate_outputs, alignments, attention_contexts, \
+            prosody_hiddens
 
     def decode(self, decoder_input, speaker_embedding, emotion_embedding,
             residual_encoding, discrete_attention_weight=False):
@@ -597,6 +601,8 @@ class Decoder(nn.Module):
                     pp_input, (self.prosody_hidden, self.prosody_cell))
                 self.prosody_hidden = F.dropout(
                     self.prosody_hidden, self.p_decoder_dropout, self.training)
+        else:
+            self.prosody_hidden = None
 
         decoder_inputs = [self.attention_hidden, self.attention_context]
         if self.has_style_token_lstm_2:
@@ -619,7 +625,8 @@ class Decoder(nn.Module):
             decoder_hidden_attention_context)
 
         gate_prediction = self.gate_layer(decoder_hidden_attention_context)
-        return decoder_output, gate_prediction, self.attention_weights, self.attention_context
+        return decoder_output, gate_prediction, self.attention_weights, self.attention_context, \
+            self.prosody_hidden
 
     def forward(self, memory, memory_lengths,
             speaker_embeddings, emotion_embeddings, residual_encoding,
@@ -647,23 +654,29 @@ class Decoder(nn.Module):
             self.initialize_decoder_states(
                 memory, mask=~get_mask_from_lengths(memory_lengths))
 
-            mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
+            mel_outputs, gate_outputs, alignments, attention_contexts, \
+                prosody_hiddens = [], [], [], [], []
             while len(mel_outputs) < decoder_inputs.size(0) - 1:
                 decoder_input = decoder_inputs[len(mel_outputs)]
-                mel_output, gate_output, attention_weights, attention_context = self.decode(
-                    decoder_input, speaker_embeddings, emotion_embeddings, residual_encoding)
+                mel_output, gate_output, attention_weights, attention_context, \
+                    prosody_hidden = self.decode(
+                    decoder_input, speaker_embeddings, emotion_embeddings,
+                    residual_encoding)
                 mel_outputs += [mel_output.squeeze(1)]
                 gate_outputs += [gate_output.squeeze(1)]
                 alignments += [attention_weights]
                 attention_contexts += [attention_context]
+                prosody_hiddens += [prosody_hidden]
 
             (mel_outputs, gate_outputs, alignments,
-                attention_contexts) = self.parse_decoder_outputs(
-                    mel_outputs, gate_outputs, alignments, attention_contexts)
+                attention_contexts, prosody_hiddens) = self.parse_decoder_outputs(
+                    mel_outputs, gate_outputs, alignments, attention_contexts,
+                    prosody_hiddens)
 
             att_means = self.get_attention_means()
 
-            return mel_outputs, gate_outputs, alignments, attention_contexts, att_means
+            return mel_outputs, gate_outputs, alignments, attention_contexts, \
+                prosody_hiddens, att_means
         else:
             fr_outputs = self.free_running(memory, memory_lengths,
                 speaker_embeddings, emotion_embeddings,
@@ -693,22 +706,26 @@ class Decoder(nn.Module):
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = [], [], [], [], []
         while len(mel_outputs) < self.max_decoder_steps:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
+            mel_output, gate_output, alignment, attention_context, prosody_hidden \
+                = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding,
                 discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
+            prosody_hiddens += [prosody_hidden]
             decoder_input = mel_output
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = self.parse_decoder_outputs(
-            mel_outputs, gate_outputs, alignments, attention_contexts)
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = self.parse_decoder_outputs(
+            mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens)
 
-        return mel_outputs, gate_outputs, alignments
+        return mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens
 
     def inference(self, memory, speaker_indices, emotion_vectors, residual_encoding,
             discrete_attention_weight=False):
@@ -727,16 +744,19 @@ class Decoder(nn.Module):
 
         self.initialize_decoder_states(memory, mask=None)
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = [], [], [], []
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = [], [], [], [], []
         while True:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment, attention_context = self.decode(decoder_input,
+            mel_output, gate_output, alignment, attention_context, prosody_hidden \
+                = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding,
                 discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
+            prosody_hiddens += [prosody_hidden]
 
             if torch.sigmoid(gate_output.data) > self.gate_threshold:
                 break
@@ -746,10 +766,11 @@ class Decoder(nn.Module):
 
             decoder_input = mel_output
 
-        mel_outputs, gate_outputs, alignments, attention_contexts = self.parse_decoder_outputs(
-            mel_outputs, gate_outputs, alignments, attention_contexts)
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = self.parse_decoder_outputs(
+            mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens)
 
-        return mel_outputs, gate_outputs, alignments
+        return mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens
 
 
 class Tacotron2(nn.Module):
@@ -786,6 +807,13 @@ class Tacotron2(nn.Module):
             self.residual_encoder = ResidualEncoder(hparams)
         else:
             self.residual_encoder = None
+        if hparams.reference_encoder:
+            if hparams.reference_encoder == 'ref1':
+                self.reference_encoder = ReferenceEncoder1(hparams)
+            elif hparams.reference_encoder == 'ref2':
+                self.reference_encoder = ReferenceEncoder2(hparams)
+        else:
+            self.reference_encoder = None
 
     def parse_batch(self, batch):
         text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
@@ -847,10 +875,15 @@ class Tacotron2(nn.Module):
                 residual_encoding, mu, logvar = None, None, None
 
             (mel_outputs, gate_outputs, alignments,
-                attention_contexts, att_means) = self.decoder(
+                attention_contexts, prosody_preds, att_means) = self.decoder(
                     encoder_outputs, text_lengths,
                         speaker_embeddings, emotion_embeddings, residual_encoding,
                         mels, teacher_forcing=True)
+
+            if self.hparams.reference_encoder:
+                prosody_seq = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
+            else:
+                prosody_seq = None
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -871,6 +904,7 @@ class Tacotron2(nn.Module):
                     (logit_speakers, prob_speakers, int_pred_speakers),
                     (logit_emotions, prob_emotions, int_pred_emotions),
                     (residual_encoding, mu, logvar),
+                    (prosody_seq, prosody_preds),
                     att_means)
         else:
             text_inputs, text_lengths = inputs
@@ -891,7 +925,8 @@ class Tacotron2(nn.Module):
         else:
             residual_encoding = None
 
-        mel_outputs, gate_outputs, alignments = self.decoder(
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = self.decoder(
             encoder_outputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
@@ -902,7 +937,7 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
         outputs = self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
+            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments, prosody_hiddens])
 
         return outputs
 
@@ -920,7 +955,8 @@ class Tacotron2(nn.Module):
         else:
             residual_encoding = None
 
-        mel_outputs, gate_outputs, alignments = self.decoder.inference(
+        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+            = self.decoder.inference(
             encoder_outputs, speaker_embeddings, emotion_embeddings, residual_encoding,
             discrete_attention_weight)
 
@@ -928,7 +964,7 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
         outputs = self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments])
+            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments, prosody_hiddens])
 
         return outputs
 
