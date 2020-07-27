@@ -15,7 +15,7 @@ import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, mean_absolute_error, confusion_matrix
-from torch.nn import MSELoss
+from torch.nn import MSELoss, L1Loss
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
@@ -234,10 +234,11 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                                     shuffle=False, batch_size=batch_size,
                                     pin_memory=False, collate_fn=collate_fn)
 
-            criterion, criterion_spk_adv, criterion_emo_adv = criterions
+            criterion, criterion_spk_adv, criterion_emo_adv, criterion_L1Loss = criterions
             val_loss_mel = 0.0
             val_loss_gate = 0.0
             val_loss_KLD = 0.0
+            val_loss_ref_enc = 0.0
             val_loss_spk_adv = 0.0
             val_loss_emo_adv = 0.0
             val_loss_att_means = 0.0
@@ -334,6 +335,13 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 else:
                     loss_KLD = torch.zeros(1).cuda()
 
+                # Calculate L1 loss between prosody_preds and prosody_seq
+                if hparams.reference_encoder:
+                    fixed_prosody_seq = prosody_seq.detach()
+                    loss_ref_enc = criterion_L1Loss(prosody_preds, fixed_prosody_seq)
+                else:
+                    loss_ref_enc = torch.zeros(1).cuda()
+
                 # Forward the speaker adversarial training module.
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
@@ -358,6 +366,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
 
                 loss = loss_taco2 + \
                     hparams.res_en_KLD_weight * loss_KLD + \
+                    hparams.loss_ref_enc_weight * loss_ref_enc + \
                     hparams.speaker_adv_weight * loss_spk_adv + \
                     hparams.emotion_adv_weight * loss_emo_adv + \
                     hparams.loss_att_means_weight * loss_att_means
@@ -425,6 +434,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     reduced_val_loss_mel = reduce_tensor(loss_mel).item()
                     reduced_val_loss_gate = reduce_tensor(loss_gate).item()
                     reduced_loss_KLD = reduce_tensor(loss_KLD).item()
+                    reduced_loss_ref_enc = reduce_tensor(loss_ref_enc).item()
                     reduced_val_loss_spk_adv = reduce_tensor(loss_spk_adv).item()
                     reduced_val_loss_emo_adv = reduce_tensor(loss_emo_adv).item()
                     reduced_val_loss_att_means = reduce_tensor(loss_att_means).item()
@@ -479,6 +489,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     reduced_val_loss_mel = loss_mel.item()
                     reduced_val_loss_gate = loss_gate.item()
                     reduced_loss_KLD = loss_KLD.item()
+                    reduced_loss_ref_enc = loss_ref_enc.item()
                     reduced_val_loss_spk_adv = loss_spk_adv.item()
                     reduced_val_loss_emo_adv = loss_emo_adv.item()
                     reduced_val_loss_att_means = loss_att_means.item()
@@ -488,6 +499,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 val_loss_mel += reduced_val_loss_mel
                 val_loss_gate += reduced_val_loss_gate
                 val_loss_KLD += reduced_loss_KLD
+                val_loss_ref_enc += reduced_loss_ref_enc
                 val_loss_spk_adv += reduced_val_loss_spk_adv
                 val_loss_emo_adv += reduced_val_loss_emo_adv
                 val_loss_att_means += reduced_val_loss_att_means
@@ -566,6 +578,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 val_loss_mel = val_loss_mel / n_val_batches
                 val_loss_gate = val_loss_gate / n_val_batches
                 val_loss_KLD = val_loss_KLD / n_val_batches
+                val_loss_ref_enc = val_loss_ref_enc / n_val_batches
                 val_loss_spk_adv = val_loss_spk_adv / n_val_batches
                 val_loss_emo_adv = val_loss_emo_adv / n_val_batches
                 val_loss_att_means = val_loss_att_means / n_val_batches
@@ -628,7 +641,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
         model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
-            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_KLD, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
+            losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_KLD, val_loss_ref_enc, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
             ar_pairs = ((val_mean_ar, val_batch_ar),
                         (val_mean_letter_ar, val_batch_letter_ar),
                         (val_mean_punct_ar, val_batch_punct_ar),
@@ -717,6 +730,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     criterion = Tacotron2Loss()
     criterion_spk_adv = torch.nn.CrossEntropyLoss()
     criterion_emo_adv = torch.nn.CrossEntropyLoss()
+    criterion_L1Loss = L1Loss()
 
     logger = prepare_directories_and_logger(
         hparams,
@@ -784,6 +798,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
             residual_encoding, mu, logvar = y_pred_res_en
+            prosody_seq, prosody_preds = y_pred_prosody
 
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
@@ -793,6 +808,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 loss_KLD = KLD_loss(mu, logvar)
             else:
                 loss_KLD = torch.zeros(1).cuda()
+
+            # Fitting prosody_preds to prosody_seq
+            if hparams.reference_encoder:
+                fixed_prosody_seq = prosody_seq.detach()
+                loss_ref_enc = criterion_L1Loss(prosody_preds, fixed_prosody_seq)
+            else:
+                loss_ref_enc = torch.zeros(1).cuda()
 
             # Forward the speaker adversarial training module.
             if hparams.speaker_adversarial_training:
@@ -819,6 +841,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             hparams.res_en_KLD_weight = get_KLD_weight(iteration, hparams)
             loss = loss_taco2 + \
                 hparams.res_en_KLD_weight * loss_KLD + \
+                hparams.loss_ref_enc_weight * loss_ref_enc + \
                 hparams.speaker_adv_weight * loss_spk_adv + \
                 hparams.emotion_adv_weight * loss_emo_adv + \
                 hparams.loss_att_means_weight * loss_att_means
@@ -895,6 +918,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss_mel = reduce_tensor(loss_mel).item()
                 reduced_loss_gate = reduce_tensor(loss_gate).item()
                 reduced_loss_KLD = reduce_tensor(loss_KLD).item()
+                reduced_loss_ref_enc = reduce_tensor(loss_ref_enc).item()
                 reduced_loss_spk_adv = reduce_tensor(loss_spk_adv).item()
                 reduced_loss_emo_adv = reduce_tensor(loss_emo_adv).item()
                 reduced_loss_att_means = reduce_tensor(loss_att_means).item()
@@ -933,6 +957,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss_mel = loss_mel.item()
                 reduced_loss_gate = loss_gate.item()
                 reduced_loss_KLD = loss_KLD.item()
+                reduced_loss_ref_enc = loss_ref_enc.item()
                 reduced_loss_spk_adv = loss_spk_adv.item()
                 reduced_loss_emo_adv = loss_emo_adv.item()
                 reduced_loss_att_means = loss_att_means.item()
@@ -940,9 +965,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
-                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
+                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
+                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
+                reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
                 att_measures = (
                     (mean_far, batch_far),
                     (mean_ar, batch_ar),
@@ -1014,7 +1039,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
-                criterions = (criterion, criterion_spk_adv, criterion_emo_adv)
+                criterions = (criterion, criterion_spk_adv, criterion_emo_adv, criterion_L1Loss)
                 validate(model, criterions, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          False, rank, hparams)

@@ -110,6 +110,7 @@ def create_hparams(hparams_string=None, verbose=False):
         prosody_dim=512,
 
         # Reference encoder
+        loss_ref_enc_weight=1.0,
         with_gst=True,
         ref_enc_filters=[32, 32, 64, 64, 128, 128],
         ref_enc_size=[3, 3],
