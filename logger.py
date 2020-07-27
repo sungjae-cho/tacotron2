@@ -94,6 +94,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_mel = 0
         self.sum_loss_gate = 0
         self.sum_loss_KLD = 0
+        self.sum_loss_ref_enc = 0
         self.sum_loss_spk_adv = 0
         self.sum_loss_emo_adv = 0
         self.sum_loss_att_means = 0
@@ -126,6 +127,7 @@ class Tacotron2Logger(SummaryWriter):
         dict_vars['sum_loss_mel'] = self.sum_loss_mel
         dict_vars['sum_loss_gate'] = self.sum_loss_gate
         dict_vars['sum_loss_KLD'] = self.sum_loss_KLD
+        dict_vars['sum_loss_ref_enc'] = self.sum_loss_ref_enc
         dict_vars['sum_loss_spk_adv'] = self.sum_loss_spk_adv
         dict_vars['sum_loss_emo_adv'] = self.sum_loss_emo_adv
         dict_vars['sum_loss_att_means'] = self.sum_loss_att_means
@@ -159,6 +161,7 @@ class Tacotron2Logger(SummaryWriter):
         self.sum_loss_mel = dict_vars['sum_loss_mel']
         self.sum_loss_gate = dict_vars['sum_loss_gate']
         self.sum_loss_KLD = dict_vars['sum_loss_KLD']
+        self.sum_loss_ref_enc = dict_vars['sum_loss_ref_enc']
         self.sum_loss_spk_adv = dict_vars['sum_loss_spk_adv']
         self.sum_loss_emo_adv = dict_vars['sum_loss_emo_adv']
         self.sum_loss_att_means = dict_vars['sum_loss_att_means']
@@ -281,7 +284,7 @@ class Tacotron2Logger(SummaryWriter):
 
         # Parse given data structures to be logged. ============================
         self.batches_per_epoch = batches_per_epoch
-        loss, loss_mel, loss_gate, loss_KLD, loss_spk_adv, loss_emo_adv, loss_att_means = losses
+        loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
         _, mel_outputs, gate_outputs, alignments = y_pred
@@ -370,6 +373,13 @@ class Tacotron2Logger(SummaryWriter):
                        "train/res_en/mean_var": logvar.exp().mean().detach().cpu().numpy(),
                        }, step=iteration)
 
+        if self.hparams.reference_encoder:
+            # Update training_epoch_variables
+            self.sum_loss_ref_enc += loss_ref_enc
+            # wandb logging
+            wandb.log({"train/ref_enc/loss_ref_enc": loss_ref_enc,
+                       }, step=iteration)
+
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
             # Update training_epoch_variables
@@ -440,6 +450,10 @@ class Tacotron2Logger(SummaryWriter):
                 wandb.log({"train_epoch/res_en/loss_KLD": (self.sum_loss_KLD / self.batches_per_epoch),
                            }, step=iteration)
 
+            if self.hparams.reference_encoder:
+                wandb.log({"train_epoch/ref_enc/loss_ref_enc": (self.sum_loss_ref_enc / self.batches_per_epoch),
+                           }, step=iteration)
+
             if self.hparams.speaker_adversarial_training:
                 wandb.log({"train_epoch/spk_adv/loss": (self.sum_loss_spk_adv / self.batches_per_epoch),
                            "train_epoch/spk_adv/accuracy": (self.sum_spk_adv_accuracy / self.batches_per_epoch)
@@ -495,7 +509,7 @@ class Tacotron2Logger(SummaryWriter):
         _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']
 
-        loss, loss_mel, loss_gate, loss_KLD, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
+        loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
         far_pair, ar_pairs, arr_pair, mar_pair = dict_log_values['attention_measures']
         far_fr_pair, ar_fr_pairs, arr_fr_pair, mar_fr_pair = dict_log_values['attention_measures_fr']
 
@@ -589,6 +603,11 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/res_en/var".format(log_prefix): wandb.Histogram(logvar.exp().detach().cpu().numpy()),
                        "{}/res_en/mean_mu".format(log_prefix): mu.mean().detach().cpu().numpy(),
                        "{}/res_en/mean_var".format(log_prefix): logvar.exp().mean().detach().cpu().numpy(),
+                       }, step=iteration)
+
+        # Logging values concerning the reference encoder.
+        if self.hparams.reference_encoder:
+            wandb.log({"{}/res_en/loss_ref_enc".format(log_prefix): loss_ref_enc,
                        }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
@@ -716,7 +735,7 @@ class Tacotron2Logger(SummaryWriter):
                         speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
                         emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 
-                        _, mel_outputs_postnet, _, alignments = model.inference(sequence, speaker_tensor, emotion_input_tensor)
+                        _, mel_outputs_postnet, _, alignments, prosody_preds = model.inference(sequence, speaker_tensor, emotion_input_tensor)
 
                         np_wav = self.mel2wav(mel_outputs_postnet.cuda().half())
                         np_alignment = plot_alignment_to_numpy(alignments[0].detach().cpu().numpy().T, text_len)
