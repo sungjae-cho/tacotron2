@@ -1182,7 +1182,7 @@ class ProsodyPredictorLSTMCell(nn.Module):
 class ReferenceEncoder1(nn.Module):
     '''
     inputs --- [N, n_mels, Ty]  mels
-    outputs --- ([N, seq_len, ref_enc_gru_size], [N, ref_enc_gru_size])
+    outputs --- ([N, seq_len, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
         super(ReferenceEncoder1, self).__init__()
@@ -1239,7 +1239,7 @@ class ReferenceEncoder1(nn.Module):
         outputs = F.relu(self.linear_projection(outputs))
         last_output = outputs[-1,:,:]
         #_, out = self.gru(out)
-        return outputs, last_output
+        return outputs
         #return out.squeeze(0)
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
