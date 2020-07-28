@@ -108,3 +108,53 @@ def plot_embeddings_to_numpy(labels, label_embeddings):
     data = save_figure_to_numpy(fig)
     plt.close()
     return data
+
+
+def plot_prosody_dims_to_numpy(spectrogram, prosody):
+    '''
+    PARAMS
+    -----
+    spectrogram: Spectrogram of speech.
+    - type: numpy.ndarray.
+    - shape: (frames, n_mel_channels)
+    prosody: A pack of prosody encodings at speech spectrogram frames.
+    - type: numpy.ndarry.
+    - shape: (frames, prosody_dim)
+
+    RETURNS
+    -----
+    data: An image in the format of NumPy.
+    - type: numpy.ndarray
+    '''
+    n_decoding_steps = prosody.shape[0]
+    n_prosody_dims = prosody.shape[1]
+
+    n_figures = 1 + n_prosody_dims
+    fig, axes = plt.subplots(n_figures, 1, figsize=(12, 2*n_figures))
+
+    # [1] First figure: Spectrogram
+    spectrogram = spectrogram.astype(np.float32) # casting required when fp16_run.
+    axes[0].set_xlabel("Frames")
+    axes[0].set_ylabel("Channels")
+    im = axes[0].imshow(spectrogram, aspect="auto", origin="lower",
+               interpolation='none')
+
+    # [2] The rest of figures: Prosody dimensions.
+    colors = ['orange', 'blue', 'green', 'magenta']
+    x = np.arange(n_decoding_steps)
+    for i_dim in range(n_prosody_dims):
+        prosody_dim = prosody[:,i_dim]
+        prosody_dim = prosody_dim.astype(np.float32) # casting required when fp16_run.
+        axes[i_dim+1].plot(x, prosody_dim, 'o-', color=colors[i_dim % len(colors)])
+        axes[i_dim+1].set_xlabel("Decoding_step")
+        axes[i_dim+1].set_ylabel("Prosody_dim{}".format(i_dim))
+        axes[i_dim+1].set_xlim(x[0], x[-1])
+        axes[i_dim+1].set_ylim(0, prosody_dim.max())
+
+    # [3] Figure to an image
+    plt.tight_layout()
+    fig.canvas.draw()
+    data = save_figure_to_numpy(fig)
+    plt.close()
+
+    return data
