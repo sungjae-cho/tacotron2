@@ -188,7 +188,7 @@ def fill_synth_dict(synth_dict, idx, inputs, outputs,
     (output_lengths, gate_outputs_fr,
         mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr,
         alignments, alignments_fr,
-        prosody_tf, prosody_fr) = outputs
+        prosody_tf, prosody_pred_fr) = outputs
     mel_length = output_lengths[idx].item()
     mel_length_fr = get_mel_length(gate_outputs_fr[idx])
     synth_dict['mel_true'] = mel_padded[idx,:,:mel_length]
@@ -197,7 +197,6 @@ def fill_synth_dict(synth_dict, idx, inputs, outputs,
     synth_dict['alignment_tf'] = alignments[idx,:mel_length,:text_length]
     synth_dict['alignment_fr'] = alignments_fr[idx,:mel_length_fr,:text_length]
     prosody_ref_tf, prosody_pred_tf = prosody_tf
-    _, prosody_pred_fr = prosody_fr
     synth_dict['prosody_ref_tf'] = prosody_ref_tf[idx,:mel_length,:text_length]
     synth_dict['prosody_pred_tf'] = prosody_pred_tf[idx,:mel_length,:text_length]
     synth_dict['prosody_pred_fr'] = prosody_pred_fr[idx,:mel_length_fr,:text_length]
@@ -401,7 +400,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, prosody_fr = model((text_padded, input_lengths), speakers, emotion_input_vectors, teacher_forcing=False)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, prosody_pred_fr = model((text_padded, input_lengths), speakers, emotion_input_vectors, teacher_forcing=False)
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
@@ -570,7 +569,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 if rank == 0:
                     # Wrap up data of audios to be logged.
                     inputs = (input_lengths, text_padded, speakers, emotion_input_vectors)
-                    outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_fr)
+                    outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_pred_fr)
                     batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
 
