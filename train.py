@@ -442,10 +442,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     tensor_emo_cm = torch.IntTensor(np_emo_cm).cuda()
 
                 if hparams.reference_encoder:
-                    sum_prosody_ref_dims = prosody_ref.sum(dim=-1)
+                    sum_prosody_ref_dims = prosody_ref.sum(dim=(0,1))
 
                 if hparams.prosody_predictor:
-                    sum_prosody_pred_dims = prosody_pred.sum(dim=-1)
+                    sum_prosody_pred_dims = prosody_pred.sum(dim=(0,1))
 
                 if distributed_run:
                     # Losses
@@ -498,9 +498,9 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                         mu = gather_all_tensor(mu)
                         logvar = gather_all_tensor(logvar)
                     if hparams.prosody_predictor:
-                        sum_prosody_pred_dims = gather_all_tensor(sum_prosody_pred_dims)
+                        sum_prosody_pred_dims = reduce_tensor(sum_prosody_pred_dims, 'sum')
                     if hparams.reference_encoder:
-                        sum_prosody_ref_dims = gather_all_tensor(sum_prosody_ref_dims)
+                        sum_prosody_ref_dims = reduce_tensor(sum_prosody_ref_dims, 'sum')
                     # Things concerning speaker adversarial training
                     if hparams.speaker_adversarial_training:
                         tensor_spk_cm = reduce_tensor(tensor_spk_cm, 'sum')
@@ -552,10 +552,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     list_logvar.append(logvar)
 
                 if hparams.prosody_predictor:
-                    np_sum_prosody_pred_dim += sum_prosody_pred_dims.sum(dim=-1).cpu().numpy()
+                    np_sum_prosody_pred_dim += sum_prosody_pred_dims.cpu().numpy()
 
                 if hparams.reference_encoder:
-                    np_sum_prosody_ref_dim += sum_prosody_ref_dims.sum(dim=-1).cpu().numpy()
+                    np_sum_prosody_ref_dim += sum_prosody_ref_dims.cpu().numpy()
 
                 # Accumulate outputs of the speaker adversarial training module.
                 if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
@@ -618,10 +618,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     logvar = torch.cat(list_logvar)
 
                 if hparams.prosody_predictor:
-                    mean_prosody_pred_dim = np_sum_prosody_pred_dim.mean(axis=-1)
+                    mean_prosody_pred_dim = np_sum_prosody_pred_dim / n_val_batches
 
                 if hparams.reference_encoder:
-                    mean_prosody_ref_dim = np_sum_prosody_ref_dim.mean(axis=-1)
+                    mean_prosody_ref_dim = np_sum_prosody_ref_dim / n_val_batches
 
                 # [M1] forward_attention_ratio
                 val_batch_far = torch.cat(batch_far_list)
