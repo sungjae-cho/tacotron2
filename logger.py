@@ -246,7 +246,7 @@ class Tacotron2Logger(SummaryWriter):
 
         if self.hparams.prosody_predictor:
             prosody_pred_tf = synth_dict['prosody_pred_tf']
-            np_prosody_dims = prosody_pred_tf.numpy()
+            np_prosody_dims = prosody_pred_tf.cpu().numpy()
             np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
             wandb.log({
                 "{}/teacher_forcing/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
@@ -254,7 +254,7 @@ class Tacotron2Logger(SummaryWriter):
 
         if self.hparams.reference_encoder:
             prosody_ref_tf = synth_dict['prosody_ref_tf']
-            np_prosody_dims = prosody_ref_tf.numpy()
+            np_prosody_dims = prosody_ref_tf.cpu().numpy()
             np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
             wandb.log({
                 "{}/teacher_forcing/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
@@ -286,7 +286,7 @@ class Tacotron2Logger(SummaryWriter):
 
         if self.hparams.prosody_predictor:
             prosody_pred_fr = synth_dict['prosody_pred_fr']
-            np_prosody_dims = prosody_pred_fr.numpy()
+            np_prosody_dims = prosody_pred_fr.cpu().numpy()
             np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_fr, np_prosody_dims)
             wandb.log({
                 "{}/free_running/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],

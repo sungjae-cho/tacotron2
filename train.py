@@ -552,10 +552,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     list_logvar.append(logvar)
 
                 if hparams.prosody_predictor:
-                    np_sum_prosody_pred_dim += sum_prosody_pred_dims.sum(dim=-1).numpy()
+                    np_sum_prosody_pred_dim += sum_prosody_pred_dims.sum(dim=-1).cpu().numpy()
 
                 if hparams.reference_encoder:
-                    np_sum_prosody_ref_dim += sum_prosody_ref_dims.sum(dim=-1).numpy()
+                    np_sum_prosody_ref_dim += sum_prosody_ref_dims.sum(dim=-1).cpu().numpy()
 
                 # Accumulate outputs of the speaker adversarial training module.
                 if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
