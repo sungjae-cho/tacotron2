@@ -749,7 +749,7 @@ class Tacotron2Logger(SummaryWriter):
                         speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
                         emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 
-                        _, mel_outputs_postnet, _, alignments, prosody_preds = model.inference(sequence, speaker_tensor, emotion_input_tensor)
+                        _, mel_outputs_postnet, _, alignments, prosody_pred = model.inference(sequence, speaker_tensor, emotion_input_tensor)
 
                         decoding_steps = mel_outputs_postnet.size(-1)
                         if decoding_steps == 0:

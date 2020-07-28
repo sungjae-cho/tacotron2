@@ -316,7 +316,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
                 logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
                 residual_encoding, mu, logvar = y_pred_res_en
-                prosody_ref, prosody_preds = prosody
+                prosody_ref, prosody_pred = prosody
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -335,10 +335,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 else:
                     loss_KLD = torch.zeros(1).cuda()
 
-                # Calculate L1 loss between prosody_preds and prosody_ref
+                # Calculate L1 loss between prosody_pred and prosody_ref
                 if hparams.reference_encoder:
                     fixed_prosody_ref = prosody_ref.detach()
-                    loss_ref_enc = criterion_L1Loss(prosody_preds, fixed_prosody_ref)
+                    loss_ref_enc = criterion_L1Loss(prosody_pred, fixed_prosody_ref)
                 else:
                     loss_ref_enc = torch.zeros(1).cuda()
 
@@ -798,7 +798,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
             residual_encoding, mu, logvar = y_pred_res_en
-            prosody_ref, prosody_preds = prosody
+            prosody_ref, prosody_pred = prosody
 
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
@@ -809,10 +809,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             else:
                 loss_KLD = torch.zeros(1).cuda()
 
-            # Fitting prosody_preds to prosody_ref
+            # Fitting prosody_pred to prosody_ref
             if hparams.reference_encoder:
                 fixed_prosody_ref = prosody_ref.detach()
-                loss_ref_enc = criterion_L1Loss(prosody_preds, fixed_prosody_ref)
+                loss_ref_enc = criterion_L1Loss(prosody_pred, fixed_prosody_ref)
             else:
                 loss_ref_enc = torch.zeros(1).cuda()
 
