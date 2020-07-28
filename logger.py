@@ -415,7 +415,7 @@ class Tacotron2Logger(SummaryWriter):
             # Update training_epoch_variables
             self.sum_loss_ref_enc += loss_ref_enc
             # wandb logging
-            wandb.log({"train/ref_enc/loss_ref_enc": loss_ref_enc,
+            wandb.log({"train/loss_ref_enc": loss_ref_enc,
                        }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
@@ -489,7 +489,7 @@ class Tacotron2Logger(SummaryWriter):
                            }, step=iteration)
 
             if self.hparams.reference_encoder:
-                wandb.log({"train_epoch/ref_enc/loss_ref_enc": (self.sum_loss_ref_enc / self.batches_per_epoch),
+                wandb.log({"train_epoch/loss_ref_enc": (self.sum_loss_ref_enc / self.batches_per_epoch),
                            }, step=iteration)
 
             if self.hparams.speaker_adversarial_training:
@@ -652,7 +652,7 @@ class Tacotron2Logger(SummaryWriter):
 
         # Logging values concerning the reference encoder.
         if self.hparams.reference_encoder:
-            wandb.log({"{}/res_en/loss_ref_enc".format(log_prefix): loss_ref_enc,
+            wandb.log({"{}/loss_ref_enc".format(log_prefix): loss_ref_enc,
                        }, step=iteration)
             mean_prosody_ref_dim = dict_log_values['mean_prosody_ref_dim']
             for i_dim in range(mean_prosody_ref_dim.shape[-1]):
