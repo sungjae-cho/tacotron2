@@ -1238,7 +1238,11 @@ class ReferenceEncoder1(nn.Module):
              for i in range(K)])
 
         #out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
-        out_channels = hparams.n_mel_channels
+        #out_channels = hparams.n_mel_channels
+        out_channels = self.calculate_channels(hparams.n_mel_channels,
+            hparams.ref_enc_size[1], hparams.ref_enc_strides[1],
+            hparams.ref_enc_pad[1], K)
+
         self.gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
                           hidden_size=hparams.ref_enc_gru_size,
                           batch_first=True)
@@ -1261,9 +1265,9 @@ class ReferenceEncoder1(nn.Module):
             out = bn(out)
             out = F.relu(out)
 
-        out = out.transpose(1, 2)  # [N, Ty, 128, n_mels]
+        out = out.transpose(1, 2)  # [N, 128, Ty, n_mels] -> [N, Ty, 128, n_mels // 2 ** mel_wise_stride]
         N, T = out.size(0), out.size(1)
-        out = out.contiguous().view(N, T, -1)  # [N, Ty, 128*n_mels]
+        out = out.contiguous().view(N, T, -1)  # [N, Ty, 128*(n_mels // 2 ** mel_wise_stride)]
 
         if input_lengths is not None:
             input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
