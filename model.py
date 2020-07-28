@@ -882,9 +882,9 @@ class Tacotron2(nn.Module):
                         mels, teacher_forcing=True)
 
             if self.hparams.reference_encoder:
-                prosody_seq = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
+                prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
-                prosody_seq = None
+                prosody_ref = None
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -905,7 +905,7 @@ class Tacotron2(nn.Module):
                     (logit_speakers, prob_speakers, int_pred_speakers),
                     (logit_emotions, prob_emotions, int_pred_emotions),
                     (residual_encoding, mu, logvar),
-                    (prosody_seq, prosody_preds),
+                    (prosody_ref, prosody_preds),
                     att_means)
         else:
             text_inputs, text_lengths = inputs
