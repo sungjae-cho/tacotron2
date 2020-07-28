@@ -244,6 +244,22 @@ class Tacotron2Logger(SummaryWriter):
             "{}/teacher_forcing/multiple_attention_ratio".format(log_prefix): synth_dict['mar_tf'],
         }, step=iteration)
 
+        if self.hparams.prosody_predictor:
+            prosody_pred_tf = synth_dict['prosody_pred_tf']
+            np_prosody_dims = prosody_pred_tf.numpy()
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
+            wandb.log({
+                "{}/teacher_forcing/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+            }, step=iteration)
+
+        if self.hparams.reference_encoder:
+            prosody_ref_tf = synth_dict['prosody_ref_tf']
+            np_prosody_dims = prosody_ref_tf.numpy()
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
+            wandb.log({
+                "{}/teacher_forcing/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+            }, step=iteration)
+
         # [3] Logging data for free-running data ##############################
         mel_output_fr = synth_dict['mel_output_fr']
         decoding_steps = mel_output_fr.size(-1)
@@ -267,6 +283,14 @@ class Tacotron2Logger(SummaryWriter):
             "{}/free_running/attention_range_ratio".format(log_prefix): synth_dict['arr_fr'],
             "{}/free_running/multiple_attention_ratio".format(log_prefix): synth_dict['mar_fr'],
         }, step=iteration)
+
+        if self.hparams.prosody_predictor:
+            prosody_pred_fr = synth_dict['prosody_pred_fr']
+            np_prosody_dims = prosody_pred_fr.numpy()
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_fr, np_prosody_dims)
+            wandb.log({
+                "{}/free_running/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+            }, step=iteration)
 
 
     def log_training(self, trainset, hparams, dict_log_values, batches_per_epoch):
@@ -619,10 +643,21 @@ class Tacotron2Logger(SummaryWriter):
                        "{}/res_en/mean_var".format(log_prefix): logvar.exp().mean().detach().cpu().numpy(),
                        }, step=iteration)
 
+        # Logging values concerning the prosody predictor.
+        if self.hparams.prosody_predictor:
+            mean_prosody_pred_dim = dict_log_values['mean_prosody_pred_dim']
+            for i_dim in range(mean_prosody_pred_dim.shape[-1]):
+                wandb.log({"{}/prosody_predictor/mean_prosody_dim{}".format(log_prefix, i_dim): mean_prosody_pred_dim[i_dim],
+                           }, step=iteration)
+
         # Logging values concerning the reference encoder.
         if self.hparams.reference_encoder:
             wandb.log({"{}/res_en/loss_ref_enc".format(log_prefix): loss_ref_enc,
                        }, step=iteration)
+            mean_prosody_ref_dim = dict_log_values['mean_prosody_ref_dim']
+            for i_dim in range(mean_prosody_ref_dim.shape[-1]):
+                wandb.log({"{}/ref_enc/mean_prosody_dim{}".format(log_prefix, i_dim): mean_prosody_ref_dim[i_dim],
+                           }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
