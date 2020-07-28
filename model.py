@@ -1259,8 +1259,8 @@ class ReferenceEncoder1(nn.Module):
             w_init_gain='relu')
 
     def forward(self, inputs, input_lengths=None):
-        inputs = inputs.transpose(1, 2) # [N, Ty, n_mels] -> [N, n_mels, Ty]
-        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels)
+        inputs = inputs.transpose(1, 2) #  [N, n_mels, Ty] -> [N, Ty, n_mels]
+        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels) # [N, Ty, n_mels] -> [N, 1, Ty, n_mels]
         for conv, bn in zip(self.convs, self.bns):
             out = conv(out)
             out = bn(out)
