@@ -547,8 +547,9 @@ class Decoder(nn.Module):
             mel_outputs.size(0), -1, self.n_mel_channels)
         # (B, T_out, n_mel_channels) -> (B, n_mel_channels, T_out)
         mel_outputs = mel_outputs.transpose(1, 2)
-        # (T_out, B, prosody_dim) -> (B, T_out, prosody_dim)
-        prosody_hiddens =  torch.stack(prosody_hiddens).transpose(0, 1)
+        if self.hparams.reference_encoder != '':
+            # (T_out, B, prosody_dim) -> (B, T_out, prosody_dim)
+            prosody_hiddens =  torch.stack(prosody_hiddens).transpose(0, 1)
 
 
         return mel_outputs, gate_outputs, alignments, attention_contexts, \
