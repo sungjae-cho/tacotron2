@@ -362,6 +362,8 @@ class Decoder(nn.Module):
         self.has_style_token_lstm_1 = hparams.has_style_token_lstm_1
         self.has_style_token_lstm_2 = hparams.has_style_token_lstm_2
         self.monotonic_attention = hparams.monotonic_attention
+        self.prosody_dim = self.hparams.prosody_dim
+        self.pp_lstm_hidden_dim = hparams.pp_lstm_hidden_dim
 
         self.attention_rnn_input_dim = self.get_attention_rnn_input_dim()
         self.decoder_rnn_input_dim = self.get_decoder_rnn_input_dim()
@@ -469,10 +471,13 @@ class Decoder(nn.Module):
         MAX_TIME = memory.size(1)
 
         if self.hparams.prosody_predictor:
+            self.prosody_encoding = Variable(memory.data.new(
+                B, self.prosody_dim).zero_())
+        if self.hparams.prosody_predictor == 'LSTM':
             self.prosody_hidden = Variable(memory.data.new(
-                B, self.prosody_dim).zero_())
+                B, self.pp_lstm_hidden_dim).zero_())
             self.prosody_cell = Variable(memory.data.new(
-                B, self.prosody_dim).zero_())
+                B, self.pp_lstm_hidden_dim).zero_())
 
         self.attention_hidden = Variable(memory.data.new(
             B, self.attention_rnn_dim).zero_())
@@ -1205,11 +1210,12 @@ class ProsodyPredictorLSTMCell(nn.Module):
     def __init__(self, hparams):
         super(ProsodyPredictorLSTMCell, self).__init__()
         self.hparams = hparams
+        self.pp_lstm_hidden_dim = hparams.pp_lstm_hidden_dim
         in_dim = (hparams.encoder_embedding_dim
             + hparams.emotion_embedding_dim
             + hparams.speaker_embedding_dim)
         out_dim = hparams.prosody_dim
-        self.cell = nn.LSTMCell(in_dim, out_dim)
+        self.cell = nn.LSTMCell(in_dim, self.pp_lstm_hidden_dim)
 
     def forward(self, inputs, h_c):
         outputs = self.cell(inputs, h_c)
