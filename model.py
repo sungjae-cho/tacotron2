@@ -415,10 +415,13 @@ class Decoder(nn.Module):
             + self.hparams.encoder_embedding_dim)
 
         if self.hparams.has_style_token_lstm_1:
-            attention_rnn_input_dim += self.hparams.speaker_embedding_dim
-            attention_rnn_input_dim += self.hparams.emotion_embedding_dim
-            if self.hparams.residual_encoder:
-                attention_rnn_input_dim += self.hparams.res_en_out_dim
+            if self.hparams.prosody_predictor:
+                attention_rnn_input_dim += self.hparams.prosody_dim
+            else:
+                attention_rnn_input_dim += self.hparams.speaker_embedding_dim
+                attention_rnn_input_dim += self.hparams.emotion_embedding_dim
+                if self.hparams.residual_encoder:
+                    attention_rnn_input_dim += self.hparams.res_en_out_dim
 
         return attention_rnn_input_dim
 
@@ -427,12 +430,13 @@ class Decoder(nn.Module):
             + self.hparams.encoder_embedding_dim)
 
         if self.hparams.has_style_token_lstm_2:
-            decoder_rnn_input_dim += self.hparams.speaker_embedding_dim
-            decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
-            if self.hparams.residual_encoder:
-                decoder_rnn_input_dim += self.hparams.res_en_out_dim
             if self.hparams.prosody_predictor:
                 decoder_rnn_input_dim += self.hparams.prosody_dim
+            else:
+                decoder_rnn_input_dim += self.hparams.speaker_embedding_dim
+                decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
+                if self.hparams.residual_encoder:
+                    decoder_rnn_input_dim += self.hparams.res_en_out_dim
 
         return decoder_rnn_input_dim
 
