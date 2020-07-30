@@ -1193,15 +1193,18 @@ class ProsodyPredictorMLP(nn.Module):
         out_dim = hparams.prosody_dim
         self.linear1 = LinearNorm(in_dim, hparams.encoder_embedding_dim,
             bias=True, w_init_gain='relu')
+        self.bn1 = nn.BatchNorm1d(hparams.encoder_embedding_dim)
         self.linear2 = LinearNorm(hparams.encoder_embedding_dim, hparams.encoder_embedding_dim,
             bias=True, w_init_gain='relu')
+        self.bn2 = nn.BatchNorm1d(hparams.encoder_embedding_dim)
         self.linear3 = LinearNorm(hparams.encoder_embedding_dim, out_dim,
             bias=True, w_init_gain='relu')
+        self.bn3 = nn.BatchNorm1d(hparams.encoder_embedding_dim)
 
     def forward(self, inputs):
-        h1 = self.linear1(inputs)
-        h2 = self.linear2(h1)
-        outputs = self.linear3(h2)
+        h1 = F.relu(self.bn1(self.linear1(inputs)))
+        h2 = F.relu(self.bn2(self.linear2(h1)))
+        outputs = F.relu(self.bn3(self.linear3(h2)))
 
         return outputs
 
