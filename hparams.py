@@ -108,6 +108,7 @@ def create_hparams(hparams_string=None, verbose=False):
 
         # Prosody predictor Parameters
         prosody_dim=4,
+        pp_lstm_hidden_dim=512,
 
         # Reference encoder
         loss_ref_enc_weight=1.0,
