@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 from torch.utils.tensorboard import SummaryWriter
 
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
-    plot_embeddings_to_numpy
+    plot_embeddings_to_numpy, plot_prosody_dims_to_numpy
 from plotting_utils import plot_gate_outputs_to_numpy
 from measures import forward_attention_ratio, get_mel_length, get_mel_lengths, \
     get_attention_quality, attention_ratio, attention_range_ratio, \
@@ -225,7 +225,8 @@ class Tacotron2Logger(SummaryWriter):
 
         # [2] Logging data for teacher-forcing data ############################
         mel_output_tf = synth_dict['mel_output_tf']
-        np_mel_output_tf = plot_spectrogram_to_numpy(mel_output_tf.detach().cpu().numpy())
+        np_mel_output_tf = mel_output_tf.detach().cpu().numpy()
+        np_fig_mel_output_tf = plot_spectrogram_to_numpy(np_mel_output_tf)
         if mel_output_tf.dim() == 2:
             mel_output_tf = mel_output_tf.unsqueeze(0)
         np_wav_tf = self.mel2wav(mel_output_tf.cuda().half())
@@ -233,7 +234,7 @@ class Tacotron2Logger(SummaryWriter):
         np_alignment_tf = plot_alignment_to_numpy(alignment_tf.detach().cpu().numpy().T)
 
         wandb.log({
-            "{}/teacher_forcing/mel".format(log_prefix): [wandb.Image(np_mel_output_tf)],
+            "{}/teacher_forcing/mel".format(log_prefix): [wandb.Image(np_fig_mel_output_tf)],
             "{}/teacher_forcing/wav".format(log_prefix): [wandb.Audio(np_wav_tf.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
             "{}/teacher_forcing/alignment".format(log_prefix): [wandb.Image(np_alignment_tf, caption=caption_string)],
             "{}/teacher_forcing/attention_ratio".format(log_prefix): synth_dict['ar_tf'],
@@ -265,7 +266,8 @@ class Tacotron2Logger(SummaryWriter):
         decoding_steps = mel_output_fr.size(-1)
         if decoding_steps == 0:
             return
-        np_mel_output_fr = plot_spectrogram_to_numpy(mel_output_fr.detach().cpu().numpy())
+        np_mel_output_fr = mel_output_fr.detach().cpu().numpy()
+        np_fig_mel_output_fr = plot_spectrogram_to_numpy(np_mel_output_fr)
         if mel_output_fr.dim() == 2:
             mel_output_fr = mel_output_fr.unsqueeze(0)
         np_wav_fr = self.mel2wav(mel_output_fr.cuda().half())
@@ -273,7 +275,7 @@ class Tacotron2Logger(SummaryWriter):
         np_alignment_fr = plot_alignment_to_numpy(alignment_fr.detach().cpu().numpy().T)
 
         wandb.log({
-            "{}/free_running/mel".format(log_prefix): [wandb.Image(np_mel_output_fr)],
+            "{}/free_running/mel".format(log_prefix): [wandb.Image(np_fig_mel_output_fr)],
             "{}/free_running/wav".format(log_prefix): [wandb.Audio(np_wav_fr.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
             "{}/free_running/alignment".format(log_prefix): [wandb.Image(np_alignment_fr, caption=caption_string)],
             "{}/free_running/attention_ratio".format(log_prefix): synth_dict['ar_fr'],
@@ -325,7 +327,7 @@ class Tacotron2Logger(SummaryWriter):
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
-        _, mel_outputs, gate_outputs, alignments = y_pred
+        _, mel_outputs, gate_outputs, alignments, _, _ = y_pred
         mean_far, batch_far = att_measures[0]
         mean_ar, batch_ar = att_measures[1]
         mean_letter_ar, batch_letter_ar, best_letter_ar, worst_letter_ar = att_measures[2]
@@ -410,6 +412,10 @@ class Tacotron2Logger(SummaryWriter):
                        "train/res_en/mean_mu": mu.mean().detach().cpu().numpy(),
                        "train/res_en/mean_var": logvar.exp().mean().detach().cpu().numpy(),
                        }, step=iteration)
+            mean_prosody_pred_dim = dict_log_values['mean_prosody_pred_dim']
+            for i_dim in range(mean_prosody_pred_dim.shape[-1]):
+                wandb.log({"train/prosody_predictor/mean_prosody_dim{}".format(i_dim): mean_prosody_pred_dim[i_dim],
+                           }, step=iteration)
 
         if self.hparams.reference_encoder:
             # Update training_epoch_variables
@@ -417,6 +423,10 @@ class Tacotron2Logger(SummaryWriter):
             # wandb logging
             wandb.log({"train/loss_ref_enc": loss_ref_enc,
                        }, step=iteration)
+            mean_prosody_ref_dim = dict_log_values['mean_prosody_ref_dim']
+            for i_dim in range(mean_prosody_ref_dim.shape[-1]):
+                wandb.log({"train/ref_enc/mean_prosody_dim{}".format(i_dim): mean_prosody_ref_dim[i_dim],
+                           }, step=iteration)
 
         # Logging values concerning speaker adversarial training.
         if self.hparams.speaker_adversarial_training:
@@ -544,7 +554,7 @@ class Tacotron2Logger(SummaryWriter):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
-        _, mel_outputs, gate_outputs, alignments = dict_log_values['y_pred']
+        _, mel_outputs, gate_outputs, alignments, _, _ = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']
 
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
@@ -784,7 +794,7 @@ class Tacotron2Logger(SummaryWriter):
                         speaker_tensor = to_gpu(torch.tensor(speaker_int).view(1)).long()
                         emotion_input_tensor = to_gpu(torch.tensor(emotion_input_vector).view(1,-1)).float()
 
-                        _, mel_outputs_postnet, _, alignments, prosody_pred = model.inference(sequence, speaker_tensor, emotion_input_tensor)
+                        _, mel_outputs_postnet, _, alignments, _, prosody_pred = model.inference(sequence, speaker_tensor, emotion_input_tensor)
 
                         decoding_steps = mel_outputs_postnet.size(-1)
                         if decoding_steps == 0:

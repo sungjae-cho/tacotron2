@@ -175,7 +175,7 @@ def save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch, lr_
                 }, filepath)
 
 
-def fill_synth_dict(synth_dict, idx, inputs, outputs,
+def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
         batch_attention_measures_tf, batch_attention_measures_fr):
     # Inputs
     (input_lengths, text_padded, speakers, emotion_input_vectors) = inputs
@@ -197,9 +197,11 @@ def fill_synth_dict(synth_dict, idx, inputs, outputs,
     synth_dict['alignment_tf'] = alignments[idx,:mel_length,:text_length]
     synth_dict['alignment_fr'] = alignments_fr[idx,:mel_length_fr,:text_length]
     prosody_ref_tf, prosody_pred_tf = prosody_tf
-    synth_dict['prosody_ref_tf'] = prosody_ref_tf[idx,:mel_length,:text_length]
-    synth_dict['prosody_pred_tf'] = prosody_pred_tf[idx,:mel_length,:text_length]
-    synth_dict['prosody_pred_fr'] = prosody_pred_fr[idx,:mel_length_fr,:text_length]
+    if hparams.reference_encoder:
+        synth_dict['prosody_ref_tf'] = prosody_ref_tf[idx,:mel_length,:text_length]
+    if hparams.prosody_predictor:
+        synth_dict['prosody_pred_tf'] = prosody_pred_tf[idx,:mel_length,:text_length]
+        synth_dict['prosody_pred_fr'] = prosody_pred_fr[idx,:mel_length_fr,:text_length]
 
     # Teacher forcing attention measures
     (batch_attention_quality,
@@ -249,16 +251,18 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
             val_loss_att_means = 0.0
             val_loss = 0.0
 
+            sum_output_lengths = 0.0
+
             if hparams.residual_encoder:
                 list_residual_encoding = list()
                 list_mu = list()
                 list_logvar = list()
 
             if hparams.prosody_predictor:
-                np_sum_prosody_pred_dim = np.zeros(hparams.prosody_dim)
+                np_sum_prosody_pred_dims = np.zeros(hparams.prosody_dim)
 
             if hparams.reference_encoder:
-                np_sum_prosody_ref_dim = np.zeros(hparams.prosody_dim)
+                np_sum_prosody_ref_dims = np.zeros(hparams.prosody_dim)
 
             if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
                 np_spk_cm_sum = np.zeros((len(trainset.speaker_list), len(trainset.speaker_list)))
@@ -551,12 +555,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     list_mu.append(mu)
                     list_logvar.append(logvar)
 
-                if hparams.prosody_predictor:
-                    np_sum_prosody_pred_dim += sum_prosody_pred_dims.cpu().numpy()
-
-                if hparams.reference_encoder:
-                    np_sum_prosody_ref_dim += sum_prosody_ref_dims.cpu().numpy()
-
                 # Accumulate outputs of the speaker adversarial training module.
                 if hparams.speaker_adversarial_training and val_type == ('all', 'all'):
                     np_spk_cm = tensor_spk_cm.cpu().numpy()
@@ -574,28 +572,36 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
 
+                    sum_output_lengths += output_lengths.sum().cpu().item()
+
                     # [SynthDict 1] A random sample.
                     if i == i_batch_rand:
                         i_rand = i_sample_rand
                         # (i, i_rand) == (0, 0) is a random sample
                         # b/c the validation data reshuffled at every epoch
                         synth_dict_rand = dict()
-                        fill_synth_dict(synth_dict_rand, i_rand, inputs, outputs,
+                        fill_synth_dict(hparams, synth_dict_rand, i_rand, inputs, outputs,
                                 batch_attention_measures_tf, batch_attention_measures_fr)
 
                     # [SynthDict 2] A teacher-forcing sample that has the minimum attention quality.
                     if min_attention_quality_tf > batch_attention_quality.min().item():
                         min_attention_quality_tf = batch_attention_quality.min().item()
                         i_min = batch_attention_quality.argmin().item()
-                        fill_synth_dict(synth_dict_min_aq_tf, i_min, inputs, outputs,
+                        fill_synth_dict(hparams, synth_dict_min_aq_tf, i_min, inputs, outputs,
                                 batch_attention_measures_tf, batch_attention_measures_fr)
 
                     # [SynthDict 3] A free-running sample that has the minimum attention quality.
                     if min_attention_quality_fr > batch_attention_quality_fr.min().item():
                         min_attention_quality_fr = batch_attention_quality_fr.min().item()
                         i_min = batch_attention_quality_fr.argmin().item()
-                        fill_synth_dict(synth_dict_min_aq_fr, i_min, inputs, outputs,
+                        fill_synth_dict(hparams, synth_dict_min_aq_fr, i_min, inputs, outputs,
                                 batch_attention_measures_tf, batch_attention_measures_fr)
+
+                    if hparams.prosody_predictor:
+                        np_sum_prosody_pred_dims += sum_prosody_pred_dims.detach().cpu().numpy()
+
+                    if hparams.reference_encoder:
+                        np_sum_prosody_ref_dims += sum_prosody_ref_dims.detach().cpu().numpy()
 
                 ############################################################
 
@@ -618,10 +624,10 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     logvar = torch.cat(list_logvar)
 
                 if hparams.prosody_predictor:
-                    mean_prosody_pred_dim = np_sum_prosody_pred_dim / n_val_batches
+                    mean_prosody_pred_dim = np_sum_prosody_pred_dims / sum_output_lengths
 
                 if hparams.reference_encoder:
-                    mean_prosody_ref_dim = np_sum_prosody_ref_dim / n_val_batches
+                    mean_prosody_ref_dim = np_sum_prosody_ref_dims / sum_output_lengths
 
                 # [M1] forward_attention_ratio
                 val_batch_far = torch.cat(batch_far_list)
@@ -828,15 +834,16 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             # Forward propagtion
             (y_pred, y_pred_speakers, y_pred_emotions,
-                y_pred_res_en, prosody, att_means
+                y_pred_res_en, att_means
             ) = model(x, speakers, emotion_input_vectors)
 
             # Forward propagtion results
-            mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
+            mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
+                prosody_ref, prosody_pred = y_pred
             logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
             residual_encoding, mu, logvar = y_pred_res_en
-            prosody_ref, prosody_pred = prosody
+            prosody = prosody_ref, prosody_pred
 
             # Caculate Tacotron2 losses.
             loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
@@ -952,6 +959,14 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 np_emo_cm -= np.eye(np_emotion_array.shape[0], dtype=np_emo_cm.dtype)
                 tensor_emo_cm = torch.IntTensor(np_emo_cm).cuda()
 
+            sum_output_lengths = np_output_lengths.sum()
+
+            if hparams.reference_encoder:
+                sum_prosody_ref_dims = prosody_ref.sum(dim=(0,1))
+
+            if hparams.prosody_predictor:
+                sum_prosody_pred_dims = prosody_pred.sum(dim=(0,1))
+
             if hparams.distributed_run:
                 reduced_loss_mel = reduce_tensor(loss_mel).item()
                 reduced_loss_gate = reduce_tensor(loss_gate).item()
@@ -983,10 +998,15 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 batch_attention_quality = gather_all_tensor(batch_attention_quality)
                 best_attention_quality = reduce_scalar(best_attention_quality, 'max')
                 worst_attention_quality = reduce_scalar(worst_attention_quality, 'min')
+                sum_output_lengths = reduce_tensor(sum_output_lengths, 'sum')
                 if hparams.residual_encoder:
                     residual_encoding = gather_all_tensor(residual_encoding)
                     mu = gather_all_tensor(mu)
                     logvar = gather_all_tensor(logvar)
+                if hparams.prosody_predictor:
+                    sum_prosody_pred_dims = reduce_tensor(sum_prosody_pred_dims, 'sum')
+                if hparams.reference_encoder:
+                    sum_prosody_ref_dims = reduce_tensor(sum_prosody_ref_dims, 'sum')
                 if hparams.speaker_adversarial_training:
                     tensor_spk_cm = reduce_tensor(tensor_spk_cm, 'sum')
                 if hparams.emotion_adversarial_training:
@@ -1038,6 +1058,16 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     dict_log_values['residual_encoding'] = residual_encoding
                     dict_log_values['mu'] = mu
                     dict_log_values['logvar'] = logvar
+
+                if hparams.prosody_predictor:
+                    np_sum_prosody_pred_dims = sum_prosody_pred_dims.detach().cpu().numpy()
+                    mean_prosody_pred_dim = np_sum_prosody_pred_dims / sum_output_lengths
+                    dict_log_values['mean_prosody_pred_dim'] = mean_prosody_pred_dim
+
+                if hparams.reference_encoder:
+                    np_sum_prosody_ref_dims = sum_prosody_ref_dims.detach().cpu().numpy()
+                    mean_prosody_ref_dim = np_sum_prosody_ref_dims / sum_output_lengths
+                    dict_log_values['mean_prosody_ref_dim'] = mean_prosody_ref_dim
 
                 if hparams.speaker_adversarial_training:
                     # Compute the accuracy of the speaker adversarial classifier.
