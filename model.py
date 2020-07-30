@@ -1272,6 +1272,7 @@ class ReferenceEncoder1(nn.Module):
             out_channels=self.prosody_dim,
             bias=True,
             w_init_gain='relu')
+        self.bn_lp = nn.BatchNorm1d(self.prosody_dim)
 
     def forward(self, inputs, input_lengths=None):
         inputs = inputs.transpose(1, 2) #  [N, n_mels, Ty] -> [N, Ty, n_mels]
@@ -1294,7 +1295,7 @@ class ReferenceEncoder1(nn.Module):
         self.gru.flatten_parameters()
         outputs, _ = self.gru(out)
         outputs = outputs.transpose(1, 2) #  [N, Ty, ref_enc_gru_size] -> [N, ref_enc_gru_size, Ty]
-        outputs = F.relu(self.linear_projection(outputs)) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
+        outputs = F.relu(self.bn_lp(self.linear_projection(outputs))) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
         outputs = outputs.transpose(1, 2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
         last_output = outputs[-1,:,:]
         #_, out = self.gru(out)
@@ -1340,6 +1341,7 @@ class ReferenceEncoder2(nn.Module):
             out_channels=hparams.prosody_dim,
             bias=True,
             w_init_gain='relu')
+        self.bn_lp = nn.BatchNorm1d(self.prosody_dim)
 
     def forward(self, inputs):
         """ Residual Encoder
@@ -1358,7 +1360,7 @@ class ReferenceEncoder2(nn.Module):
         out_conv = out_conv.transpose(1, 2)
         out_lstm, _ = self.bi_lstm(out_conv) # both h_0 and c_0 default to zero. out_lstm.size == [batch_size, seq_len, 2*256]
         out_lstm = out_lstm.transpose(1, 2) # [batch_size, 2*lstm_hidden_size, seq_len]
-        outputs = F.relu(self.linear_projection(out_lstm)) # [batch_size, prosody_dim, seq_len]
+        outputs = F.relu(self.bn_lp(self.linear_projection(out_lstm))) # [batch_size, prosody_dim, seq_len]
         outputs = outputs.transpose(1, 2) # [batch_size, seq_len, prosody_dim]
 
         return outputs
