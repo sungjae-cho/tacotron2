@@ -859,12 +859,22 @@ class Tacotron2(nn.Module):
     def parse_output(self, outputs, output_lengths=None):
         if self.mask_padding and output_lengths is not None:
             mask = ~get_mask_from_lengths(output_lengths)
-            mask = mask.expand(self.n_mel_channels, mask.size(0), mask.size(1))
-            mask = mask.permute(1, 0, 2)
+            # mask. dim0: batch_size. dim1:seq_len.
+            mel_mask = mask.expand(self.n_mel_channels, mask.size(0), mask.size(1))
+            mel_mask = mel_mask.permute(1, 0, 2)
+            prosody_mask = mask.expand(self.hparams.prosody_dim, mask.size(0), mask.size(1))
+            prosody_mask = prosody_mask.permute(1, 2, 0)
 
-            outputs[0].data.masked_fill_(mask, 0.0)
-            outputs[1].data.masked_fill_(mask, 0.0)
-            outputs[2].data.masked_fill_(mask[:, 0, :], 1e3)  # gate energies
+            outputs[0].data.masked_fill_(mel_mask, 0.0)
+            outputs[1].data.masked_fill_(mel_mask, 0.0)
+            outputs[2].data.masked_fill_(mel_mask[:, 0, :], 1e3)  # gate energies
+
+            if outputs[4] is not None:
+                # prosody_ref
+                outputs[4].masked_fill_(prosody_mask, 0.0)
+            if outputs[5] is not None:
+                # prosody_preds
+                outputs[5].masked_fill_(prosody_mask, 0.0)
 
         return outputs
 
