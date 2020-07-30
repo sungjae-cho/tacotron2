@@ -905,16 +905,16 @@ class Tacotron2(nn.Module):
             else:
                 residual_encoding, mu, logvar = None, None, None
 
-            (mel_outputs, gate_outputs, alignments,
-                attention_contexts, prosody_preds, att_means) = self.decoder(
-                    encoder_outputs, text_lengths,
-                        speaker_embeddings, emotion_embeddings, residual_encoding,
-                        mels, teacher_forcing=True)
-
             if self.hparams.reference_encoder:
                 prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
                 prosody_ref = None
+
+            (mel_outputs, gate_outputs, alignments,
+                attention_contexts, prosody_preds, att_means) = self.decoder(
+                    encoder_outputs, text_lengths,
+                        speaker_embeddings, emotion_embeddings, residual_encoding,
+                        prosody_ref, mels, teacher_forcing=True)
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -931,11 +931,14 @@ class Tacotron2(nn.Module):
             else:
                 logit_emotions, prob_emotions, int_pred_emotions = None, None, None
 
-            return (self.parse_output([mel_outputs, mel_outputs_postnet, gate_outputs, alignments], output_lengths),
+            outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
+                gate_outputs, alignments, prosody_ref, prosody_preds],
+                output_lengths)
+
+            return (outputs,
                     (logit_speakers, prob_speakers, int_pred_speakers),
                     (logit_emotions, prob_emotions, int_pred_emotions),
                     (residual_encoding, mu, logvar),
-                    (prosody_ref, prosody_preds),
                     att_means)
         else:
             text_inputs, text_lengths = inputs
@@ -967,8 +970,8 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
-        outputs = self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments, prosody_hiddens])
+        outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
+            gate_outputs, alignments, None, prosody_hiddens])
 
         return outputs
 
@@ -994,8 +997,9 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
-        outputs = self.parse_output(
-            [mel_outputs, mel_outputs_postnet, gate_outputs, alignments, prosody_hiddens])
+        outputs = self.parse_output([
+            mel_outputs, mel_outputs_postnet, gate_outputs, alignments,
+            None, prosody_hiddens])
 
         return outputs
 

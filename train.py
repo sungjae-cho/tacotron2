@@ -318,16 +318,17 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 # TEACHER FORCING #####
                 # Forward propagation by teacher forcing
                 (y_pred, y_pred_speakers, y_pred_emotions, y_pred_res_en,
-                    prosody, att_means) = model(
+                    att_means) = model(
                         x, speakers, emotion_input_vectors,
                         zero_res_en=hparams.val_tf_zero_res_en)
 
                 # Forward propagtion results
-                mel_outputs, mel_outputs_postnet, gate_outputs, alignments = y_pred
+                mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
+                    prosody_ref, prosody_pred = y_pred
                 logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
                 logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
                 residual_encoding, mu, logvar = y_pred_res_en
-                prosody_ref, prosody_pred = prosody
+                prosody = prosody_ref, prosody_pred
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -400,7 +401,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, prosody_pred_fr = model((text_padded, input_lengths), speakers, emotion_input_vectors, teacher_forcing=False)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, _, prosody_pred_fr = model((text_padded, input_lengths), speakers, emotion_input_vectors, teacher_forcing=False)
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio

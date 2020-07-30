@@ -12,7 +12,10 @@ class Tacotron2Loss(nn.Module):
         gate_target.requires_grad = False
         gate_target = gate_target.view(-1, 1)
 
-        mel_out, mel_out_postnet, gate_out, _ = model_output
+        mel_out = model_output[0]
+        mel_out_postnet = model_output[1]
+        gate_out = model_output[2]
+
         gate_out = gate_out.view(-1, 1)
         mel_loss = nn.MSELoss()(mel_out, mel_target) + \
             nn.MSELoss()(mel_out_postnet, mel_target)
