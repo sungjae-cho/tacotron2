@@ -1219,10 +1219,16 @@ class ProsodyPredictorLSTMCell(nn.Module):
             + hparams.speaker_embedding_dim)
         out_dim = hparams.prosody_dim
         self.cell = nn.LSTMCell(in_dim, self.pp_lstm_hidden_dim)
+        self.linear = LinearNorm(self.pp_lstm_hidden_dim, out_dim,
+            bias=True, w_init_gain='relu')
+        self.bn = nn.BatchNorm1d(self.pp_lstm_hidden_dim)
 
     def forward(self, inputs, h_c):
-        outputs = self.cell(inputs, h_c)
-        return outputs
+        hidden, cell = self.cell(inputs, h_c)
+        hidden = F.dropout(
+            hidden, self.p_decoder_dropout, self.training)
+        outputs = F.relu(self.bn(self.linear(hidden)))
+        return outputs, hidden, cell
 
 
 class ReferenceEncoder1(nn.Module):
