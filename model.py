@@ -1196,7 +1196,7 @@ class ProsodyPredictorMLP(nn.Module):
         self.linear2 = LinearNorm(hparams.encoder_embedding_dim, hparams.encoder_embedding_dim,
             bias=True, w_init_gain='relu')
         self.linear3 = LinearNorm(hparams.encoder_embedding_dim, out_dim,
-            bias=True, w_init_gain='tanh')
+            bias=True, w_init_gain='relu')
 
     def forward(self, inputs):
         h1 = self.linear1(inputs)
