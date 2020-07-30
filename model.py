@@ -1270,7 +1270,7 @@ class ReferenceEncoder1(nn.Module):
         self.linear_projection = ConvNorm(
             in_channels=self.ref_enc_gru_size,
             out_channels=self.prosody_dim,
-            bias=False,
+            bias=True,
             w_init_gain='relu')
 
     def forward(self, inputs, input_lengths=None):
@@ -1338,7 +1338,7 @@ class ReferenceEncoder2(nn.Module):
         self.linear_projection = ConvNorm(
             in_channels=2*self.lstm_hidden_size,
             out_channels=hparams.prosody_dim,
-            bias=False,
+            bias=True,
             w_init_gain='relu')
 
     def forward(self, inputs):
