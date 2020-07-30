@@ -655,6 +655,7 @@ class Decoder(nn.Module):
         memory: Encoder outputs
         decoder_inputs: Decoder inputs for teacher forcing. i.e. mel-specs
         memory_lengths: Encoder output lengths for attention masking.
+        prosody_ref: [B, seq_len, prosody_dim]
 
         RETURNS
         -------
