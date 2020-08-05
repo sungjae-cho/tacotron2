@@ -1394,3 +1394,211 @@ class ReferenceEncoder2(nn.Module):
         outputs = outputs.transpose(1, 2) # [batch_size, seq_len, prosody_dim]
 
         return outputs
+
+
+class ReferenceEncoder3(nn.Module):
+    def __init__(self, hparams):
+        super(ReferenceEncoder3, self).__init__()
+        self.hparams = hparams
+        K = len(hparams.ref_enc_filters)
+        filters = [1] + hparams.ref_enc_filters
+
+        #convs = [nn.Conv2d(in_channels=filters[i],
+        convs = [CoordConv2d(in_channels=filters[i],
+                                out_channels=filters[i + 1],
+                                kernel_size=hparams.ref_enc_filter_size,
+                                stride=hparams.ref_enc_strides,
+                                #stride=(2, 2),
+                                padding=hparams.ref_enc_pad) for i in range(K)]
+        self.convs = nn.ModuleList(convs)
+        self.bns = nn.ModuleList(
+            [nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i])
+             for i in range(K)])
+
+        out_channels = self.calculate_channels(hparams.n_mel_channels,
+            hparams.ref_enc_filter_size[1], hparams.ref_enc_strides[1],
+            hparams.ref_enc_pad[1], K)
+
+        # Construct GRUCell
+        self.temp_gru_cell = nn.GRUCell(
+            input_size=hparams.ref_enc_filters[-1] * out_channels,
+            hidden_size=hparams.ref_enc_gru_size)
+        self.global_gru_cell = nn.GRUCell(
+            input_size=hparams.ref_enc_gru_size,
+            hidden_size=hparams.ref_enc_gru_size)
+
+        # linear projection at each step.
+        self.linear1 = LinearNorm(
+            in_dim=hparams.ref_enc_gru_size,
+            out_dim=hparams.prosody_dim,
+            bias=True,
+            w_init_gain='relu')
+        self.bn_l1 = nn.BatchNorm1d(hparams.prosody_dim)
+        self.linear2 = LinearNorm(
+            in_dim=hparams.ref_enc_gru_size,
+            out_dim=hparams.prosody_dim,
+            bias=True,
+            w_init_gain='relu')
+        self.bn_l2 = nn.BatchNorm1d(hparams.prosody_dim)
+
+    def forward(self, inputs):
+        '''
+        Params
+        -----
+
+        Returns
+        -----
+
+        '''
+        inputs = inputs.transpose(1, 2) #  [N, n_mels, Ty] -> [N, Ty, n_mels]
+        out = inputs.view(inputs.size(0), 1, -1, self.hparams.n_mel_channels) # [N, Ty, n_mels] -> [N, 1, Ty, n_mels]
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out)
+            out = bn(out)
+            out = F.relu(out)
+
+        out = out.transpose(1, 2)  # [N, 128, Ty, n_mels] -> [N, Ty, 128, n_mels // 2 ** mel_wise_stride]
+        N, T = out.size(0), out.size(1)
+        conv_out = out.contiguous().view(N, T, -1)  # [N, Ty, 128*(n_mels // 2 ** mel_wise_stride)]
+
+        # Initialize GRPCells
+        self.initialize_states()
+
+        seq_len = inputs.size(1)
+        temp_outputs, global_outputs = [], []
+
+        while len(temp_outputs) < seq_len:
+            t = len(temp_outputs)
+            gru_input = conv_out[:,t,:]
+            self.temp_gru_hidden = self.temp_gru_cell(gru_input, self.temp_gru_hidden)
+            temp_gru_hidden_detached = self.temp_gru_hidden.detach()
+            self.global_gru_hidden = self.global_gru_cell(temp_gru_hidden_detached, self.global_gru_hidden)
+            temp_output = F.relu(self.bn_l1(self.linear1(self.temp_gru_hidden)))
+            global_output = F.relu(self.bn_l2(self.linear2(self.global_gru_hidden)))
+            temp_outputs += [temp_output]
+            global_outputs += [global_output]
+
+        self.temp_outputs, self.global_outputs \
+            = self.parse_outputs(temp_outputs, global_outputs)
+
+        return self.temp_outputs, self.global_outputs
+
+    def get_gru_cell(self):
+        return self.temp_gru_cell, self.global_gru_cell
+
+    def initialize_states(self):
+        self.temp_gru_hidden = None
+        self.global_gru_hidden = None
+
+    def parse_outputs(self, temp_outputs, global_outputs):
+        temp_outputs = torch.stack(temp_outputs)
+        temp_outputs = temp_outputs.transpose(0,1) # (T_out, B, gru_dim) -> (B, T_out, prosody_dim)
+        global_outputs = torch.stack(global_outputs)
+        global_outputs = global_outputs.transpose(0,1) # (T_out, B, gru_dim) -> (B, T_out, prosody_dim)
+
+        return temp_outputs, global_outputs
+
+    def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
+        for _ in range(n_convs):
+            L = (L - kernel_size + 2 * pad) // stride + 1
+        return L
+
+class ReferenceEncoder4(nn.Module):
+    '''
+    inputs --- [N, n_mels, Ty]  mels
+    outputs --- ([N, seq_len, ref_enc_gru_size])
+    '''
+    def __init__(self, hparams):
+        super(ReferenceEncoder4, self).__init__()
+        self.hparams = hparams
+        K = len(hparams.ref_enc_filters)
+        filters = [1] + hparams.ref_enc_filters
+
+        #convs = [nn.Conv2d(in_channels=filters[i],
+        convs = [CoordConv2d(in_channels=filters[i],
+                                out_channels=filters[i + 1],
+                                kernel_size=hparams.ref_enc_filter_size,
+                                stride=hparams.ref_enc_strides,
+                                #stride=(2, 2),
+                                padding=hparams.ref_enc_pad) for i in range(K)]
+        self.convs = nn.ModuleList(convs)
+        self.bns = nn.ModuleList(
+            [nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i])
+             for i in range(K)])
+
+        #out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        #out_channels = hparams.n_mel_channels
+        out_channels = self.calculate_channels(hparams.n_mel_channels,
+            hparams.ref_enc_filter_size[1], hparams.ref_enc_strides[1],
+            hparams.ref_enc_pad[1], K)
+
+        self.temp_gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
+                          hidden_size=hparams.ref_enc_gru_size,
+                          batch_first=True)
+        self.h_temp_gru = None
+
+        self.global_gru = nn.GRU(input_size=hparams.ref_enc_gru_size,
+                          hidden_size=hparams.ref_enc_gru_size,
+                          batch_first=True)
+        self.h_global_gru = None
+
+        # 1dConv linear project at each step.
+        self.linear_conv = ConvNorm(
+            in_channels=hparams.ref_enc_gru_size,
+            out_channels=hparams.prosody_dim,
+            bias=True,
+            w_init_gain='relu')
+        self.bn_l = nn.BatchNorm1d(hparams.prosody_dim)
+
+    def initialize_states(self):
+        self.h_temp_gru = None
+        self.h_global_gru = None
+
+    def forward(self, inputs, input_lengths=None):
+        inputs = inputs.transpose(1, 2) #  [N, n_mels, Ty] -> [N, Ty, n_mels]
+        out = inputs.view(inputs.size(0), 1, -1, self.hparams.n_mel_channels) # [N, Ty, n_mels] -> [N, 1, Ty, n_mels]
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out)
+            out = bn(out)
+            out = F.relu(out)
+
+        out = out.transpose(1, 2)  # [N, 128, Ty, n_mels] -> [N, Ty, 128, n_mels // 2 ** mel_wise_stride]
+        N, T = out.size(0), out.size(1)
+        out = out.contiguous().view(N, T, -1)  # [N, Ty, 128*(n_mels // 2 ** mel_wise_stride)]
+
+        if input_lengths is not None:
+            input_lengths = (input_lengths.cpu().numpy() / 2 ** len(self.convs))
+            input_lengths = input_lengths.round().astype(int)
+            out = nn.utils.rnn.pack_padded_sequence(
+                        out, input_lengths, batch_first=True, enforce_sorted=False)
+
+        conv_out = out
+        self.temp_gru.flatten_parameters()
+        self.global_gru.flatten_parameters()
+
+        out_temp_gru, self.h_temp_gru = self.temp_gru(conv_out, self.h_temp_gru)
+        out_temp_gru_detached = out_temp_gru.detach()
+        out_global_gru, self.h_global_gru = self.global_gru(out_temp_gru_detached, self.h_global_gru)
+
+        out_temp_gru = out_temp_gru.transpose(1, 2) #  [N, Ty, ref_enc_gru_size] -> [N, ref_enc_gru_size, Ty]
+        out_global_gru = out_global_gru.transpose(1, 2) #  [N, Ty, ref_enc_gru_size] -> [N, ref_enc_gru_size, Ty]
+
+        if self.hparams.global_prosody_is_hidden:
+            out_temp = F.relu(self.bn_l(self.linear_conv(out_cat))) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
+            out_temp = out_temp.transpose(1,2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
+            out_global_gru = out_global_gru.transpose(1, 2) # [N, ref_enc_gru_size, Ty] -> [N, Ty, ref_enc_gru_size]
+            return out_temp, out_global_gru
+
+        else:
+            out_cat = torch.cat([out_temp_gru, out_global_gru], dim=0) # [2*N, ref_enc_gru_size, Ty]
+            out_cat = F.relu(self.bn_l(self.linear_conv(out_cat))) # [2*N, ref_enc_gru_size, Ty] -> [2*N, prosody_dim, Ty]
+
+            out_temp = out_cat[:N,:,:].transpose(1,2) # [2*N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
+            out_global = out_cat[N:,:,:].transpose(1,2) # [2*N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
+
+            return out_temp, out_global
+
+    def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
+        for _ in range(n_convs):
+            L = (L - kernel_size + 2 * pad) // stride + 1
+        return L
