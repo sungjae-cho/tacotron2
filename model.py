@@ -403,11 +403,11 @@ class Decoder(nn.Module):
                 exit()
 
         self.linear_projection = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim,
+            self.get_linear_input_dim(),
             hparams.n_mel_channels * hparams.n_frames_per_step)
 
         self.gate_layer = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
+            self.get_linear_input_dim(), 1,
             bias=True, w_init_gain='sigmoid')
 
     def add_ref_enc(self, reference_encoder):
@@ -442,6 +442,21 @@ class Decoder(nn.Module):
                     decoder_rnn_input_dim += self.hparams.res_en_out_dim
 
         return decoder_rnn_input_dim
+
+    def get_linear_input_dim(self):
+        linear_input_dim = (self.hparams.decoder_rnn_dim
+            + self.hparams.encoder_embedding_dim)
+
+        if self.hparams.has_style_token_linear:
+            if self.hparams.prosody_predictor:
+                linear_input_dim += self.hparams.prosody_dim
+            else:
+                linear_input_dim += self.hparams.speaker_embedding_dim
+                linear_input_dim += self.hparams.emotion_embedding_dim
+                if self.hparams.residual_encoder:
+                    linear_input_dim += self.hparams.res_en_out_dim
+
+        return linear_input_dim
 
     def get_attention_means(self):
         if self.monotonic_attention:
@@ -650,8 +665,17 @@ class Decoder(nn.Module):
         self.decoder_hidden = F.dropout(
             self.decoder_hidden, self.p_decoder_dropout, self.training)
 
+        linear_inputs = [self.decoder_hidden, self.attention_context]
+        if self.hparams.has_style_token_linear:
+            if self.hparams.prosody_predictor:
+                linear_inputs.append(self.prosody_encoding)
+            else:
+                linear_inputs.append(speaker_embedding)
+                linear_inputs.append(emotion_embedding)
+                if self.hparams.residual_encoder:
+                    linear_inputs.append(residual_encoding)
         decoder_hidden_attention_context = torch.cat(
-            (self.decoder_hidden, self.attention_context), dim=1)
+            linear_inputs, dim=1)
         decoder_output = self.linear_projection(
             decoder_hidden_attention_context)
 
