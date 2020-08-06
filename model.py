@@ -619,6 +619,8 @@ class Decoder(nn.Module):
                 emotion_embedding]
             if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                 pp_inputs.append(prev_global_prosody_ref)
+            if 'AttRNN' in self.hparams.pp_opt_inputs:
+                pp_inputs.append(self.attention_hidden.detach())
             pp_input = torch.cat(pp_inputs, -1)
             if self.hparams.prosody_predictor == 'MLP':
                 prosody_pred = self.prosody_predictor(pp_input)
@@ -1277,6 +1279,8 @@ class ProsodyPredictorMLP(nn.Module):
                 in_dim += hparams.ref_enc_gru_size
             else:
                 in_dim += hparams.prosody_dim
+        if 'AttRNN' in hparams.pp_opt_inputs:
+            in_dim += hparams.attention_rnn_dim
         out_dim = hparams.prosody_dim
         self.linear1 = LinearNorm(in_dim, hparams.encoder_embedding_dim,
             bias=True, w_init_gain='relu')
@@ -1309,6 +1313,8 @@ class ProsodyPredictorLSTMCell(nn.Module):
                 in_dim += hparams.ref_enc_gru_size
             else:
                 in_dim += hparams.prosody_dim
+        if 'AttRNN' in hparams.pp_opt_inputs:
+            in_dim += hparams.attention_rnn_dim
         out_dim = hparams.prosody_dim
         self.cell = nn.LSTMCell(in_dim, self.pp_lstm_hidden_dim)
         self.linear = LinearNorm(self.pp_lstm_hidden_dim, out_dim,
