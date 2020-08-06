@@ -1306,6 +1306,7 @@ class ProsodyPredictorLSTMCell(nn.Module):
         super(ProsodyPredictorLSTMCell, self).__init__()
         self.hparams = hparams
         self.pp_lstm_hidden_dim = hparams.pp_lstm_hidden_dim
+        self.p_decoder_dropout = hparams.p_decoder_dropout
         in_dim = (hparams.encoder_embedding_dim
             + hparams.emotion_embedding_dim
             + hparams.speaker_embedding_dim)
