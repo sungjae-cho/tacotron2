@@ -1476,7 +1476,6 @@ class ReferenceEncoder3(nn.Module):
                                 out_channels=filters[i + 1],
                                 kernel_size=hparams.ref_enc_filter_size,
                                 stride=hparams.ref_enc_strides,
-                                #stride=(2, 2),
                                 padding=hparams.ref_enc_pad) for i in range(K)]
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(
@@ -1587,7 +1586,6 @@ class ReferenceEncoder4(nn.Module):
                                 out_channels=filters[i + 1],
                                 kernel_size=hparams.ref_enc_filter_size,
                                 stride=hparams.ref_enc_strides,
-                                #stride=(2, 2),
                                 padding=hparams.ref_enc_pad) for i in range(K)]
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(
