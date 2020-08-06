@@ -410,6 +410,9 @@ class Decoder(nn.Module):
             hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
             bias=True, w_init_gain='sigmoid')
 
+    def add_ref_enc(self, reference_encoder):
+        self.reference_encoder = reference_encoder
+
     def get_attention_rnn_input_dim(self):
         attention_rnn_input_dim = (self.hparams.prenet_dim
             + self.hparams.encoder_embedding_dim)
@@ -461,6 +464,13 @@ class Decoder(nn.Module):
         decoder_input = Variable(memory.data.new(
             B, self.n_mel_channels * self.n_frames_per_step).zero_())
         return decoder_input
+
+    def get_go_prosody(self, global_prosody):
+        B = global_prosody.size(0)
+        prosody_dim = global_prosody.size(2)
+        go_prosody = Variable(global_prosody.data.new(
+            B, prosody_dim).zero_())
+        return go_prosody
 
     def initialize_decoder_states(self, memory, mask):
         """ Initializes attention rnn states, decoder rnn states, attention
@@ -565,7 +575,8 @@ class Decoder(nn.Module):
             prosody_hiddens
 
     def decode(self, decoder_input, speaker_embedding, emotion_embedding,
-            residual_encoding, t_prosody_ref=None, discrete_attention_weight=False):
+            residual_encoding, t_prosody_ref=None, prev_global_prosody_ref=None,
+            discrete_attention_weight=False):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -606,6 +617,8 @@ class Decoder(nn.Module):
             detached_attention_context = self.attention_context.detach()
             pp_inputs = [detached_attention_context, speaker_embedding,
                 emotion_embedding]
+            if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+                pp_inputs.append(prev_global_prosody_ref)
             pp_input = torch.cat(pp_inputs, -1)
             if self.hparams.prosody_predictor == 'MLP':
                 prosody_pred = self.prosody_predictor(pp_input)
@@ -646,7 +659,7 @@ class Decoder(nn.Module):
 
     def forward(self, memory, memory_lengths,
             speaker_embeddings, emotion_embeddings, residual_encoding,
-            prosody_ref=None,
+            prosody_ref=None, global_prosody_ref=None,
             decoder_inputs=None, teacher_forcing=True,
             discrete_attention_weight=False):
         """ Decoder forward pass for training
@@ -680,10 +693,16 @@ class Decoder(nn.Module):
                 t_prosody_ref = None
                 if self.hparams.reference_encoder:
                     t_prosody_ref = prosody_ref[:,t,:]
+                prev_global_prosody_ref = None
+                if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+                    if t == 0:
+                        prev_global_prosody_ref = self.get_go_prosody(global_prosody_ref)
+                    else:
+                        prev_global_prosody_ref = global_prosody_ref[:,t-1,:]
                 mel_output, gate_output, attention_weights, attention_context, \
                     prosody_hidden = self.decode(
                     decoder_input, speaker_embeddings, emotion_embeddings,
-                    residual_encoding, t_prosody_ref)
+                    residual_encoding, t_prosody_ref, prev_global_prosody_ref)
                 mel_outputs += [mel_output.squeeze(1)]
                 gate_outputs += [gate_output.squeeze(1)]
                 alignments += [attention_weights]
@@ -722,26 +741,38 @@ class Decoder(nn.Module):
         alignments: sequence of attention weights from the decoder
         - Size: [batch_size, max_decoder_steps, batch_max_text_length]
         """
-        decoder_input = self.get_go_frame(memory)
+        prev_mel_output = self.get_go_frame(memory)
 
         #self.initialize_decoder_states(memory, mask=None)
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
+        if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+            self.reference_encoder.initialize_states()
 
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = [], [], [], [], []
         while len(mel_outputs) < self.max_decoder_steps:
-            decoder_input = self.prenet(decoder_input)
+            t_temp_prosody_ref, prev_global_prosody_ref = None, None
+            if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+                t_temp_prosody_ref, prev_global_prosody_ref = self.reference_encoder(prev_mel_output.unsqueeze(-1))
+                # squeeze time step dim
+                t_temp_prosody_ref = t_temp_prosody_ref.squeeze(1)
+                prev_global_prosody_ref = prev_global_prosody_ref.squeeze(1)
+
+            decoder_input = self.prenet(prev_mel_output)
+
             mel_output, gate_output, alignment, attention_context, prosody_hidden \
                 = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding,
+                t_prosody_ref=t_temp_prosody_ref,
+                prev_global_prosody_ref=prev_global_prosody_ref,
                 discrete_attention_weight=discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
             prosody_hiddens += [prosody_hidden]
-            decoder_input = mel_output
+            prev_mel_output = mel_output
 
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = self.parse_decoder_outputs(
@@ -762,23 +793,34 @@ class Decoder(nn.Module):
         gate_outputs: gate outputs from the decoder
         alignments: sequence of attention weights from the decoder
         """
-        decoder_input = self.get_go_frame(memory)
+        prev_mel_output = self.get_go_frame(memory)
 
         self.initialize_decoder_states(memory, mask=None)
+        if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+            self.reference_encoder.initialize_states()
 
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = [], [], [], [], []
         while True:
-            decoder_input = self.prenet(decoder_input)
+            t_temp_prosody_ref, prev_global_prosody_ref = None, None
+            if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+                t_temp_prosody_ref, prev_global_prosody_ref = self.reference_encoder(prev_mel_output.unsqueeze(-1))
+                # squeeze time step dim
+                t_temp_prosody_ref = t_temp_prosody_ref.squeeze(1)
+                prev_global_prosody_ref = prev_global_prosody_ref.squeeze(1)
+            decoder_input = self.prenet(prev_mel_output)
             mel_output, gate_output, alignment, attention_context, prosody_hidden \
                 = self.decode(decoder_input,
                 speaker_indices, emotion_vectors, residual_encoding,
+                t_prosody_ref=t_temp_prosody_ref,
+                prev_global_prosody_ref=prev_global_prosody_ref,
                 discrete_attention_weight=discrete_attention_weight)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [alignment]
             attention_contexts += [attention_context]
             prosody_hiddens += [prosody_hidden]
+            prev_mel_output = mel_output
 
             if torch.sigmoid(gate_output.data) > self.gate_threshold:
                 break
@@ -834,6 +876,12 @@ class Tacotron2(nn.Module):
                 self.reference_encoder = ReferenceEncoder1(hparams)
             elif hparams.reference_encoder == 'ref2':
                 self.reference_encoder = ReferenceEncoder2(hparams)
+            elif hparams.reference_encoder == 'ref3':
+                self.reference_encoder = ReferenceEncoder3(hparams)
+                self.decoder.add_ref_enc(self.reference_encoder)
+            elif hparams.reference_encoder == 'ref4':
+                self.reference_encoder = ReferenceEncoder4(hparams)
+                self.decoder.add_ref_enc(self.reference_encoder)
         else:
             self.reference_encoder = None
 
@@ -907,15 +955,19 @@ class Tacotron2(nn.Module):
                 residual_encoding, mu, logvar = None, None, None
 
             if self.hparams.reference_encoder:
-                prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
+                if self.hparams.reference_encoder in ['ref3', 'ref4']:
+                    self.reference_encoder.initialize_states()
+                prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
                 prosody_ref = None
+                global_prosody_ref = None
 
             (mel_outputs, gate_outputs, alignments,
                 attention_contexts, prosody_preds, att_means) = self.decoder(
                     encoder_outputs, text_lengths,
                         speaker_embeddings, emotion_embeddings, residual_encoding,
-                        prosody_ref, mels, teacher_forcing=True)
+                        prosody_ref, global_prosody_ref,
+                        mels, teacher_forcing=True)
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -1220,6 +1272,11 @@ class ProsodyPredictorMLP(nn.Module):
         in_dim = (hparams.encoder_embedding_dim
             + hparams.emotion_embedding_dim
             + hparams.speaker_embedding_dim)
+        if 'prev_global_prosody' in hparams.pp_opt_inputs:
+            if self.hparams.global_prosody_is_hidden:
+                in_dim += hparams.ref_enc_gru_size
+            else:
+                in_dim += hparams.prosody_dim
         out_dim = hparams.prosody_dim
         self.linear1 = LinearNorm(in_dim, hparams.encoder_embedding_dim,
             bias=True, w_init_gain='relu')
@@ -1247,6 +1304,11 @@ class ProsodyPredictorLSTMCell(nn.Module):
         in_dim = (hparams.encoder_embedding_dim
             + hparams.emotion_embedding_dim
             + hparams.speaker_embedding_dim)
+        if 'prev_global_prosody' in hparams.pp_opt_inputs:
+            if self.hparams.global_prosody_is_hidden:
+                in_dim += hparams.ref_enc_gru_size
+            else:
+                in_dim += hparams.prosody_dim
         out_dim = hparams.prosody_dim
         self.cell = nn.LSTMCell(in_dim, self.pp_lstm_hidden_dim)
         self.linear = LinearNorm(self.pp_lstm_hidden_dim, out_dim,
@@ -1329,7 +1391,7 @@ class ReferenceEncoder1(nn.Module):
         outputs = outputs.transpose(1, 2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
         last_output = outputs[-1,:,:]
         #_, out = self.gru(out)
-        return outputs
+        return outputs, _
         #return out.squeeze(0)
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
