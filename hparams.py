@@ -67,6 +67,9 @@ def create_hparams(hparams_string=None, verbose=False):
         n_mel_channels=80,
         mel_fmin=0.0,
         mel_fmax=8000.0,
+        f0_min=80,
+        f0_max=880,
+        harm_thresh=0.25,
         new_param=10,
 
         ################################

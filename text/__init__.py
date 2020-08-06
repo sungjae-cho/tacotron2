@@ -116,6 +116,15 @@ def sequence_to_text(sequence):
       result += s
   return result.replace('}{', ' ')
 
+def sequence_to_text_list(sequence):
+  '''Converts a sequence of IDs back to a sequnce of graphemes/phonemes'''
+  result = list()
+  for symbol_id in sequence:
+    if symbol_id in _id_to_symbol:
+      s = _id_to_symbol[symbol_id]
+      result.append(s)
+  return result
+
 
 def _clean_text(text, cleaner_names):
   for name in cleaner_names:

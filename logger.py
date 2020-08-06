@@ -15,7 +15,7 @@ from plotting_utils import plot_gate_outputs_to_numpy
 from measures import forward_attention_ratio, get_mel_length, get_mel_lengths, \
     get_attention_quality, attention_ratio, attention_range_ratio, \
     multiple_attention_ratio
-from text import sequence_to_text
+from text import sequence_to_text, text_to_sequence, sequence_to_text_list
 from denoiser import Denoiser
 from text import text_to_sequence
 from utils import to_gpu, get_spk_adv_targets
@@ -231,12 +231,13 @@ class Tacotron2Logger(SummaryWriter):
             mel_output_tf = mel_output_tf.unsqueeze(0)
         np_wav_tf = self.mel2wav(mel_output_tf.cuda().half())
         alignment_tf = synth_dict['alignment_tf']
-        np_alignment_tf = plot_alignment_to_numpy(alignment_tf.detach().cpu().numpy().T)
+        np_alignment_tf = alignment_tf.detach().cpu().numpy()
+        np_img_alignment_tf = plot_alignment_to_numpy(np_alignment_tf.T)
 
         wandb.log({
             "{}/teacher_forcing/mel".format(log_prefix): [wandb.Image(np_fig_mel_output_tf)],
             "{}/teacher_forcing/wav".format(log_prefix): [wandb.Audio(np_wav_tf.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
-            "{}/teacher_forcing/alignment".format(log_prefix): [wandb.Image(np_alignment_tf, caption=caption_string)],
+            "{}/teacher_forcing/alignment".format(log_prefix): [wandb.Image(np_img_alignment_tf, caption=caption_string)],
             "{}/teacher_forcing/attention_ratio".format(log_prefix): synth_dict['ar_tf'],
             "{}/teacher_forcing/letter_attention_ratio".format(log_prefix): synth_dict['letter_ar_tf'],
             "{}/teacher_forcing/punctuation_attention_ratio".format(log_prefix): synth_dict['punct_ar_tf'],
@@ -248,7 +249,12 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.prosody_predictor:
             prosody_pred_tf = synth_dict['prosody_pred_tf']
             np_prosody_dims = prosody_pred_tf.cpu().numpy()
-            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
+            int_text_seq = text_to_sequence(text_string,
+                self.hparams.text_cleaners, valset.get_g2p_dictionary())
+            text_seq = sequence_to_text_list(int_text_seq)
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf,
+                np_wav_tf, text_seq, np_alignment_tf, np_prosody_dims,
+                self.hparams)
             wandb.log({
                 "{}/teacher_forcing/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)
@@ -256,7 +262,12 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.reference_encoder:
             prosody_ref_tf = synth_dict['prosody_ref_tf']
             np_prosody_dims = prosody_ref_tf.cpu().numpy()
-            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf, np_prosody_dims)
+            int_text_seq = text_to_sequence(text_string,
+                self.hparams.text_cleaners, valset.get_g2p_dictionary())
+            text_seq = sequence_to_text_list(int_text_seq)
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf,
+                np_wav_tf, text_seq, np_alignment_tf, np_prosody_dims,
+                self.hparams)
             wandb.log({
                 "{}/teacher_forcing/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)
@@ -272,12 +283,13 @@ class Tacotron2Logger(SummaryWriter):
             mel_output_fr = mel_output_fr.unsqueeze(0)
         np_wav_fr = self.mel2wav(mel_output_fr.cuda().half())
         alignment_fr = synth_dict['alignment_fr']
-        np_alignment_fr = plot_alignment_to_numpy(alignment_fr.detach().cpu().numpy().T)
+        np_alignment_fr = alignment_fr.detach().cpu().numpy()
+        np_img_alignment_fr = plot_alignment_to_numpy(np_alignment_fr.T)
 
         wandb.log({
             "{}/free_running/mel".format(log_prefix): [wandb.Image(np_fig_mel_output_fr)],
             "{}/free_running/wav".format(log_prefix): [wandb.Audio(np_wav_fr.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
-            "{}/free_running/alignment".format(log_prefix): [wandb.Image(np_alignment_fr, caption=caption_string)],
+            "{}/free_running/alignment".format(log_prefix): [wandb.Image(np_img_alignment_fr, caption=caption_string)],
             "{}/free_running/attention_ratio".format(log_prefix): synth_dict['ar_fr'],
             "{}/free_running/letter_attention_ratio".format(log_prefix): synth_dict['letter_ar_fr'],
             "{}/free_running/punctuation_attention_ratio".format(log_prefix): synth_dict['punct_ar_fr'],
@@ -289,7 +301,12 @@ class Tacotron2Logger(SummaryWriter):
         if self.hparams.prosody_predictor:
             prosody_pred_fr = synth_dict['prosody_pred_fr']
             np_prosody_dims = prosody_pred_fr.cpu().numpy()
-            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_fr, np_prosody_dims)
+            int_text_seq = text_to_sequence(text_string,
+                self.hparams.text_cleaners, valset.get_g2p_dictionary())
+            text_seq = sequence_to_text_list(int_text_seq)
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_fr,
+                np_wav_fr, text_seq, np_alignment_fr, np_prosody_dims,
+                self.hparams)
             wandb.log({
                 "{}/free_running/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)

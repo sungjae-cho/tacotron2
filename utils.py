@@ -6,6 +6,7 @@ import pandas as pd
 import torch.nn.functional as F
 from os import listdir
 from os.path import isfile, join
+from yin import compute_yin
 
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
@@ -506,3 +507,73 @@ def discretize_att_w(attention_weights, discrete_bound=False):
             discrete_att_w = discrete_att_w.masked_fill((attention_weights == max_expanded), 1)
 
     return discrete_att_w
+
+def get_f0(wav, sampling_rate=22050, frame_length=1024, hop_length=256,
+        f0_min=100, f0_max=300, harm_thresh=0.1):
+    f0, harmonic_rates, argmins, times = compute_yin(
+        wav, sampling_rate, frame_length, hop_length, f0_min, f0_max,
+        harm_thresh)
+    pad = int((frame_length / hop_length) / 2)
+    f0 = [0.0] * pad + f0 + [0.0] * pad
+
+    f0 = np.array(f0, dtype=np.float32)
+    return f0
+
+def get_text_durations(alignment):
+    '''
+    Params
+    -----
+    alignment: A stack of attention weights at every decoding step.
+    - type: numpy.ndarray.
+    - dtype: float.
+    - shape: (mel_steps, text_steps)
+
+    Returns
+    -----
+    text_durations: # Mel frames where a grapheme/phoneme is continuously spoken.
+    - type: list.
+    - dtype: int.
+    x_chunks: A list of chunks containing mel steps where a grapheme/phoneme is continuously spoken.
+    - type: list.
+    - dtype: list. that contains integers.
+    att_text_seq: A sequence of maximally attended text.
+    - type: list.
+    - dtype: int.
+    '''
+    (mel_steps, text_steps) = alignment.shape
+    text_durations = list()
+    x_chunks = list()
+    # y cantains maximally attended text locations.
+    x = list(range(mel_steps))
+    att_text_seq = y = alignment.argmax(axis=1)
+    prev_yi = -1
+    for i in range(mel_steps):
+        xi = x[i]
+        yi = y[i]
+        if i > 0:
+            prev_yi = y[i-1]
+        if i < mel_steps -1:
+            next_yi = y[i+1]
+
+        if (prev_yi != yi) or (i == 0):
+            start = True
+        else:
+            start = False
+
+        if (next_yi != yi) or (i == mel_steps - 1):
+            end = True
+        else:
+            end = False
+
+        if start:
+            xi_list = list()
+
+        xi_list.append(xi)
+
+        if end:
+            yi_list = y[xi_list[0]:xi_list[-1]+1]
+            duration = len(xi_list)
+            text_durations += [duration]*len(xi_list)
+            x_chunks.append(xi_list)
+
+    return text_durations, x_chunks, att_text_seq
