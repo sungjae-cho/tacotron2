@@ -204,7 +204,7 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
     for i_dim in range(n_prosody_dims):
         prosody_dim = prosody[:,i_dim]
         prosody_dim = prosody_dim.astype(np.float32) # casting required when fp16_run.
-        axes[i_dim+n_leading_figures].plot(x, prosody_dim, 'o-', color=colors[i_dim % len(colors)])
+        axes[i_dim+n_leading_figures].plot(x, prosody_dim, '-', color=colors[i_dim % len(colors)])
         axes[i_dim+n_leading_figures].set_xlabel("Decoding_step")
         axes[i_dim+n_leading_figures].set_ylabel("Prosody_dim{}".format(i_dim))
         axes[i_dim+n_leading_figures].set_xlim(x[0], x[-1])
