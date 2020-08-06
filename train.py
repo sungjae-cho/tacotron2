@@ -19,7 +19,7 @@ from torch.nn import MSELoss, L1Loss
 
 from model import Tacotron2
 from data_utils import TextMelLoader, TextMelCollate
-from loss_function import Tacotron2Loss, KLD_loss
+from loss_function import Tacotron2Loss, KLD_loss, TotalLoss
 from logger import Tacotron2Logger
 from hparams import create_hparams
 from measures import forward_attention_ratio, attention_ratio, attention_range_ratio, multiple_attention_ratio
@@ -228,7 +228,7 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     synth_dict['mar_fr'] = batch_mar_fr[idx].item()
 
 
-def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size, n_gpus,
+def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, n_gpus,
              collate_fn, logger, distributed_run, rank, hparams):
     """Handles all the validation scoring and printing"""
     for val_type, valset in valsets.items():
@@ -241,7 +241,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                                     shuffle=False, batch_size=batch_size,
                                     pin_memory=False, collate_fn=collate_fn)
 
-            criterion, criterion_spk_adv, criterion_emo_adv, criterion_L1Loss = criterions
+            criterion = criterion
             val_loss_mel = 0.0
             val_loss_gate = 0.0
             val_loss_KLD = 0.0
@@ -342,50 +342,24 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 # Compute stop gate MAE(pred_lengths, true_lengths)
                 gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
 
-                # Caculate Tacotron2 losses.
-                loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
-
-                # Calculate the KL-divergence loss.
-                if hparams.residual_encoder:
-                    loss_KLD = KLD_loss(mu, logvar)
-                else:
-                    loss_KLD = torch.zeros(1).cuda()
-
-                # Calculate L1 loss between prosody_pred and prosody_ref
-                if hparams.reference_encoder:
-                    fixed_prosody_ref = prosody_ref.detach()
-                    loss_ref_enc = criterion_L1Loss(prosody_pred, fixed_prosody_ref)
-                else:
-                    loss_ref_enc = torch.zeros(1).cuda()
-
-                # Forward the speaker adversarial training module.
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                    # Compute the speaker adversarial loss
-                    loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
-                else:
-                    loss_spk_adv = torch.zeros(1).cuda()
-
-                # Forward the emotion adversarial training module.
                 if hparams.emotion_adversarial_training:
                     emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
-                    # Compute the emotion adversarial loss
-                    loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
-                else:
-                    loss_emo_adv = torch.zeros(1).cuda()
 
-                if hparams.monotonic_attention:
-                    input_lengths = x[1]
-                    loss_att_means = MSELoss()(att_means, input_lengths.float())
-                else:
-                    loss_att_means = torch.zeros(1).cuda()
-
-                loss = loss_taco2 + \
-                    hparams.res_en_KLD_weight * loss_KLD + \
-                    hparams.loss_ref_enc_weight * loss_ref_enc + \
-                    hparams.speaker_adv_weight * loss_spk_adv + \
-                    hparams.emotion_adv_weight * loss_emo_adv + \
-                    hparams.loss_att_means_weight * loss_att_means
+                (loss, loss_taco2, loss_mel, loss_gate, loss_KLD, loss_ref_enc,
+                    loss_spk_adv, loss_emo_adv, loss_att_means
+                    ) = criterion(
+                        mel_outputs, mel_outputs_postnet, mel_padded,
+                        gate_outputs, gate_padded,
+                        y_pred, y,
+                        mu, logvar,
+                        prosody_pred, prosody_ref,
+                        logit_speakers, speakers,
+                        logit_emotions, emotion_targets,
+                        att_means, input_lengths,
+                        iteration
+                    )
 
                 # [M1] forward_attention_ratio
                 _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
@@ -678,7 +652,6 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                 mar_fr_pair = (val_mean_mar_fr, val_batch_mar_fr)
 
 
-        model.train()
         if rank == 0:
             print("Validation loss {} {}: {:9f}  ".format(str(val_type), iteration, val_loss))
             losses = (val_loss, val_loss_mel, val_loss_gate, val_loss_KLD, val_loss_ref_enc, val_loss_spk_adv, val_loss_emo_adv, val_loss_att_means)
@@ -732,6 +705,7 @@ def validate(model, criterions, trainset, valsets, iteration, epoch, batch_size,
                     dict_log_values['emotion_clsf_report'] = get_clsf_report(np_emo_cm_sum, hparams.emotions, trainset.emotion_list)
 
             logger.log_validation(trainset, valset, val_type, hparams, dict_log_values)
+    model.train()
 
 
 def train(output_directory, log_directory, checkpoint_path, pretrained_path,
@@ -771,10 +745,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     if hparams.distributed_run:
         model = apply_gradient_allreduce(model)
 
-    criterion = Tacotron2Loss()
-    criterion_spk_adv = torch.nn.CrossEntropyLoss()
-    criterion_emo_adv = torch.nn.CrossEntropyLoss()
-    criterion_L1Loss = L1Loss()
+    criterion = TotalLoss(hparams)
 
     logger = prepare_directories_and_logger(
         hparams,
@@ -845,51 +816,20 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             residual_encoding, mu, logvar = y_pred_res_en
             prosody = prosody_ref, prosody_pred
 
-            # Caculate Tacotron2 losses.
-            loss_taco2, loss_mel, loss_gate = criterion(y_pred, y)
 
-            # Calculate the KL-divergence loss.
-            if hparams.residual_encoder:
-                loss_KLD = KLD_loss(mu, logvar)
-            else:
-                loss_KLD = torch.zeros(1).cuda()
-
-            # Fitting prosody_pred to prosody_ref
-            if hparams.reference_encoder:
-                fixed_prosody_ref = prosody_ref.detach()
-                loss_ref_enc = criterion_L1Loss(prosody_pred, fixed_prosody_ref)
-            else:
-                loss_ref_enc = torch.zeros(1).cuda()
-
-            # Forward the speaker adversarial training module.
-            if hparams.speaker_adversarial_training:
-                spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
-                # Compute the speaker adversarial loss
-                loss_spk_adv = criterion_spk_adv(logit_speakers, spk_adv_targets)
-            else:
-                loss_spk_adv = torch.zeros(1).cuda()
-
-            # Forward the emotion adversarial training module.
-            if hparams.emotion_adversarial_training:
-                emo_adv_targets = get_emo_adv_targets(emotion_targets, input_lengths)
-                # Compute the emotion adversarial loss
-                loss_emo_adv = criterion_emo_adv(logit_emotions, emo_adv_targets)
-            else:
-                loss_emo_adv = torch.zeros(1).cuda()
-
-            if hparams.monotonic_attention:
-                input_lengths = x[1]
-                loss_att_means = MSELoss()(att_means, input_lengths.float())
-            else:
-                loss_att_means = torch.zeros(1).cuda()
-
-            hparams.res_en_KLD_weight = get_KLD_weight(iteration, hparams)
-            loss = loss_taco2 + \
-                hparams.res_en_KLD_weight * loss_KLD + \
-                hparams.loss_ref_enc_weight * loss_ref_enc + \
-                hparams.speaker_adv_weight * loss_spk_adv + \
-                hparams.emotion_adv_weight * loss_emo_adv + \
-                hparams.loss_att_means_weight * loss_att_means
+            (loss, loss_taco2, loss_mel, loss_gate, loss_KLD, loss_ref_enc,
+                loss_spk_adv, loss_emo_adv, loss_att_means
+                ) = criterion(
+                    mel_outputs, mel_outputs_postnet, mel_padded,
+                    gate_outputs, gate_padded,
+                    y_pred, y,
+                    mu, logvar,
+                    prosody_pred, prosody_ref,
+                    logit_speakers, speakers,
+                    logit_emotions, emotion_targets,
+                    att_means, input_lengths,
+                    iteration
+                )
 
             # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
             # These are accumulated into x.grad for every parameter x
@@ -1107,8 +1047,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
             if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch)):
-                criterions = (criterion, criterion_spk_adv, criterion_emo_adv, criterion_L1Loss)
-                validate(model, criterions, trainset, valsets, iteration, float_epoch,
+                validate(model, criterion, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          False, rank, hparams)
                          #hparams.distributed_run, rank, hparams)
