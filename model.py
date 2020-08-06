@@ -628,7 +628,7 @@ class Decoder(nn.Module):
                 prosody_pred, self.prosody_hidden, self.prosody_cell = self.prosody_predictor(
                     pp_input, (self.prosody_hidden, self.prosody_cell))
 
-        if t_prosody_ref is None:
+        if (t_prosody_ref is None) or (not self.training):
             self.prosody_encoding = prosody_pred
         else:
             self.prosody_encoding = t_prosody_ref
