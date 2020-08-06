@@ -757,6 +757,7 @@ class Decoder(nn.Module):
         PARAMS
         ------
         memory: Encoder outputs
+        - Size: [batch_size, n_mel_channels * n_frames_per_step)] == [B, 80]
 
         RETURNS
         -------
