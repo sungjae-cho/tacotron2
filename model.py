@@ -1290,9 +1290,10 @@ class ProsodyPredictorMLP(nn.Module):
         self.bn2 = nn.BatchNorm1d(hparams.encoder_embedding_dim)
         self.linear3 = LinearNorm(hparams.encoder_embedding_dim, out_dim,
             bias=True, w_init_gain='relu')
-        self.bn3 = nn.BatchNorm1d(hparams.encoder_embedding_dim)
+        self.bn3 = nn.BatchNorm1d(out_dim)
 
     def forward(self, inputs):
+
         h1 = F.relu(self.bn1(self.linear1(inputs)))
         h2 = F.relu(self.bn2(self.linear2(h1)))
         outputs = F.relu(self.bn3(self.linear3(h2)))
@@ -1319,7 +1320,7 @@ class ProsodyPredictorLSTMCell(nn.Module):
         self.cell = nn.LSTMCell(in_dim, self.pp_lstm_hidden_dim)
         self.linear = LinearNorm(self.pp_lstm_hidden_dim, out_dim,
             bias=True, w_init_gain='relu')
-        self.bn = nn.BatchNorm1d(self.pp_lstm_hidden_dim)
+        self.bn = nn.BatchNorm1d(out_dim)
 
     def forward(self, inputs, h_c):
         hidden, cell = self.cell(inputs, h_c)
