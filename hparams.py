@@ -115,10 +115,11 @@ def create_hparams(hparams_string=None, verbose=False):
         loss_ref_enc_weight=1.0,
         with_gst=True,
         ref_enc_filters=[32, 32, 64, 64, 128, 128],
-        ref_enc_size=[3, 3],
+        ref_enc_filter_size=[1, 3], # [time_wise_stride, freq_wise_stride]
         ref_enc_strides=[1, 2], # [time_wise_stride, freq_wise_stride]
-        ref_enc_pad=[1, 1],
+        ref_enc_pad=[0, 1], #[1, 1],
         ref_enc_gru_size=128,
+        global_prosody_is_hidden=False,
 
         # Residual encoder parameters
         res_en_out_dim=16,

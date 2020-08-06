@@ -1354,7 +1354,7 @@ class ReferenceEncoder1(nn.Module):
         #out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
         #out_channels = hparams.n_mel_channels
         out_channels = self.calculate_channels(hparams.n_mel_channels,
-            hparams.ref_enc_size[1], hparams.ref_enc_strides[1],
+            hparams.ref_enc_filter_size[1], hparams.ref_enc_strides[1],
             hparams.ref_enc_pad[1], K)
 
         self.gru = nn.GRU(input_size=hparams.ref_enc_filters[-1] * out_channels,
