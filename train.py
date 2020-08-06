@@ -233,6 +233,8 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
     """Handles all the validation scoring and printing"""
     for val_type, valset in valsets.items():
         #val_type: tuple. (str_speaker, str_emotion).
+        '''if val_type == ('all', 'all'):
+            continue'''
         torch.cuda.empty_cache()
         model.eval()
         with torch.no_grad():
