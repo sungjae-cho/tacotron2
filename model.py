@@ -1336,15 +1336,15 @@ class ReferenceEncoder1(nn.Module):
     '''
     def __init__(self, hparams):
         super(ReferenceEncoder1, self).__init__()
+        self.hparams = hparams
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
 
         #convs = [nn.Conv2d(in_channels=filters[i],
         convs = [CoordConv2d(in_channels=filters[i],
                                 out_channels=filters[i + 1],
-                                kernel_size=(3, 3),
+                                kernel_size=hparams.ref_enc_filter_size,
                                 stride=hparams.ref_enc_strides,
-                                #stride=(2, 2),
                                 padding=hparams.ref_enc_pad) for i in range(K)]
         self.convs = nn.ModuleList(convs)
         self.bns = nn.ModuleList(
