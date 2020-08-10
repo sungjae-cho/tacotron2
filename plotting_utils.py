@@ -166,7 +166,7 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
     axes[1].set_xlabel("Frames")
     axes[1].set_ylabel("F0 (Hz)")
     axes[1].set_xlim(x[0], x[-1])
-    axes[1].set_ylim(hparams.f0_min, hparams.f0_max)
+    axes[1].set_ylim(hparams.f0_min, f0.max())
     axes[1].plot(x, f0)
 
     # [3] Third figure: Amplitude
