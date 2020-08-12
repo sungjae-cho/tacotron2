@@ -607,8 +607,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_blank_ar, batch_blank_ar = ar_pairs[3]
         mean_arr, batch_arr = arr_pair
         mean_mar, batch_mar = mar_pair
-        mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
-        batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
+        mean_attention_quality = get_attention_quality(mean_far, mean_mar, mean_letter_ar)
+        batch_attention_quality = get_attention_quality(batch_far, batch_mar, batch_letter_ar)
         best_attention_quality = batch_attention_quality.max().item()
         worst_attention_quality = batch_attention_quality.min().item()
 
@@ -620,8 +620,8 @@ class Tacotron2Logger(SummaryWriter):
         mean_blank_ar_fr, batch_blank_ar_fr = ar_fr_pairs[3]
         mean_arr_fr, batch_arr_fr = arr_fr_pair
         mean_mar_fr, batch_mar_fr = mar_fr_pair
-        mean_attention_quality_fr = get_attention_quality(mean_far_fr, mean_ar_fr, mean_arr_fr, mean_mar_fr)
-        batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
+        mean_attention_quality_fr = get_attention_quality(mean_far_fr, mean_mar_fr, mean_letter_ar_fr)
+        batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_mar_fr, batch_letter_ar_fr)
         best_attention_quality_fr = batch_attention_quality_fr.max().item()
         worst_attention_quality_fr = batch_attention_quality_fr.min().item()
 
