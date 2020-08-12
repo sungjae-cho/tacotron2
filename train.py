@@ -139,11 +139,14 @@ def warm_start_model(checkpoint_path, model, ignore_layers):
     return model
 
 
-def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger, rank):
+def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger,
+        rank, hparams):
     assert os.path.isfile(checkpoint_path)
     print("Loading checkpoint '{}'".format(checkpoint_path))
     checkpoint_dict = torch.load(checkpoint_path, map_location='cpu')
-    model.load_state_dict(checkpoint_dict['state_dict'])
+    model = load_pretrained_model(model, checkpoint_path,
+        freeze_pretrained=hparams.freeze_pretrained,
+        except_for=hparams.freeze_except_for)[0]
     optimizer.load_state_dict(checkpoint_dict['optimizer'])
     learning_rate = checkpoint_dict['learning_rate']
     print("Loaded learning_rate=", learning_rate)
@@ -764,7 +767,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 checkpoint_path, model, hparams.ignore_layers)
         else:
             model, optimizer, _learning_rate, iteration, float_epoch = load_checkpoint(
-                checkpoint_path, model, optimizer, lr_scheduler, logger, rank)
+                checkpoint_path, model, optimizer, lr_scheduler, logger, rank,
+                hparams)
             if hparams.use_saved_learning_rate:
                 learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
