@@ -1677,7 +1677,7 @@ class ReferenceEncoder4(nn.Module):
         out_global_gru = out_global_gru.transpose(1, 2) #  [N, Ty, ref_enc_gru_size] -> [N, ref_enc_gru_size, Ty]
 
         if self.hparams.global_prosody_is_hidden:
-            out_temp = F.relu(self.bn_l(self.linear_conv(out_cat))) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
+            out_temp = F.relu(self.bn_l(self.linear_conv(out_temp_gru))) # [N, ref_enc_gru_size, Ty] -> [N, prosody_dim, Ty]
             out_temp = out_temp.transpose(1,2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
             out_global_gru = out_global_gru.transpose(1, 2) # [N, ref_enc_gru_size, Ty] -> [N, Ty, ref_enc_gru_size]
             return out_temp, out_global_gru
