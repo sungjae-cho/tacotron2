@@ -208,7 +208,7 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
         axes[i_dim+n_leading_figures].set_xlabel("Decoding_step")
         axes[i_dim+n_leading_figures].set_ylabel("Prosody_dim{}".format(i_dim))
         axes[i_dim+n_leading_figures].set_xlim(x[0], x[-1])
-        axes[i_dim+n_leading_figures].set_ylim(0, prosody_dim.max())
+        #axes[i_dim+n_leading_figures].set_ylim(0, prosody_dim.max())
 
     # [6] Convert figures to an image
     plt.tight_layout()
