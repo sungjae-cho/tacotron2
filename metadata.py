@@ -1,15 +1,24 @@
 import pandas as pd
 import os
+from os.path import splitext, join
 import random
 from scipy.io.wavfile import read as read_wav
 from tqdm import tqdm
 from ffmpy import FFmpeg
+import librosa
+import sys
+import numpy as np
+import scipy.stats
+from g2p_en import G2p
+from sklearn import linear_model
+
 
 class MetaData:
     def __init__(self, db, use_nvidia_ljs_split=True):
         self.db = db
         self.ljs_path = '/data2/sungjaecho/data_tts/LJSpeech-1.1'
         self.emovdb_path = '/data2/sungjaecho/data_tts/EmoV-DB/EmoV-DB'
+        self.bc2013_path = '/data2/sungjaecho/data_tts/BC2013'
         self.metadata_path = 'metadata'
         self.df = None
         self.use_nvidia_ljs_split = use_nvidia_ljs_split
@@ -51,6 +60,7 @@ class MetaData:
                     # the length of row is 3
                     row = wavpath_rawtext_text[i]
                     self.df.loc[i] = row
+                print("Loaded from {}".format(csv_path))
             else:
                 self.df = pd.read_csv(csv_path, sep='|', header=None, encoding='utf-8', quoting=3)
                 self.df = self.df.rename(columns={0:"id", 1:"text_raw", 2:"text"})
@@ -413,7 +423,13 @@ def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
     #frame_rate, _  = read_wav(dst_wav)
     #print("New sample rate:", frame_rate)
 
+def convert_sec(seconds):
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
 
+    return hours, minutes, seconds
 
 
 
