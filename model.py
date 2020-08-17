@@ -611,7 +611,7 @@ class Decoder(nn.Module):
         """
         cell_inputs = [decoder_input, self.attention_context]
         if self.has_style_token_lstm_1:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 cell_inputs.append(self.prosody_encoding)
             else:
                 if len(self.hparams.all_speakers) > 1:
@@ -661,7 +661,7 @@ class Decoder(nn.Module):
 
         decoder_inputs = [self.attention_hidden, self.attention_context]
         if self.has_style_token_lstm_2:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 decoder_inputs.append(self.prosody_encoding)
             else:
                 if len(self.hparams.all_speakers) > 1:
@@ -680,7 +680,7 @@ class Decoder(nn.Module):
 
         linear_inputs = [self.decoder_hidden, self.attention_context]
         if self.hparams.has_style_token_linear:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 linear_inputs.append(self.prosody_encoding)
             else:
                 if len(self.hparams.all_speakers) > 1:
