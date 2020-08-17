@@ -62,8 +62,117 @@ class MetaData:
                 'sentence_path':'wav_path',
                 'script':'text'})
             self.df.speaker = self.df.speaker.apply(self.change_speaker_name)
+            print("Loaded from {}".format(csv_path))
 
-        print("Loaded from {}".format(csv_path))
+        if self.db == 'bc2013':
+            segment_dir = os.path.join(self.bc2013_path, 'segments')
+            transcript_dir = os.path.join(self.bc2013_path, 'transcripts')
+            book_dirs = [f for f in os.listdir(segment_dir) \
+                if not os.path.isfile(os.path.join(segment_dir, f))]
+
+            df_txt_books = list()
+            for book_dir in book_dirs:
+                txt_dir = os.path.join(transcript_dir, book_dir)
+                txts = [f for f in os.listdir(txt_dir) if splitext(f)[1] == '.txt']
+                df_txt_chapters = list()
+                for txt in txts:
+                    chapter = int(splitext(txt)[0])
+                    txt_path = os.path.join(txt_dir, txt)
+                    df_txt = pd.read_csv(txt_path, sep='|', header=None, encoding='utf-8', quoting=3)
+                    df_txt = df_txt.rename(columns={0:"sentence_id", 1:"text"})
+                    df_txt['chapter'] = [chapter] * len(df_txt)
+                    df_txt_chapters.append(df_txt)
+                df_txt_chapters = pd.concat(df_txt_chapters)
+                df_txt_chapters['book'] = [book_dir] * len(df_txt_chapters)
+                df_txt_books.append(df_txt_chapters)
+            df_txt_books = pd.concat(df_txt_books)
+            df_txt_books['segmented'] = [False] * len(df_txt_books)
+            df_txt_books = df_txt_books.reset_index(drop=True)
+
+            rm_i_list = list()
+            rm_wav_paths = list()
+            log_file = 'log_bc2013_nonexisting_wavs.txt'
+            df_txt_books['wav_path'] = [''] * len(df_txt_books)
+            for i, row in df_txt_books.iterrows():
+                wav = '{:02d}-{:06d}.wav'.format(row.chapter, row.sentence_id)
+                wav_path = os.path.join(segment_dir, row.book, wav)
+                if not os.path.exists(wav_path):
+                    rm_i_list.append(i)
+                    rm_wav_paths.append(wav_path)
+                else:
+                    df_txt_books.at[i,'wav_path'] = wav_path
+
+            with open(os.path.join(self.metadata_path, log_file), 'w') as f:
+                for rm_wav_path in rm_wav_paths:
+                    f.write(rm_wav_path)
+                    f.write('\n')
+
+            df_txt_books = df_txt_books.drop(rm_i_list)
+            df_txt_books = df_txt_books.reset_index(drop=True)
+
+            print("{} wav files do not exist. Those files are logged in {}.".format(len(rm_wav_paths), log_file))
+            print("Corresponding scripts are removed.")
+
+            segmented_wav_dir = os.path.join(self.bc2013_path, 'wav')
+            segmented_txt_dir = os.path.join(self.bc2013_path, 'txt')
+            segmented_wavs = [f for f in os.listdir(segmented_wav_dir) \
+                if splitext(f)[1] == '.wav']
+            segmented_txts = [f for f in os.listdir(segmented_txt_dir) \
+                if splitext(f)[1] == '.txt']
+
+            wav_paths = list()
+            texts = list()
+            for txt in segmented_txts:
+                f_name = splitext(txt)[0]
+                wav_path = os.path.join(segmented_wav_dir, f_name) + '.wav'
+                if not os.path.exists(wav_path):
+                    continue
+
+                txt_path = os.path.join(segmented_txt_dir, txt)
+                with open(txt_path, 'r') as f:
+                    text = f.read()
+
+                wav_paths.append(wav_path)
+                texts.append(text)
+
+            df = pd.DataFrame({
+                'text':texts,
+                'wav_path':wav_paths,
+                'segmented':[True]*len(wav_paths)
+            })
+
+            df_txt_books = pd.concat([df_txt_books, df], sort=True)
+            df_txt_books = df_txt_books.reset_index(drop=True)
+
+            print("Getting duration for every audio in bc2013 DB.")
+            rm_i_list = list()
+            rm_wav_paths = list()
+            e_list = list()
+            df_txt_books['duration'] = [0.0] * len(df_txt_books)
+            for i, row in tqdm(df_txt_books.iterrows(), total=len(df_txt_books)):
+                try:
+                    y, sr = librosa.load(row.wav_path)
+                    duration = librosa.get_duration(y, sr)
+                    duration = round(duration, 3)
+                    df_txt_books.at[i,'duration'] = duration
+                except Exception as e:
+                    print(e)
+                    print(row.wav_path)
+                    rm_i_list.append(i)
+                    e_list.append(e)
+                    rm_wav_paths.append(row.wav_path)
+
+            df_txt_books = df_txt_books.drop(rm_i_list)
+            df_txt_books = df_txt_books.reset_index(drop=True)
+
+            with open(os.path.join(self.metadata_path, 'log_get_duration_errors.txt'), 'w') as f:
+                for error, wav_path in zip(e_list, rm_wav_paths):
+                    f.write(str(error))
+                    f.write('\n')
+                    f.write(wav_path)
+                    f.write('\n')
+
+            self.df = df_txt_books
 
     def add_columns(self, split_ratio):
         '''
@@ -79,7 +188,6 @@ class MetaData:
             self.df['split'] = self.get_split_labels(split_ratio)
             self.df = self.df[['database','split','id','wav_path','text_raw','text','speaker','sex','emotion','lang']]
 
-
         if self.db == "emovdb":
             self.df['wav_path'] = self.df.wav_path.apply(self.get_wav_path)
             print(self.df['wav_path'])
@@ -87,6 +195,15 @@ class MetaData:
             self.df['lang'] = 'en'
             self.df['split'] = self.get_split_labels(split_ratio)
             self.df = self.df[['database','split','id','wav_path','duration','text','speaker','sex','emotion','lang']]
+
+        if self.db == "bc2013":
+            self.df['database'] = 'bc2013'
+            self.df['speaker'] = ['bc2013-w'] * len(self.df)
+            self.df['emotion'] = ['neutral'] * len(self.df)
+            self.df['sex'] = ['w'] * len(self.df)
+            self.df['lang'] = ['en'] * len(self.df)
+            self.df['split'] = self.get_split_labels(split_ratio)
+            self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang','segmented','book','chapter','sentence_id']]
 
     def get_split_labels(self, split_ratio):
         if self.use_nvidia_ljs_split and self.db == "ljspeech":
@@ -207,17 +324,25 @@ class MetaData:
         df_agg.to_csv(csv_path)
 
 
-def save_csv_db():
-    db = "ljspeech"
-    #split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
-    md = MetaData(db, use_nvidia_ljs_split=True)
-    md.make_new_db()
+def save_csv_db(db):
+    if db == "ljspeech":
+        #split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
+        md = MetaData(db, use_nvidia_ljs_split=True)
+        md.make_new_db()
 
-    db = "emovdb"
-    test_ratio = 0.2
-    split_ratio = {'train':(1 - test_ratio)**2, 'val':(1 - test_ratio)*test_ratio, 'test':test_ratio}
-    md = MetaData(db)
-    md.make_new_db(split_ratio)
+    if db == "emovdb":
+        test_ratio = 0.2
+        split_ratio = {'train':(1 - test_ratio)**2, 'val':(1 - test_ratio)*test_ratio, 'test':test_ratio}
+        md = MetaData(db)
+        md.make_new_db(split_ratio)
+
+    if db == "bc2013":
+        val_size = 100
+        test_size = 400
+        split_ratio = {'val':val_size, 'test':test_size}
+        md = MetaData(db)
+        md.make_new_db(split_ratio)
+
 
 def print_data_stat():
     db = "ljspeech"
@@ -225,6 +350,10 @@ def print_data_stat():
     md.print_data_stat()
 
     db = "emovdb"
+    md = MetaData(db)
+    md.print_data_stat()
+
+    db = "bc2013"
     md = MetaData(db)
     md.print_data_stat()
 
@@ -248,11 +377,24 @@ def make_one_sample_rate(db, sample_rate=22050):
     print("Start to encode wav files of {} to have {} sample rate.".format(db, sample_rate))
 
     for i, row in tqdm(df.iterrows(), total=len(df)):
+
+        src_wav = row.wav_path + "_old"
         dst_wav = row.wav_path
-        src_wav = dst_wav.replace(os.path.join('EmoV-DB', 'EmoV-DB'), os.path.join('EmoV-DB', 'EmoV-DB-copy'))
+        os.rename(
+            row.wav_path,
+            src_wav
+        )
+        #src_wav = dst_wav.replace(os.path.join('EmoV-DB', 'EmoV-DB'), os.path.join('EmoV-DB', 'EmoV-DB-copy'))
 
         change_sample_rate(src_wav, dst_wav, sample_rate)
 
+        if os.path.exists(src_wav) and (not os.path.exists(dst_wav)):
+            os.rename(
+                src_wav,
+                dst_wav
+            )
+        if os.path.exists(src_wav) and os.path.exists(dst_wav):
+            os.remove(src_wav)
 
 def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
     frame_rate, _  = read_wav(src_wav)
