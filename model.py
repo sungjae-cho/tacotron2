@@ -421,8 +421,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 attention_rnn_input_dim += self.hparams.prosody_dim
             else:
-                attention_rnn_input_dim += self.hparams.speaker_embedding_dim
-                attention_rnn_input_dim += self.hparams.emotion_embedding_dim
+                if len(self.hparams.all_speakers) > 1:
+                    attention_rnn_input_dim += self.hparams.speaker_embedding_dim
+                if len(self.hparams.all_emotions) > 1:
+                    attention_rnn_input_dim += self.hparams.emotion_embedding_dim
                 if self.hparams.residual_encoder:
                     attention_rnn_input_dim += self.hparams.res_en_out_dim
 
@@ -436,8 +438,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 decoder_rnn_input_dim += self.hparams.prosody_dim
             else:
-                decoder_rnn_input_dim += self.hparams.speaker_embedding_dim
-                decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
+                if len(self.hparams.all_speakers) > 1:
+                    decoder_rnn_input_dim += self.hparams.speaker_embedding_dim
+                if len(self.hparams.all_emotions) > 1:
+                    decoder_rnn_input_dim += self.hparams.emotion_embedding_dim
                 if self.hparams.residual_encoder:
                     decoder_rnn_input_dim += self.hparams.res_en_out_dim
 
@@ -451,8 +455,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 linear_input_dim += self.hparams.prosody_dim
             else:
-                linear_input_dim += self.hparams.speaker_embedding_dim
-                linear_input_dim += self.hparams.emotion_embedding_dim
+                if len(self.hparams.all_speakers) > 1:
+                    linear_input_dim += self.hparams.speaker_embedding_dim
+                if len(self.hparams.all_emotions) > 1:
+                    linear_input_dim += self.hparams.emotion_embedding_dim
                 if self.hparams.residual_encoder:
                     linear_input_dim += self.hparams.res_en_out_dim
 
@@ -608,8 +614,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 cell_inputs.append(self.prosody_encoding)
             else:
-                cell_inputs.append(speaker_embedding)
-                cell_inputs.append(emotion_embedding)
+                if len(self.hparams.all_speakers) > 1:
+                    cell_inputs.append(speaker_embedding)
+                if len(self.hparams.all_emotions) > 1:
+                    cell_inputs.append(emotion_embedding)
                 if self.hparams.residual_encoder:
                     cell_inputs.append(residual_encoding)
         cell_input = torch.cat(cell_inputs, -1)
@@ -630,8 +638,11 @@ class Decoder(nn.Module):
 
         if self.hparams.prosody_predictor:
             detached_attention_context = self.attention_context.detach()
-            pp_inputs = [detached_attention_context, speaker_embedding,
-                emotion_embedding]
+            pp_inputs = [detached_attention_context]
+            if len(self.hparams.all_speakers) > 1:
+                pp_inputs.append(speaker_embedding)
+            if len(self.hparams.all_emotions) > 1:
+                pp_inputs.append(emotion_embedding)
             if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                 pp_inputs.append(prev_global_prosody_ref)
             if 'AttRNN' in self.hparams.pp_opt_inputs:
@@ -653,8 +664,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 decoder_inputs.append(self.prosody_encoding)
             else:
-                decoder_inputs.append(speaker_embedding)
-                decoder_inputs.append(emotion_embedding)
+                if len(self.hparams.all_speakers) > 1:
+                    decoder_inputs.append(speaker_embedding)
+                if len(self.hparams.all_emotions) > 1:
+                    decoder_inputs.append(emotion_embedding)
                 if self.hparams.residual_encoder:
                     decoder_inputs.append(residual_encoding)
 
@@ -670,8 +683,10 @@ class Decoder(nn.Module):
             if self.hparams.prosody_predictor:
                 linear_inputs.append(self.prosody_encoding)
             else:
-                linear_inputs.append(speaker_embedding)
-                linear_inputs.append(emotion_embedding)
+                if len(self.hparams.all_speakers) > 1:
+                    linear_inputs.append(speaker_embedding)
+                if len(self.hparams.all_emotions) > 1:
+                    linear_inputs.append(emotion_embedding)
                 if self.hparams.residual_encoder:
                     linear_inputs.append(residual_encoding)
         decoder_hidden_attention_context = torch.cat(
@@ -884,8 +899,10 @@ class Tacotron2(nn.Module):
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
-        self.speaker_embedding_layer = SpeakerEncoder(hparams)
-        self.emotion_embedding_layer = EmotionEncoder(hparams)
+        if len(self.hparams.all_speakers) > 1:
+            self.speaker_embedding_layer = SpeakerEncoder(hparams)
+        if len(self.hparams.all_emotions) > 1:
+            self.emotion_embedding_layer = EmotionEncoder(hparams)
         if hparams.speaker_adversarial_training:
             self.speaker_advgrad_classifier = SpeakerRevGradClassifier(hparams)
         else:
@@ -967,8 +984,14 @@ class Tacotron2(nn.Module):
 
             encoder_outputs = self.encoder(embedded_inputs, text_lengths)
 
-            speaker_embeddings = self.speaker_embedding_layer(speakers)
-            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+            if len(self.hparams.all_speakers) > 1:
+                speaker_embeddings = self.speaker_embedding_layer(speakers)
+            else:
+                speaker_embeddings = None
+            if len(self.hparams.all_emotions) > 1:
+                emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+            else:
+                emotion_embeddings = None
 
             if self.hparams.residual_encoder:
                 if zero_res_en:
@@ -1031,8 +1054,14 @@ class Tacotron2(nn.Module):
             discrete_attention_weight=False):
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
-        speaker_embeddings = self.speaker_embedding_layer(speakers)
-        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        if len(self.hparams.all_speakers) > 1:
+            speaker_embeddings = self.speaker_embedding_layer(speakers)
+        else:
+            speaker_embeddings = None
+        if len(self.hparams.all_emotions) > 1:
+            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        else:
+            emotion_embeddings = None
         if self.hparams.residual_encoder:
             batch_size = text_inputs.size(0)
             residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
@@ -1061,8 +1090,14 @@ class Tacotron2(nn.Module):
             emotion_vectors = emotion_vectors.type(self.float_dtype)
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
-        speaker_embeddings = self.speaker_embedding_layer(speakers)
-        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        if len(self.hparams.all_speakers) > 1:
+            speaker_embeddings = self.speaker_embedding_layer(speakers)
+        else:
+            speaker_embeddings = None
+        if len(self.hparams.all_emotions) > 1:
+            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        else:
+            emotion_embeddings = None
         if self.hparams.residual_encoder:
             batch_size = text_inputs.size(0)
             residual_encoding = self.residual_encoder.inference(batch_size, emotion_vectors.dtype)
@@ -1084,9 +1119,15 @@ class Tacotron2(nn.Module):
         return outputs
 
     def get_embeddings(self, speakers, emotion_vectors):
-        speaker_embeddings = self.speaker_embedding_layer(speakers)
-        emotion_vectors = emotion_vectors.type(self.float_dtype)
-        emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        if len(self.hparams.all_speakers) > 1:
+            speaker_embeddings = self.speaker_embedding_layer(speakers)
+        else:
+            speaker_embeddings = None
+        if len(self.hparams.all_emotions) > 1:
+            emotion_vectors = emotion_vectors.type(self.float_dtype)
+            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        else:
+            emotion_embeddings = None
 
         return speaker_embeddings, emotion_embeddings
 
@@ -1184,6 +1225,9 @@ class SpeakerEncoder(nn.Module):
 
 
 class EmotionEncoder(nn.Module):
+    '''
+    Emotion encoder should be constructed under #emotions > 1.
+    '''
     def __init__(self, hparams):
         super(EmotionEncoder, self).__init__()
         self.out_dim = hparams.emotion_embedding_dim
@@ -1296,9 +1340,11 @@ class ProsodyPredictorMLP(nn.Module):
     def __init__(self, hparams):
         super(ProsodyPredictorMLP, self).__init__()
         self.hparams = hparams
-        in_dim = (hparams.encoder_embedding_dim
-            + hparams.emotion_embedding_dim
-            + hparams.speaker_embedding_dim)
+        in_dim = hparams.encoder_embedding_dim
+        if len(self.hparams.all_speakers) > 1:
+            in_dim += hparams.speaker_embedding_dim
+        if len(hparams.all_emotions) > 1:
+            in_dim += hparams.emotion_embedding_dim
         if 'prev_global_prosody' in hparams.pp_opt_inputs:
             if self.hparams.global_prosody_is_hidden:
                 in_dim += hparams.ref_enc_gru_size
@@ -1332,9 +1378,11 @@ class ProsodyPredictorLSTMCell(nn.Module):
         self.hparams = hparams
         self.pp_lstm_hidden_dim = hparams.pp_lstm_hidden_dim
         self.p_decoder_dropout = hparams.p_decoder_dropout
-        in_dim = (hparams.encoder_embedding_dim
-            + hparams.emotion_embedding_dim
-            + hparams.speaker_embedding_dim)
+        in_dim = hparams.encoder_embedding_dim
+        if len(self.hparams.all_speakers) > 1:
+            in_dim += hparams.speaker_embedding_dim
+        if len(hparams.all_emotions) > 1:
+            in_dim += hparams.emotion_embedding_dim
         if 'prev_global_prosody' in hparams.pp_opt_inputs:
             if self.hparams.global_prosody_is_hidden:
                 in_dim += hparams.ref_enc_gru_size
