@@ -106,8 +106,13 @@ class MetaData:
 
         else:
             df_len = len(self.df)
-            i_val_start = int(df_len * split_ratio['train'])
-            i_test_start = int(df_len * (split_ratio['train'] + split_ratio['val']))
+            if split_ratio['val'] < 1:
+                i_val_start = int(df_len * split_ratio['train'])
+                i_test_start = int(df_len * (split_ratio['train'] + split_ratio['val']))
+            else:
+                # This case specifies split ratio using the number of samples
+                i_val_start = df_len - split_ratio['val'] - split_ratio['test']
+                i_test_start = df_len - split_ratio['test']
 
             n_train = i_val_start
             n_val = i_test_start - i_val_start
