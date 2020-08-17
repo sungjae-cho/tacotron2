@@ -49,8 +49,6 @@ class TextMelLoader(torch.utils.data.Dataset):
             self.g2p_dictionary = cmudict.CMUDict(hparams.cmudict_path)
         elif hparams.txt_type == 'p_g2p':
             self.g2p_dictionary = G2p()
-            print("type(self.g2p_dictionary)",type(self.g2p_dictionary))
-
 
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
