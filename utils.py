@@ -34,6 +34,8 @@ def one_hot_encoding(labels, num_classes):
 
 def load_wav_to_torch(full_path):
     sampling_rate, data = read(full_path)
+    if len(data.shape) == 2:
+        data = data.mean(axis=1) # for multichannel audios.
     return torch.FloatTensor(data.astype(np.float32)), sampling_rate
 
 
