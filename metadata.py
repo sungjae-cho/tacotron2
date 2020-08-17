@@ -313,6 +313,108 @@ class MetaData:
             df.to_csv(csv_path, index=False)
             print("Saved! {}".format(csv_path))
 
+    def rm_outliers(self, min_duration=1, max_duration=10,
+            split_ratio={'train':0.95, 'val':0.025, 'test':0.025}):
+        '''
+        min_duration: seconds
+        max_duration: seconds
+        '''
+        df = self.get_df()
+
+        g2p = G2p()
+        y = df.duration
+        x = list()
+        print("Converting graphem sequences to phoneme sequences...")
+        for i, row in tqdm(df.iterrows(), total=len(df)):
+            p_seq = g2p(row.text)
+            x.append(len(p_seq))
+
+        y = y[:len(x)]
+        y = y.to_numpy()
+        x = np.asarray(x)
+
+        hard_duration_mask = (y > min_duration) & (y < max_duration)
+
+        print("Deleted files under {} sec: {}".format(min_duration, np.invert(hard_duration_mask).sum()))
+
+        '''
+        Reference: https://scikit-learn.org/stable/auto_examples/linear_model/plot_ols.html#sphx-glr-auto-examples-linear-model-plot-ols-py
+        '''
+        # Create linear regression object
+        regr = linear_model.LinearRegression(fit_intercept=False)
+
+        # Train the model using the training sets
+        regr.fit(x[np.argwhere(hard_duration_mask)], y[np.argwhere(hard_duration_mask)])
+
+        # Make predictions using the training set
+        y_pred = regr.predict(x.reshape(-1, 1))
+        y_pred = y_pred.reshape(-1)
+
+        # AE: Absolute Error between durations and predicted durations
+        ae_y = np.abs((y - y_pred))
+
+        # Find the lower & upper bounds of 1.5*IQR outlying duration absolute errors
+        iqr_ae_y = scipy.stats.iqr(ae_y)
+        q1 = np.quantile(ae_y, 0.25)
+        q3 = np.quantile(ae_y, 0.75)
+        lb_ae_y = q1 - 1.5 * iqr_ae_y # Lower bound
+        ub_ae_y = q3 + 1.5 * iqr_ae_y # Upper bound
+        print("The lower bound of 1.5*IQR outlying duration absolute errors:", lb_ae_y)
+        print("The upper bound of 1.5*IQR outlying duration absolute errors:", ub_ae_y)
+
+        # Find the lower & upper bounds of 1.5*IQR outlying durations
+        iqr_y = scipy.stats.iqr(y)
+        q1_y = np.quantile(y, 0.25)
+        q3_y = np.quantile(y, 0.75)
+        lb_y = q1_y - 1.5 * iqr_y # Lower bound
+        ub_y = q3_y + 1.5 * iqr_y # Upper bound
+        print("The lower bound of 1.5*IQR outlying durations:", lb_y)
+        print("The upper bound of 1.5*IQR outlying durations:", ub_y)
+
+        # Get the indicies of outliers
+        outlier_mask = ((ae_y < lb_ae_y) | (ae_y > ub_ae_y) | (y < lb_y) | (y > ub_y) | np.invert(hard_duration_mask))
+        i_outliers = np.argwhere(outlier_mask).reshape(-1)
+        i_inliers = np.argwhere(np.invert(outlier_mask)).reshape(-1)
+
+        x_outliers = x[i_outliers]
+        y_outliers = y[i_outliers]
+        x_inliers = x[i_inliers]
+        y_inliers = y[i_inliers]
+
+        # About stats
+        print("Total samples:", len(x))
+
+        # About inliers =====
+        print("Inliers:", len(x_inliers))
+        secs_inliers = int(y[i_inliers].sum())
+        h, m, s = convert_sec(secs_inliers)
+        print("Duration(inliers): {}h {}m {}s".format(h, m, s))
+
+        # About outliers =====
+        print("Outliers:", len(x_outliers))
+        secs_outliers = int(y[i_outliers].sum())
+        h, m, s = convert_sec(secs_outliers)
+        print("Duration(outliers): {}h {}m {}s".format(h, m, s))
+        print("Ratio of Outliers:", (len(x_outliers) / len(x)))
+
+        df_inliers = df.iloc[i_inliers].reset_index(drop=True)
+        self.df = df_inliers
+
+        # Reset data split
+        self.df['split'] = self.get_split_labels(split_ratio)
+
+        # Save CSV files for each data split
+        csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
+        self.df.to_csv(csv_path, index=False)
+        print("Saved! {}".format(csv_path))
+
+        splits = ['train', 'val', 'test']
+        for split in splits:
+            df = self.get_df(split)
+            csv_path = os.path.join(self.metadata_path, '{}_{}.csv'.format(self.db, split))
+            df.to_csv(csv_path, index=False)
+            print("Saved! {}".format(csv_path))
+
     def print_data_stat(self):
         csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
         df = pd.read_csv(csv_path)
@@ -352,6 +454,16 @@ def save_csv_db(db):
         split_ratio = {'val':val_size, 'test':test_size}
         md = MetaData(db)
         md.make_new_db(split_ratio)
+
+
+def rm_outliers(db):
+    if db == "bc2013":
+        val_size = 100
+        test_size = 400
+        split_ratio = {'val':val_size, 'test':test_size}
+        md = MetaData(db)
+        md.load_from_csv()
+        md.rm_outliers(split_ratio=split_ratio)
 
 
 def print_data_stat():
