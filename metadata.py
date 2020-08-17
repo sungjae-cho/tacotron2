@@ -191,13 +191,20 @@ class MetaData:
         df = pd.read_csv(csv_path)
         print(self.db)
 
-        print(df.groupby(['split']).size().to_frame('size'))
-        csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split.csv'.format(self.db))
-        df.groupby(['split']).size().to_frame('size').to_csv(csv_path)
+        if 'duration' in df.columns:
+            agg_dict = {'wav_path':'size', 'duration':'sum'}
+        else:
+            agg_dict = {'wav_path':'size'}
 
-        print(df.groupby(['split', 'speaker', 'emotion']).size().to_frame('size'))
+        df_agg = df.groupby(['split']).agg(agg_dict)
+        print(df_agg)
+        csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split.csv'.format(self.db))
+        df_agg.to_csv(csv_path)
+
+        df_agg = df.groupby(['split', 'speaker', 'emotion']).agg(agg_dict)
+        print(df_agg)
         csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split_speaker_emotion.csv'.format(self.db))
-        df.groupby(['split', 'speaker', 'emotion']).size().to_frame('size').to_csv(csv_path)
+        df_agg.to_csv(csv_path)
 
 
 def save_csv_db():
