@@ -547,7 +547,9 @@ def convert_sec(seconds):
 
 
 def main():
-    save_csv_db()
+    save_csv_db("bc2013")
+    rm_outliers("bc2013")
+    make_one_sample_rate("bc2013")
     print_data_stat()
     #debug()
     #make_one_sample_rate(db = "emovdb", sample_rate=22050)
