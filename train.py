@@ -379,7 +379,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 # [M4] multiple_attention_ratio
                 _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
                 # [M_total] Attention quality
-                batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
+                batch_attention_quality = get_attention_quality(batch_far, batch_mar, batch_letter_ar)
 
                 ############################################################
                 # FREE RUNNING #####
@@ -400,7 +400,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 # [M4] multiple_attention_ratio
                 _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
                 # [M_total] Attention quality
-                batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_ar_fr, batch_arr_fr, batch_mar_fr)
+                batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_mar_fr, batch_letter_ar_fr)
 
                 if hparams.speaker_adversarial_training:
                     np_target_speakers = spk_adv_targets.cpu().numpy()
@@ -878,8 +878,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             mean_blank_ar, batch_blank_ar = ar_pairs[3]
             mean_arr, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
             mean_mar, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
-            mean_attention_quality = get_attention_quality(mean_far, mean_ar, mean_arr, mean_mar)
-            batch_attention_quality = get_attention_quality(batch_far, batch_ar, batch_arr, batch_mar)
+            mean_attention_quality = get_attention_quality(mean_far, mean_mar, mean_letter_ar)
+            batch_attention_quality = get_attention_quality(batch_far, batch_mar, batch_letter_ar)
             best_attention_quality = batch_attention_quality.max().item()
             worst_attention_quality = batch_attention_quality.min().item()
 
