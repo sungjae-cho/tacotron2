@@ -30,6 +30,15 @@ class MetaData:
 
 
     def load_original_db(self):
+        '''
+        Import data offered by data provider, and create a dataframe `df`
+        containing them. `df` should include columns of wav_path, text, and
+        everything that can specify a data sample during importing.
+        If some columns have a single value across samples, those columns and
+        their values will be filled with the single value. For examples,
+        if a DB contains the only one speaker, the `speaker` column will be
+        added and filled with a single value in the `add_columns` method.
+        '''
         if self.db == "ljspeech":
             csv_path = os.path.join(self.ljs_path, 'metadata.csv')
 
@@ -161,6 +170,7 @@ class MetaData:
         return dst_speaker_name
 
     def make_new_db(self, split_ratio={'train':0.95, 'val':0.025, 'test':0.025}):
+        # Import data offered by the original source.
         self.load_original_db()
         self.add_columns(split_ratio)
 
