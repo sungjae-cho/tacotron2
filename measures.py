@@ -52,7 +52,7 @@ def get_attention_quality(
         batch_letter_attention_ratio):
 
     batch_attention_quality = batch_forward_attention_ratio \
-        * (1 - batch_multiple_attention_ratio)
+        * (1 - batch_multiple_attention_ratio) \
         * batch_letter_attention_ratio
 
     return batch_attention_quality
