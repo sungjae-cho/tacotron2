@@ -38,7 +38,8 @@ def create_hparams(hparams_string=None, verbose=False):
         validation_files='filelists/ljs_audio_text_val_filelist.txt',
         csv_data_paths={
             'ljspeech':'metadata/ljspeech.csv',
-            'emovdb':'metadata/emovdb.csv'
+            'emovdb':'metadata/emovdb.csv',
+            'bc2013':'metadata/bc2013.csv',
         },
         p_arpabet=1.0,
         cmudict_path='text/cmu_dictionary',
