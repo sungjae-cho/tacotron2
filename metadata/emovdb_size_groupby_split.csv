@@ -1,4 +1,4 @@
-split,size
-test,1377
-train,4405
-val,1102
+split,wav_path,duration
+test,1377,5161.621269841274
+train,4405,16690.787800453505
+val,1102,4155.468616780048

@@ -1,4 +1,4 @@
-split,speaker,emotion,size
+split,speaker,emotion,wav_path
 test,ljs-w,neutral,500
 train,ljs-w,neutral,12500
 val,ljs-w,neutral,100

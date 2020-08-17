@@ -1,4 +1,4 @@
-split,size
+split,wav_path
 test,500
 train,12500
 val,100
