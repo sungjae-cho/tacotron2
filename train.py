@@ -969,8 +969,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start
-                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} {:.2f}s/it".format(
-                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, duration))
+                n_enc_steps = max_len
+                n_dec_steps = np_output_lengths.sum()
+                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} EncSteps {} DecSteps {} EncDecSteps {} {:.1f}EncDecSteps/s {:.2f}s/it ".format(
+                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, n_enc_steps, n_dec_steps, (n_enc_steps + n_dec_steps), ((n_enc_steps + n_dec_steps) / duration), duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
                 att_measures = (
                     (mean_far, batch_far),
