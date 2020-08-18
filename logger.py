@@ -22,14 +22,15 @@ from utils import to_gpu, get_spk_adv_targets
 
 
 class Tacotron2Logger(SummaryWriter):
-    def __init__(self, hparams, run_name, prj_name, logdir, resume):
+    def __init__(self, hparams, run_name, prj_name, logdir, model, resume):
+        super(Tacotron2Logger, self).__init__(logdir)
         self.hparams = hparams
         self.run_name = run_name
         if resume == "":
             wandb.init(name=run_name, project=prj_name, resume=resume)
         else:
             wandb.init(project=prj_name, resume=resume)
-        super(Tacotron2Logger, self).__init__(logdir)
+        wandb.watch(model)
         self.waveglow = None
         self.waveglow_path = hparams.waveglow_path
         self.init_training_epoch_variables()
