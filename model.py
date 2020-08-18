@@ -590,6 +590,8 @@ class Decoder(nn.Module):
         if self.hparams.prosody_predictor:
             # (T_out, B, prosody_dim) -> (B, T_out, prosody_dim)
             prosody_hiddens =  torch.stack(prosody_hiddens).transpose(0, 1)
+        else:
+            prosody_hiddens = None
 
 
         return mel_outputs, gate_outputs, alignments, attention_contexts, \
@@ -653,8 +655,12 @@ class Decoder(nn.Module):
             elif self.hparams.prosody_predictor == 'LSTM':
                 prosody_pred, self.prosody_hidden, self.prosody_cell = self.prosody_predictor(
                     pp_input, (self.prosody_hidden, self.prosody_cell))
+        else:
+            prosody_pred = None
 
-        if (t_prosody_ref is None) or (not self.training):
+        if not self.hparams.reference_encoder:
+            pass
+        elif (t_prosody_ref is None) or (not self.training):
             self.prosody_encoding = prosody_pred
         else:
             self.prosody_encoding = t_prosody_ref
