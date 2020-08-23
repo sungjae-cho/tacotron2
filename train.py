@@ -148,6 +148,9 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger,
         freeze_pretrained=hparams.freeze_pretrained,
         except_for=hparams.freeze_except_for)[0]
     optimizer.load_state_dict(checkpoint_dict['optimizer'])
+    if 'amp_scaling_state' in checkpoint_dict.keys():
+        optimizer.state = {} # Because of the following recommendation https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
+        amp.load_state_dict(checkpoint_dict['amp_scaling_state'])
     learning_rate = checkpoint_dict['learning_rate']
     print("Loaded learning_rate=", learning_rate)
     if 'lr_scheduler' in checkpoint_dict.keys():
@@ -161,21 +164,25 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger,
     if rank == 0:
         dict_vars = checkpoint_dict['training_epoch_variables']
         logger.set_training_epoch_variables(dict_vars)
-    return model, optimizer, learning_rate, iteration, float_epoch
+    return model, optimizer, learning_rate, iteration, float_epoch, checkpoint_dict
 
 
-def save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch, lr_scheduler,
+def save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_epoch, lr_scheduler,
         logger, filepath):
     print("Saving model and optimizer state at iteration {} to {}".format(
         iteration, filepath))
-    torch.save({'iteration': iteration,
-                'float_epoch': float_epoch,
-                'state_dict': model.state_dict(),
-                'optimizer': optimizer.state_dict(),
-                'learning_rate': learning_rate,
-                'lr_scheduler': lr_scheduler.state_dict(),
-                'training_epoch_variables': logger.get_training_epoch_variables()
-                }, filepath)
+    checkpoint_dict = {
+        'iteration': iteration,
+        'float_epoch': float_epoch,
+        'state_dict': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'learning_rate': learning_rate,
+        'lr_scheduler': lr_scheduler.state_dict(),
+        'training_epoch_variables': logger.get_training_epoch_variables(),
+    }
+    if hparams.fp16_run:
+        checkpoint_dict['amp_scaling_state'] = amp.state_dict()
+    torch.save(checkpoint_dict, filepath)
 
 
 def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
@@ -766,7 +773,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             model = warm_start_model(
                 checkpoint_path, model, hparams.ignore_layers)
         else:
-            model, optimizer, _learning_rate, iteration, float_epoch = load_checkpoint(
+            model, optimizer, _learning_rate, iteration, float_epoch, cp_dict = load_checkpoint(
                 checkpoint_path, model, optimizer, lr_scheduler, logger, rank,
                 hparams)
             if hparams.use_saved_learning_rate:
@@ -781,6 +788,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
     model.train()
     is_overflow = False
+    is_first_iteration = True
     for param_group in optimizer.param_groups:
         param_group['initial_lr'] = hparams.learning_rate
         param_group['lr'] = learning_rate
@@ -857,6 +865,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             # optimizer.step is performs a parameter update based on the current
             # gradient (stored in .grad attribute of a parameter) and the update rule.
             optimizer.step()
+
+            # Because of the following recommendation
+            # https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
+            if (checkpoint_path is not None) and hparams.fp16_run and \
+                    (hparams.fp16_opt_level == 'O2') and is_first_iteration:
+                optimizer.load_state_dict(cp_dict['optimizer'])
 
             # Compute stop gate performance.
             np_output_lengths = output_lengths.cpu().numpy()
@@ -1062,12 +1076,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if rank == 0 and (iteration % hparams.iters_per_checkpoint == 0):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
-                    save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch,
+                    save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch+1))
-                    save_checkpoint(model, optimizer, learning_rate, iteration, float_epoch,
+                    save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
 
             tmp_iteration = iteration
@@ -1078,7 +1092,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if rank == 0:
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}".format(iteration, float_epoch))
-                    save_checkpoint(model, optimizer, tmp_learning_rate, tmp_iteration, float_epoch,
+                    save_checkpoint(hparams, model, optimizer, tmp_learning_rate, tmp_iteration, float_epoch,
                                     lr_scheduler, logger, checkpoint_path)
                 sys.exit(0)
 
@@ -1088,6 +1102,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 lr_scheduler.step()
 
             iteration += 1
+            is_first_iteration = False
 
         # End of the current epoch
         # Upsampling again
