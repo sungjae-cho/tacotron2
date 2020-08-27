@@ -960,7 +960,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 batch_attention_quality = gather_all_tensor(batch_attention_quality)
                 best_attention_quality = reduce_scalar(best_attention_quality, 'max')
                 worst_attention_quality = reduce_scalar(worst_attention_quality, 'min')
-                sum_output_lengths = reduce_tensor(sum_output_lengths, 'sum')
+                sum_output_lengths = reduce_scalar(sum_output_lengths, 'sum')
                 if hparams.residual_encoder:
                     residual_encoding = gather_all_tensor(residual_encoding)
                     mu = gather_all_tensor(mu)
