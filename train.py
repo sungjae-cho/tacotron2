@@ -152,8 +152,12 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger,
         optimizer.state = {} # Because of the following recommendation https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
         amp.load_state_dict(checkpoint_dict['amp_scaling_state'])
     learning_rate = checkpoint_dict['learning_rate']
+    if hparams.use_saved_learning_rate:
+        learning_rate = checkpoint_dict['learning_rate']
+    else:
+        learning_rate = hparams.learning_rate
     print("Loaded learning_rate=", learning_rate)
-    if 'lr_scheduler' in checkpoint_dict.keys():
+    if ('lr_scheduler' in checkpoint_dict.keys()) and hparams.use_saved_learning_rate:
         lr_scheduler.load_state_dict(checkpoint_dict['lr_scheduler'])
     else:
         lr_scheduler.load_state_dict({'base_lrs':[learning_rate]})
@@ -773,11 +777,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             model = warm_start_model(
                 checkpoint_path, model, hparams.ignore_layers)
         else:
-            model, optimizer, _learning_rate, iteration, float_epoch, cp_dict = load_checkpoint(
+            model, optimizer, learning_rate, iteration, float_epoch, cp_dict = load_checkpoint(
                 checkpoint_path, model, optimizer, lr_scheduler, logger, rank,
                 hparams)
-            if hparams.use_saved_learning_rate:
-                learning_rate = _learning_rate
             iteration += 1  # next iteration is iteration + 1
             epoch_offset = max(0, int(float_epoch))
 
