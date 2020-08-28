@@ -33,7 +33,7 @@ def get_g2p_en_seq(text, dictionary):
 
 def text_to_cmu_arpabets(text, cleaner_names=['english_cleaners']):
   text = _clean_text(text, cleaner_names)
-  text = text.replace('-', ' - ')
+  #text = text.replace('-', ' - ')
   dictionary = cmudict.CMUDict('text/cmu_dictionary')
   cmu_arpabets = list()
   for word in word_tokenize(text):
