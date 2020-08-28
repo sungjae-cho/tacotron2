@@ -195,6 +195,7 @@ class Tacotron2Logger(SummaryWriter):
         '''
         synth_dict_type is one of ['random_pick', 'min_aq_tf', 'min_aq_fr']
         '''
+        text_raw = synth_dict['text_raw']
         speaker_tensor = synth_dict['speaker_tensor']
         emotion_input_tensor = synth_dict['emotion_input_tensor']
         speaker = valset.int2speaker(speaker_tensor.item())
@@ -204,9 +205,10 @@ class Tacotron2Logger(SummaryWriter):
         text_string = sequence_to_text(text_sequence.tolist())
 
         # Strings to be used for logging
-        caption_string = '[{speaker}|{emotion}] {text}'.format(
+        caption_string = '[{speaker}|{emotion}] {text_raw} | {text}'.format(
             speaker=speaker,
             emotion=str_emotion,
+            text_raw=text_raw,
             text=text_string
         )
         log_prefix = "val/{speaker}/{emotion}/{synth_dict_type}".format(
@@ -344,7 +346,7 @@ class Tacotron2Logger(SummaryWriter):
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
-        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = etc
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw = etc
         _, mel_outputs, gate_outputs, alignments, _, _ = y_pred
         mean_far, batch_far = att_measures[0]
         mean_ar, batch_ar = att_measures[1]
@@ -570,7 +572,7 @@ class Tacotron2Logger(SummaryWriter):
         model = dict_log_values['model']
 
         text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
-        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang = dict_log_values['etc']
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
         _, mel_outputs, gate_outputs, alignments, _, _ = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']

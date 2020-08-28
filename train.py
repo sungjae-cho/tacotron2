@@ -192,9 +192,11 @@ def save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_e
 def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
         batch_attention_measures_tf, batch_attention_measures_fr):
     # Inputs
-    (input_lengths, text_padded, speakers, emotion_input_vectors) = inputs
+    (input_lengths, text_padded, speakers, emotion_input_vectors, \
+        text_raw) = inputs
     text_length = input_lengths[idx].item()
     synth_dict['text_sequence'] = text_padded[idx,:text_length]
+    synth_dict['text_raw'] = text_raw[idx]
     synth_dict['speaker_tensor'] = speakers[idx]
     synth_dict['emotion_input_tensor'] = emotion_input_vectors[idx]
 
@@ -332,7 +334,8 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 x, y, etc = model.parse_batch(batch)
                 text_padded, input_lengths, mel_padded, max_len, output_lengths = x
                 mel_padded, gate_padded = y
-                speakers, sex, emotion_input_vectors, emotion_targets, lang = etc
+                speakers, sex, emotion_input_vectors, emotion_targets, lang, \
+                    text_raw = etc
 
                 ############################################################
                 # TEACHER FORCING #####
@@ -557,7 +560,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
 
                 if rank == 0:
                     # Wrap up data of audios to be logged.
-                    inputs = (input_lengths, text_padded, speakers, emotion_input_vectors)
+                    inputs = (input_lengths, text_padded, speakers, emotion_input_vectors, text_raw)
                     outputs = (output_lengths, gate_outputs_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_pred_fr)
                     batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
@@ -819,7 +822,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             x, y, etc = model.parse_batch(batch)
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
             mel_padded, gate_padded = y
-            speakers, sex, emotion_input_vectors, emotion_targets, lang = etc
+            speakers, sex, emotion_input_vectors, emotion_targets, lang, \
+                text_raw = etc
 
             # Forward propagtion
             (y_pred, y_pred_speakers, y_pred_emotions,

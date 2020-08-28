@@ -53,20 +53,21 @@ class TextMelLoader(torch.utils.data.Dataset):
     def get_mel_text_pair(self, audiopath_and_text):
         # separate filename and text
         audiopath, text = audiopath_and_text[0], audiopath_and_text[1]
-        text = self.get_text(text)
+        text, text_raw = self.get_text(text)
         mel = self.get_mel(audiopath)
         return (text, mel)
 
     def get_mel_text_etc_tuple(self, wavpath_text_speaker_sex_emotion_lang):
         wavpath, text, speaker, sex, emotion, lang = wavpath_text_speaker_sex_emotion_lang
-        text = self.get_text(text)
+        text, text_raw = self.get_text(text)
         mel = self.get_mel(wavpath)
         speaker = self.get_speaker(speaker)
         sex = self.get_sex(sex)
         emotion_input_vector = self.get_emotion_input(emotion)
         emotion_target = self.get_emotion_target(emotion)
         lang = self.get_lang(lang)
-        return (text, mel, speaker, sex, emotion_input_vector, emotion_target, lang)
+        return (text, mel, speaker, sex, emotion_input_vector, emotion_target,
+            lang, text_raw)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -101,7 +102,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         text_norm = torch.LongTensor(text_to_sequence(
             text, self.text_cleaners, self.hparams.txt_type, self.g2p_dictionary,
             self.hparams.p_arpabet))
-        return text_norm
+        return text_norm, text
 
     def get_speaker(self, speaker):
         speaker_tensor = torch.LongTensor([self.speaker2int(speaker)])
@@ -264,6 +265,7 @@ class TextMelCollate():
         emotion_input_vectors = torch.FloatTensor(len(batch), emotion_input_vector_dim)
         emotion_targets = torch.LongTensor(len(batch))
         lang = torch.LongTensor(len(batch))
+        text_raw = list()
 
         for i in range(len(ids_sorted_decreasing)):
             mel = batch[ids_sorted_decreasing[i]][1]
@@ -276,7 +278,8 @@ class TextMelCollate():
             emotion_input_vectors[i,:] = batch[ids_sorted_decreasing[i]][4]
             emotion_targets[i] = batch[ids_sorted_decreasing[i]][5]
             lang = batch[ids_sorted_decreasing[i]][6]
+            text_raw.append(batch[ids_sorted_decreasing[i]][7])
 
 
         return text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
-            speakers, sex, emotion_input_vectors, emotion_targets, lang
+            speakers, sex, emotion_input_vectors, emotion_targets, lang, text_raw
