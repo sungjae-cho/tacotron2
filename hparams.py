@@ -188,6 +188,8 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         use_saved_learning_rate=True,
         learning_rate=1e-3,
+        adam_batas=(0.9, 0.999),
+        adam_eps=1e-06,
         weight_decay=1e-6,
         grad_clip_thresh=1.0, # gradient clipping L2-norm
         batch_size=64,

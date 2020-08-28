@@ -747,6 +747,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     model = load_model(hparams)
     learning_rate = hparams.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
+                                 betas=hparams.adam_batas,
+                                 eps=hparams.adam_eps,
                                  weight_decay=hparams.weight_decay)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(
         optimizer,
