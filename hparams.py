@@ -191,6 +191,9 @@ def create_hparams(hparams_string=None, verbose=False):
         adam_batas=(0.9, 0.999),
         adam_eps=1e-06,
         weight_decay=1e-6,
+        lr_scheduling=False,
+        lr_scheduling_start_iter=50000,
+        lr_min=1e-5,
         grad_clip_thresh=1.0, # gradient clipping L2-norm
         batch_size=64,
         mask_padding=True,  # set model's padded outputs to padded values
