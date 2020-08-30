@@ -1108,8 +1108,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             lr_scheduling_start_iter = round(hparams.lr_scheduling_start_iter * (64 / (hparams.batch_size * n_gpus)))
             if iteration > lr_scheduling_start_iter \
-                    and learng_rate >= hparams.lr_min \
-                    and lr_scheduling:
+                    and learning_rate >= hparams.lr_min \
+                    and hparams.lr_scheduling:
                 lr_scheduler.step()
 
             iteration += 1
