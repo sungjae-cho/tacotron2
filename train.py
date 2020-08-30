@@ -27,6 +27,7 @@ from measures import get_mel_length, get_mel_lengths
 from measures import get_attention_quality
 from utils import get_spk_adv_targets, get_emo_adv_targets, load_pretrained_model, get_clsf_report, \
     get_KLD_weight, get_checkpoint_iter2path
+from adam_step import adam_step
 
 def reduce_tensor(tensor, reduce_op='mean'):
     rt = tensor.cuda().detach().clone()
@@ -872,6 +873,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             learning_rate = lr_scheduler.get_lr()[0]
             # optimizer.step is performs a parameter update based on the current
             # gradient (stored in .grad attribute of a parameter) and the update rule.
+            adam_grad_abs_mean, adam_grad_numers_abs_mean, adam_grad_denoms_abs_mean = adam_step(optimizer)
             optimizer.step()
 
             # Because of the following recommendation
@@ -1022,6 +1024,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
                     'att_measures':att_measures,
+                    'adam_grad_abs_mean':adam_grad_abs_mean,
+                    'adam_grad_numers_abs_mean':adam_grad_numers_abs_mean,
+                    'adam_grad_denoms_abs_mean':adam_grad_denoms_abs_mean,
                 }
 
                 if hparams.residual_encoder:
