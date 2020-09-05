@@ -70,6 +70,7 @@ def basic_cleaners(text):
   '''Basic pipeline that lowercases and collapses whitespace without transliteration.'''
   text = lowercase(text)
   text = collapse_whitespace(text)
+  text = text.strip()
   return text
 
 
@@ -78,6 +79,7 @@ def transliteration_cleaners(text):
   text = convert_to_ascii(text)
   text = lowercase(text)
   text = collapse_whitespace(text)
+  text = text.strip()
   return text
 
 
@@ -88,4 +90,5 @@ def english_cleaners(text):
   text = expand_numbers(text)
   text = expand_abbreviations(text)
   text = collapse_whitespace(text)
+  text = text.strip()
   return text
