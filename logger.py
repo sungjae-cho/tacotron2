@@ -325,6 +325,8 @@ class Tacotron2Logger(SummaryWriter):
         learning_rate = dict_log_values['learning_rate']
         KLD_weight = dict_log_values['KLD_weight']
         duration = dict_log_values['duration']
+        n_enc_steps = dict_log_values['n_encoder_steps']
+        n_dec_steps = dict_log_values['n_decoder_steps']
         x = dict_log_values['x']
         etc = dict_log_values['etc']
         y_pred = dict_log_values['y_pred']
@@ -405,6 +407,8 @@ class Tacotron2Logger(SummaryWriter):
                    "train/learning_rate": learning_rate,
                    "train/KLD_weight": KLD_weight,
                    "train/iter_duration": duration,
+                   "train/n_encoder_steps":n_enc_steps,
+                   "train/n_decoder_steps":n_dec_steps,
                    "train/adam_grad/w_steps_abs_mean":w_steps_abs_mean.detach().cpu(),
                    "train/adam_grad/adam_steps_abs_mean":adam_steps_abs_mean.detach().cpu(),
                    "train/adam_grad/adam_step_numers_abs_mean":adam_step_numers_abs_mean.detach().cpu(),
