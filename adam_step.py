@@ -82,11 +82,11 @@ def adam_step(optimizer, closure=None):
     adam_step_denoms = torch.cat(adam_step_denoms)
     grads = torch.cat(grads)
 
-    w_step_abs_mean = torch.mean(torch.abs(w_steps))
-    adam_step_abs_mean = torch.mean(torch.abs(adam_steps))
+    w_steps_abs_mean = torch.mean(torch.abs(w_steps))
+    adam_steps_abs_mean = torch.mean(torch.abs(adam_steps))
     adam_step_numers_abs_mean = torch.mean(torch.abs(adam_step_numers))
     adam_step_denoms_abs_mean = torch.mean(torch.abs(adam_step_denoms))
-    grad_abs_mean = torch.mean(torch.abs(grads))
+    grads_abs_mean = torch.mean(torch.abs(grads))
 
-    return w_step_abs_mean, adam_step_abs_mean, adam_step_numers_abs_mean, \
-        adam_step_denoms_abs_mean, grad_abs_mean
+    return w_steps_abs_mean, adam_steps_abs_mean, adam_step_numers_abs_mean, \
+        adam_step_denoms_abs_mean, grads_abs_mean
