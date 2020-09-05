@@ -23,6 +23,7 @@ def get_arpabet(word, dictionary):
 def get_g2p_en_seq(text, dictionary):
   sequence = []
   p_symbols_list = dictionary(text)
+  p_symbols_list = [' '] + p_symbols_list + [' ']
   for p_symbol in p_symbols_list:
     if p_symbol in cmudict.valid_symbols:
       sequence += _arpabet_to_sequence(p_symbol)
