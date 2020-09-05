@@ -22,6 +22,7 @@ def create_hparams(hparams_string=None, verbose=False):
         dist_port=54321,
         cudnn_enabled=True,
         cudnn_benchmark=False,
+        cudnn_deterministic=True,
         ignore_layers=['embedding.weight'],
 
         # Logging options

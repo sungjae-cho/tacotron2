@@ -745,9 +745,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
     if hparams.distributed_run:
         init_distributed(hparams, n_gpus, rank, group_name, first_device)
 
-    torch.manual_seed(hparams.seed)
-    torch.cuda.manual_seed(hparams.seed)
-
     model = load_model(hparams)
     learning_rate = hparams.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
@@ -1163,7 +1160,16 @@ if __name__ == '__main__':
     hparams = create_hparams(args.hparams)
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
+
+    # Following lines to control randomness
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
+    torch.backends.cudnn.deterministic = hparams.cudnn_deterministic
+    torch.manual_seed(hparams.seed)
+    torch.cuda.manual_seed(hparams.seed)
+    torch.cuda.manual_seed_all(hparams.seed) # if use multi-GPU
+    np.random.seed(hparams.seed)
+    random.seed(hparams.seed)
+
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
     print("FP16 Run:", hparams.fp16_run)
@@ -1171,6 +1177,8 @@ if __name__ == '__main__':
     print("Distributed Run:", hparams.distributed_run)
     print("cuDNN Enabled:", hparams.cudnn_enabled)
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
+    print("cuDNN Deterministic:", hparams.cudnn_deterministic)
+    print("Random Seed:", hparams.seed)
     print("Visible GPU IDs:", args.visible_gpus)
 
     # If checkpoint_path is given as a number, then the number is considered
