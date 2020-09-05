@@ -332,9 +332,9 @@ class Tacotron2Logger(SummaryWriter):
         gate_mae = dict_log_values['gate_mae']
         att_measures = dict_log_values['att_measures']
         w_step_abs_mean = dict_log_values['w_step_abs_mean']
-        adam_grad_abs_mean = dict_log_values['adam_grad_abs_mean']
-        adam_grad_numers_abs_mean = dict_log_values['adam_grad_numers_abs_mean']
-        adam_grad_denoms_abs_mean = dict_log_values['adam_grad_denoms_abs_mean']
+        adam_step_abs_mean = dict_log_values['adam_step_abs_mean']
+        adam_step_numers_abs_mean = dict_log_values['adam_step_numers_abs_mean']
+        adam_step_denoms_abs_mean = dict_log_values['adam_step_denoms_abs_mean']
         if self.hparams.residual_encoder:
             residual_encoding = dict_log_values['residual_encoding']
             mu = dict_log_values['mu']
@@ -403,9 +403,9 @@ class Tacotron2Logger(SummaryWriter):
                    "train/KLD_weight": KLD_weight,
                    "train/iter_duration": duration,
                    "train/adam_grad/w_step_abs_mean":w_step_abs_mean.detach().cpu(),
-                   "train/adam_grad/abs_mean":adam_grad_abs_mean.detach().cpu(),
-                   "train/adam_grad/numers_abs_mean":adam_grad_numers_abs_mean.detach().cpu(),
-                   "train/adam_grad/denoms_abs_mean":adam_grad_denoms_abs_mean.detach().cpu(),
+                   "train/adam_grad/abs_mean":adam_step_abs_mean.detach().cpu(),
+                   "train/adam_grad/numers_abs_mean":adam_step_numers_abs_mean.detach().cpu(),
+                   "train/adam_grad/denoms_abs_mean":adam_step_denoms_abs_mean.detach().cpu(),
                    "train/adam_grad/grad_abs_mean":grad_abs_mean.detach().cpu(),
                    "train/mean_forward_attention_ratio":mean_far,
                    "train/mean_attention_ratio":mean_ar,

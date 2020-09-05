@@ -15,9 +15,9 @@ def adam_step(optimizer, closure=None):
             loss = closure()
 
     w_steps = list()
-    adam_grads = list()
-    adam_grad_numers = list()
-    adam_grad_denoms = list()
+    adam_steps = list()
+    adam_step_numers = list()
+    adam_step_denoms = list()
     grads = list()
 
     for group in optimizer.param_groups:
@@ -67,26 +67,26 @@ def adam_step(optimizer, closure=None):
                 denom = (exp_avg_sq.sqrt() / math.sqrt(bias_correction2)).add_(group['eps'])
 
             numer = exp_avg / bias_correction1
-            adam_grad = numer / denom
+            adam_step = numer / denom
             lr = group['lr']
-            w_step = lr * adam_grad
+            w_step = lr * adam_step
             w_steps.append(w_step.view(-1))
-            adam_grads.append(adam_grad.view(-1))
-            adam_grad_numers.append(numer.view(-1))
-            adam_grad_denoms.append(denom.view(-1))
+            adam_steps.append(adam_step.view(-1))
+            adam_step_numers.append(numer.view(-1))
+            adam_step_denoms.append(denom.view(-1))
             grads.append(grad.view(-1))
 
     w_steps = torch.cat(w_steps)
-    adam_grads = torch.cat(adam_grads)
-    adam_grad_numers = torch.cat(adam_grad_numers)
-    adam_grad_denoms = torch.cat(adam_grad_denoms)
+    adam_steps = torch.cat(adam_steps)
+    adam_step_numers = torch.cat(adam_step_numers)
+    adam_step_denoms = torch.cat(adam_step_denoms)
     grads = torch.cat(grads)
 
     w_step_abs_mean = torch.mean(torch.abs(w_steps))
-    adam_grad_abs_mean = torch.mean(torch.abs(adam_grads))
-    adam_grad_numers_abs_mean = torch.mean(torch.abs(adam_grad_numers))
-    adam_grad_denoms_abs_mean = torch.mean(torch.abs(adam_grad_denoms))
+    adam_step_abs_mean = torch.mean(torch.abs(adam_steps))
+    adam_step_numers_abs_mean = torch.mean(torch.abs(adam_step_numers))
+    adam_step_denoms_abs_mean = torch.mean(torch.abs(adam_step_denoms))
     grad_abs_mean = torch.mean(torch.abs(grads))
 
-    return w_step_abs_mean, adam_grad_abs_mean, adam_grad_numers_abs_mean, \
-        adam_grad_denoms_abs_mean, grad_abs_mean
+    return w_step_abs_mean, adam_step_abs_mean, adam_step_numers_abs_mean, \
+        adam_step_denoms_abs_mean, grad_abs_mean
