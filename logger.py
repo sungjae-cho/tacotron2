@@ -331,6 +331,7 @@ class Tacotron2Logger(SummaryWriter):
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
         att_measures = dict_log_values['att_measures']
+        w_step_abs_mean = dict_log_values['w_step_abs_mean']
         adam_grad_abs_mean = dict_log_values['adam_grad_abs_mean']
         adam_grad_numers_abs_mean = dict_log_values['adam_grad_numers_abs_mean']
         adam_grad_denoms_abs_mean = dict_log_values['adam_grad_denoms_abs_mean']
@@ -401,9 +402,11 @@ class Tacotron2Logger(SummaryWriter):
                    "train/learning_rate": learning_rate,
                    "train/KLD_weight": KLD_weight,
                    "train/iter_duration": duration,
+                   "train/adam_grad/w_step_abs_mean":w_step_abs_mean.detach().cpu(),
                    "train/adam_grad/abs_mean":adam_grad_abs_mean.detach().cpu(),
                    "train/adam_grad/numers_abs_mean":adam_grad_numers_abs_mean.detach().cpu(),
                    "train/adam_grad/denoms_abs_mean":adam_grad_denoms_abs_mean.detach().cpu(),
+                   "train/adam_grad/grad_abs_mean":grad_abs_mean.detach().cpu(),
                    "train/mean_forward_attention_ratio":mean_far,
                    "train/mean_attention_ratio":mean_ar,
                    "train/mean_letter_attention_ratio":mean_letter_ar,

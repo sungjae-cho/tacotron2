@@ -870,7 +870,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             learning_rate = lr_scheduler.get_lr()[0]
             # optimizer.step is performs a parameter update based on the current
             # gradient (stored in .grad attribute of a parameter) and the update rule.
-            adam_grad_abs_mean, adam_grad_numers_abs_mean, adam_grad_denoms_abs_mean = adam_step(optimizer)
+            w_step_abs_mean, adam_grad_abs_mean, adam_grad_numers_abs_mean, \
+                adam_grad_denoms_abs_mean, grad_abs_mean = adam_step(optimizer)
             optimizer.step()
 
             # Because of the following recommendation
@@ -1021,9 +1022,11 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
                     'att_measures':att_measures,
+                    'w_step_abs_mean':w_step_abs_mean,
                     'adam_grad_abs_mean':adam_grad_abs_mean,
                     'adam_grad_numers_abs_mean':adam_grad_numers_abs_mean,
                     'adam_grad_denoms_abs_mean':adam_grad_denoms_abs_mean,
+                    'grad_abs_mean':grad_abs_mean,
                 }
 
                 if hparams.residual_encoder:
