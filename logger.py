@@ -321,6 +321,7 @@ class Tacotron2Logger(SummaryWriter):
         epoch = dict_log_values['epoch']
         losses = dict_log_values['losses']
         grad_norm = dict_log_values['grad_norm']
+        clipped_grad_norm = dict_log_values['clipped_grad_norm']
         learning_rate = dict_log_values['learning_rate']
         KLD_weight = dict_log_values['KLD_weight']
         duration = dict_log_values['duration']
@@ -400,6 +401,7 @@ class Tacotron2Logger(SummaryWriter):
                    "train/gate_accuracy": gate_accuracy,
                    "train/gate_mean_absolute_error":gate_mae,
                    "train/grad_norm": grad_norm,
+                   "train/clipped_grad_norm": clipped_grad_norm,
                    "train/learning_rate": learning_rate,
                    "train/KLD_weight": KLD_weight,
                    "train/iter_duration": duration,

@@ -863,9 +863,20 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     amp.master_params(optimizer), hparams.grad_clip_thresh)
                 is_overflow = math.isnan(grad_norm)
+                if is_overflow:
+                    pass
+                elif clip_coef < 1:
+                    clipped_grad_norm = grad_norm * clip_coef
+                else:
+                    clipped_grad_norm = grad_norm
             else:
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), hparams.grad_clip_thresh)
+                clip_coef = hparams.grad_clip_thresh / (grad_norm + 1e-6)
+                if clip_coef < 1:
+                    clipped_grad_norm = grad_norm * clip_coef
+                else:
+                    clipped_grad_norm = grad_norm
 
             learning_rate = lr_scheduler.get_lr()[0]
             # optimizer.step is performs a parameter update based on the current
@@ -993,8 +1004,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 duration = time.perf_counter() - start
                 n_enc_steps = max_len
                 n_dec_steps = np_output_lengths.sum()
-                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} EncSteps {} DecSteps {} EncDecSteps {} {:.1f}EncDecSteps/s {:.2f}s/it ".format(
-                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, n_enc_steps, n_dec_steps, (n_enc_steps + n_dec_steps), ((n_enc_steps + n_dec_steps) / duration), duration))
+                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} Clipped Grad Norm {:.6f} EncSteps {} DecSteps {} EncDecSteps {} {:.1f}EncDecSteps/s {:.2f}s/it ".format(
+                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, clipped_grad_norm, n_enc_steps, n_dec_steps, (n_enc_steps + n_dec_steps), ((n_enc_steps + n_dec_steps) / duration), duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
                 att_measures = (
                     (mean_far, batch_far),
@@ -1012,6 +1023,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'epoch':float_epoch,
                     'losses':reduced_losses,
                     'grad_norm':grad_norm,
+                    'clipped_grad_norm':clipped_grad_norm,
                     'learning_rate':learning_rate,
                     'KLD_weight':hparams.res_en_KLD_weight,
                     'duration':duration,
