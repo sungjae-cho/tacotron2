@@ -1119,7 +1119,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
         # End of the current epoch
         # Upsampling again
-        trainset.upsampling(iteration)
+        trainset.upsampling(epoch)
 
 
 if __name__ == '__main__':
