@@ -24,6 +24,7 @@ def create_hparams(hparams_string=None, verbose=False):
         cudnn_benchmark=False,
         cudnn_deterministic=True,
         ignore_layers=['embedding.weight'],
+        compute_alignments=False,
 
         # Logging options
         log_fr_test=False, # Control for logging free-running test

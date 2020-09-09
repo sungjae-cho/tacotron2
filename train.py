@@ -6,8 +6,10 @@ import signal
 import sys
 import random
 import numpy as np
+import pandas as pd
 from numpy import finfo
 from apex import amp
+from tqdm import tqdm
 
 import torch
 from distributed import apply_gradient_allreduce
@@ -243,6 +245,133 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     synth_dict['blank_ar_fr'] = batch_blank_ar_fr[idx].item()
     synth_dict['arr_fr'] = batch_arr_fr[idx].item()
     synth_dict['mar_fr'] = batch_mar_fr[idx].item()
+
+
+def compute_alignments(pretrained_path, hparams):
+    """Handles all the validation scoring and printing"""
+    if hparams.distributed_run:
+        return
+
+    torch.cuda.empty_cache()
+    model = load_model(hparams)
+    model = load_pretrained_model(model, pretrained_path)[0]
+    model.eval()
+
+    # Get data, data loaders and collate function ready
+    trainset = TextMelLoader(hparams, 'train')
+    valset = TextMelLoader(hparams, 'val')
+    testset = TextMelLoader(hparams, 'test')
+    set_types = ['train', 'val', 'test']
+    datasets = [trainset, valset, testset]
+    collate_fn = TextMelCollate(hparams)
+
+    # Logging lists
+    wav_path_list = list()
+    text_raw_list = list()
+    far_list = list()
+    ar_list = list()
+    letter_ar_list = list()
+    punct_ar_list = list()
+    blank_ar_list = list()
+    arr_list = list()
+    mar_list = list()
+    aq_list = list()
+
+
+    for set_type, dataset in zip(set_types, datasets):
+        print("{} set size: {}".format(set_type, len(dataset)))
+
+    for set_type, dataset in zip(set_types, datasets):
+        with torch.no_grad():
+            dataset_loader = DataLoader(dataset, sampler=None, num_workers=1,
+                                    shuffle=False, batch_size=hparams.batch_size,
+                                    pin_memory=False, collate_fn=collate_fn)
+
+            #######################
+            # TEACHER FORCING #####
+            #######################
+            # forward_attention_ratio
+            batch_far_list = list()
+            # attention_ratio
+            batch_ar_list = list()
+            batch_letter_ar_list = list()
+            batch_punct_ar_list = list()
+            batch_blank_ar_list = list()
+            # attention_range_ratio
+            batch_arr_list = list()
+            # multiple_attention_ratio
+            batch_mar_list = list()
+            # attention_quality
+            batch_aq_list = list()
+
+            print("Start to iterate {} set".format(set_type))
+            for i, batch in tqdm(enumerate(dataset_loader), total=len(dataset)):
+                # Parse inputs of each batch
+                x, y, etc = model.parse_batch(batch)
+                text_padded, input_lengths, mel_padded, max_len, output_lengths = x
+                mel_padded, gate_padded = y
+                speakers, sex, emotion_input_vectors, emotion_targets, lang, \
+                    text_raw, wav_paths = etc
+
+                ############################################################
+                # TEACHER FORCING #####
+                # Forward propagation by teacher forcing
+                (y_pred, y_pred_speakers, y_pred_emotions, y_pred_res_en,
+                    att_means) = model(
+                        x, speakers, emotion_input_vectors,
+                        zero_res_en=hparams.val_tf_zero_res_en)
+
+                # Forward propagtion results
+                mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
+                    prosody_ref, prosody_pred = y_pred
+
+                # [M1] forward_attention_ratio
+                _, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                # [M2] attention_ratio
+                ar_pairs = attention_ratio(alignments, input_lengths, text_padded, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                batch_ar = ar_pairs[0][1]
+                batch_letter_ar = ar_pairs[1][1]
+                batch_punct_ar = ar_pairs[2][1]
+                batch_blank_ar = ar_pairs[3][1]
+                # [M3] attention_range_ratio
+                _, batch_arr = attention_range_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                # [M4] multiple_attention_ratio
+                _, batch_mar = multiple_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
+                # [M_total] Attention quality
+                batch_attention_quality = get_attention_quality(batch_far, batch_mar, batch_letter_ar)
+
+                # Append attention measures into lists.
+                ## Attention measures: Teacher-forcing
+                wav_path_list += wav_paths
+                text_raw_list += text_raw
+                far_list += batch_far.squeeze().cpu().tolist()
+                ar_list += batch_ar.squeeze().cpu().tolist()
+                letter_ar_list += batch_letter_ar.squeeze().cpu().tolist()
+                punct_ar_list += batch_punct_ar.squeeze().cpu().tolist()
+                blank_ar_list += batch_blank_ar.squeeze().cpu().tolist()
+                arr_list += batch_arr.squeeze().cpu().tolist()
+                mar_list += batch_mar.squeeze().cpu().tolist()
+                aq_list += batch_attention_quality.squeeze().cpu().tolist()
+                # End of the iteration
+                ############################################################
+            # End of the datset
+            ####################################################################
+
+    csv_path = 'metadata/bc2013_att_measures.csv'
+    df = pd.DataFrame({
+        'wav_path':wav_path_list,
+        'text':text_raw_list,
+        'aq':aq_list,
+        'far':far_list,
+        'ar':ar_list,
+        'letter_ar':letter_ar_list,
+        'punct_ar':punct_ar_list,
+        'blank_ar':blank_ar_list,
+        'arr':arr_list,
+        'mar':mar_list,
+    })
+    df.to_csv(csv_path, index=False)
+    print("Results are saved in {}".format(csv_path))
 
 
 def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, n_gpus,
@@ -1199,6 +1328,13 @@ if __name__ == '__main__':
     print("cuDNN Deterministic:", hparams.cudnn_deterministic)
     print("Random Seed:", hparams.seed)
     print("Visible GPU IDs:", args.visible_gpus)
+
+    if hparams.compute_alignments:
+        if args.pretrained_path is not None:
+            compute_alignments(args.pretrained_path, hparams)
+        else:
+            print("pretrained_path must be specified!")
+        exit()
 
     # If checkpoint_path is given as a number, then the number is considered
     # as an iteration number. Thus, convert that number to the checkpoint path.
