@@ -354,7 +354,7 @@ class Tacotron2Logger(SummaryWriter):
         self.batches_per_epoch = batches_per_epoch
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
-        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw = etc
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw, wav_paths = etc
         _, mel_outputs, gate_outputs, alignments, _, _ = y_pred
         mean_far, batch_far = att_measures[0]
         mean_ar, batch_ar = att_measures[1]
@@ -588,7 +588,7 @@ class Tacotron2Logger(SummaryWriter):
         model = dict_log_values['model']
 
         text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
-        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw = dict_log_values['etc']
+        speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw, wav_paths = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
         _, mel_outputs, gate_outputs, alignments, _, _ = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']

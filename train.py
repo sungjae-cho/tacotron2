@@ -336,7 +336,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 text_padded, input_lengths, mel_padded, max_len, output_lengths = x
                 mel_padded, gate_padded = y
                 speakers, sex, emotion_input_vectors, emotion_targets, lang, \
-                    text_raw = etc
+                    text_raw, wav_paths = etc
 
                 ############################################################
                 # TEACHER FORCING #####
@@ -821,7 +821,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             text_padded, input_lengths, mel_padded, max_len, output_lengths = x
             mel_padded, gate_padded = y
             speakers, sex, emotion_input_vectors, emotion_targets, lang, \
-                text_raw = etc
+                text_raw, wav_paths = etc
 
             # Forward propagtion
             (y_pred, y_pred_speakers, y_pred_emotions,

@@ -67,7 +67,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         emotion_target = self.get_emotion_target(emotion)
         lang = self.get_lang(lang)
         return (text, mel, speaker, sex, emotion_input_vector, emotion_target,
-            lang, text_raw)
+            lang, text_raw, wavpath)
 
     def get_mel(self, filename):
         if not self.load_mel_from_disk:
@@ -266,6 +266,7 @@ class TextMelCollate():
         emotion_targets = torch.LongTensor(len(batch))
         lang = torch.LongTensor(len(batch))
         text_raw = list()
+        wav_paths = list()
 
         for i in range(len(ids_sorted_decreasing)):
             mel = batch[ids_sorted_decreasing[i]][1]
@@ -279,7 +280,9 @@ class TextMelCollate():
             emotion_targets[i] = batch[ids_sorted_decreasing[i]][5]
             lang = batch[ids_sorted_decreasing[i]][6]
             text_raw.append(batch[ids_sorted_decreasing[i]][7])
+            wav_paths.append(batch[ids_sorted_decreasing[i]][8])
 
 
         return text_padded, input_lengths, mel_padded, gate_padded, output_lengths, \
-            speakers, sex, emotion_input_vectors, emotion_targets, lang, text_raw
+            speakers, sex, emotion_input_vectors, emotion_targets, lang, text_raw, \
+            wav_paths
