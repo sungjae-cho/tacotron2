@@ -1,0 +1,4 @@
+split,speaker,emotion,wav_path,duration
+test,bc2013-w,neutral,400,1599.3030000000003
+train,bc2013-w,neutral,87611,363120.12099999975
+val,bc2013-w,neutral,100,406.0959999999999
