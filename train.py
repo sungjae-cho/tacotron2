@@ -1110,7 +1110,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 if rank == 0 and (i+1 == batches_per_epoch):
                     checkpoint_path = os.path.join(
                         os.path.join(output_directory, prj_name, run_name), "checkpoint_{}-epoch_{:.4}_end-epoch_{}".format(iteration, float_epoch, epoch+1))
-                    save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_epoch,
+                    save_checkpoint(hparams, model, optimizer, learning_rate, iteration, epoch+1,
                                     lr_scheduler, logger, checkpoint_path)
 
             tmp_iteration = iteration
