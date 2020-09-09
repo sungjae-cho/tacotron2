@@ -865,10 +865,12 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 is_overflow = math.isnan(grad_norm)
                 if is_overflow:
                     pass
-                elif clip_coef < 1:
-                    clipped_grad_norm = grad_norm * clip_coef
                 else:
-                    clipped_grad_norm = grad_norm
+                    clip_coef = hparams.grad_clip_thresh / (grad_norm + 1e-6)
+                    if clip_coef < 1:
+                        clipped_grad_norm = grad_norm * clip_coef
+                    else:
+                        clipped_grad_norm = grad_norm
             else:
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     model.parameters(), hparams.grad_clip_thresh)
