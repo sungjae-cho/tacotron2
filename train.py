@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from numpy import finfo
 from apex import amp
+from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 
 import torch
@@ -154,6 +155,8 @@ def load_checkpoint(checkpoint_path, model, optimizer, lr_scheduler, logger,
     if 'amp_scaling_state' in checkpoint_dict.keys():
         optimizer.state = {} # Because of the following recommendation https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
         amp.load_state_dict(checkpoint_dict['amp_scaling_state'])
+    '''if hparams.fp16_run:
+        amp_scaler.load_state_dict(checkpoint_dict['amp_scaler'])'''
     learning_rate = checkpoint_dict['learning_rate']
     if hparams.use_saved_learning_rate:
         learning_rate = checkpoint_dict['learning_rate']
@@ -189,6 +192,7 @@ def save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_e
     }
     if hparams.fp16_run:
         checkpoint_dict['amp_scaling_state'] = amp.state_dict()
+        '''checkpoint_dict['amp_scaler'] = amp_scaler.state_dict()'''
     torch.save(checkpoint_dict, filepath)
 
 
@@ -886,9 +890,15 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         -1
     )
 
+
     if hparams.fp16_run:
         model, optimizer = amp.initialize(
             model, optimizer, opt_level=hparams.fp16_opt_level) # default: opt_level='O2'
+    '''if hparams.fp16_run:
+        # Creates a GradScaler once at the beginning of training.
+        amp_scaler = GradScaler()
+    else:
+        amp_scaler = None'''
 
     if hparams.distributed_run:
         model = apply_gradient_allreduce(model)
@@ -956,6 +966,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             (y_pred, y_pred_speakers, y_pred_emotions,
                 y_pred_res_en, att_means
             ) = model(x, speakers, emotion_input_vectors)
+            '''with autocast(enabled=hparams.fp16_run):
+                (y_pred, y_pred_speakers, y_pred_emotions,
+                    y_pred_res_en, att_means
+                ) = model(x, speakers, emotion_input_vectors)'''
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
@@ -979,18 +993,38 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     att_means, input_lengths,
                     iteration
                 )
+            '''with autocast(enabled=hparams.fp16_run):
+                (loss, loss_taco2, loss_mel, loss_gate, loss_KLD, loss_ref_enc,
+                    loss_spk_adv, loss_emo_adv, loss_att_means
+                    ) = criterion(
+                        mel_outputs, mel_outputs_postnet, mel_padded,
+                        gate_outputs, gate_padded,
+                        y_pred, y,
+                        mu, logvar,
+                        prosody_pred, prosody_ref,
+                        logit_speakers, speakers,
+                        logit_emotions, emotion_targets,
+                        att_means, input_lengths,
+                        iteration
+                    )'''
+
 
             # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
             # These are accumulated into x.grad for every parameter x
             if hparams.fp16_run:
                 with amp.scale_loss(loss, optimizer) as scaled_loss:
                     scaled_loss.backward()
+                '''amp_scaler.scale(loss).backward()'''
             else:
                 loss.backward()
 
             if hparams.fp16_run:
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     amp.master_params(optimizer), hparams.grad_clip_thresh)
+                '''# Unscales the gradients of optimizer's assigned params in-place
+                amp_scaler.unscale_(optimizer)
+                grad_norm = torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), hparams.grad_clip_thresh)'''
                 is_overflow = math.isnan(grad_norm)
                 if is_overflow:
                     pass
@@ -1015,6 +1049,13 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             w_steps_abs_mean, adam_steps_abs_mean, adam_step_numers_abs_mean, \
                 adam_step_denoms_abs_mean, grads_abs_mean = adam_step(optimizer)
             optimizer.step()
+            '''if hparams.fp16_run:
+                amp_scaler.step(optimizer)
+                # Updates the scale for next iteration.
+                amp_scaler.update()
+            else:
+                optimizer.step()'''
+
 
             # Because of the following recommendation
             # https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
