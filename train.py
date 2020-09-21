@@ -971,6 +971,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 text_raw, wav_paths = etc
 
             # Forward propagtion
+            start_foward = time.perf_counter()
             (y_pred, y_pred_speakers, y_pred_emotions,
                 y_pred_res_en, att_means
             ) = model(x, speakers, emotion_input_vectors)
@@ -978,6 +979,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 (y_pred, y_pred_speakers, y_pred_emotions,
                     y_pred_res_en, att_means
                 ) = model(x, speakers, emotion_input_vectors)'''
+            forward_duration = time.perf_counter() - start_foward
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
@@ -987,7 +989,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             residual_encoding, mu, logvar = y_pred_res_en
             prosody = prosody_ref, prosody_pred
 
-
+            start_loss = time.perf_counter()
             (loss, loss_taco2, loss_mel, loss_gate, loss_KLD, loss_ref_enc,
                 loss_spk_adv, loss_emo_adv, loss_att_means
                 ) = criterion(
@@ -1015,8 +1017,9 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                         att_means, input_lengths,
                         iteration
                     )'''
+            loss_duration = time.perf_counter() - start_loss
 
-
+            start_backward = time.perf_counter()
             # loss.backward() computes dloss/dx for every parameter x which has requires_grad=True.
             # These are accumulated into x.grad for every parameter x
             if hparams.fp16_run:
@@ -1063,7 +1066,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 amp_scaler.update()
             else:
                 optimizer.step()'''
-
+            backward_duration = time.perf_counter() - start_backward
 
             # Because of the following recommendation
             # https://github.com/NVIDIA/apex/issues/480#issuecomment-587154020
@@ -1187,8 +1190,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 duration = time.perf_counter() - start
                 n_enc_steps = max_len
                 n_dec_steps = np_output_lengths.sum()
-                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} Clipped Grad Norm {:.6f} EncSteps {} DecSteps {} EncDecSteps {} {:.1f}EncDecSteps/s {:.2f}s/it ".format(
-                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, clipped_grad_norm, n_enc_steps, n_dec_steps, (n_enc_steps + n_dec_steps), ((n_enc_steps + n_dec_steps) / duration), duration))
+                print("Epoch {} Float Epoch {:4f} Iteration {} Learning rate {} Train total loss {:.6f} Mel loss {:.6f} Gate loss {:.6f} KLD loss {:.6f} RefEn loss {:.6f} SpkAdv loss {:.6f} EmoAdv loss {:.6f} MonoAtt MSE loss {:.6f} Grad Norm {:.6f} Clipped Grad Norm {:.6f} EncSteps {} DecSteps {} EncDecSteps {} {:.1f}EncDecSteps/s ForwardDuration {:.2f}s LossDuration {:.2f}s BackwardDuration {:.2f}s IterDuration {:.2f}s/it ".format(
+                    epoch, float_epoch, iteration, learning_rate, reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means, grad_norm, clipped_grad_norm, n_enc_steps, n_dec_steps, (n_enc_steps + n_dec_steps), ((n_enc_steps + n_dec_steps) / duration), forward_duration, loss_duration, backward_duration, duration))
                 reduced_losses = (reduced_loss, reduced_loss_mel, reduced_loss_gate, reduced_loss_KLD, reduced_loss_ref_enc, reduced_loss_spk_adv, reduced_loss_emo_adv, reduced_loss_att_means)
                 att_measures = (
                     (mean_far, batch_far),
