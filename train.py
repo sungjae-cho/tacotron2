@@ -981,7 +981,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \
-                prosody_ref, prosody_pred = y_pred
+                prosody_ref, prosody_pred, end_points = y_pred
             logit_speakers, prob_speakers, int_pred_speakers = y_pred_speakers
             logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
             residual_encoding, mu, logvar = y_pred_res_en
