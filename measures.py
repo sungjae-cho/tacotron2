@@ -333,6 +333,31 @@ def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
                 continue
         text_length = input_lengths[i].item()
         alignment = alignments[i,:mel_length,:text_length]
+        '''argmax_alignment = torch.argsort(alignment, dim=1, descending=True)[:,:top_k]
+
+        text_sequence = text_padded[i,:text_length].view(1, -1)
+        text_sequence_list = text_sequence.squeeze().tolist()
+        letter_locations = find_letter_locations(text_sequence_list)
+
+        multiple_attention_list = [False] * len(letter_locations)
+        for i_iter, i_letter in zip(range(len(letter_locations)), letter_locations):
+            argmax_step = None
+            first_argmax_found = False
+            second_argmax_finding = False
+            for i_dec in range(mel_length):
+                if i_letter in argmax_alignment[i_dec,:].tolist():
+                    argmax_step = True
+                else:
+                    argmax_step = False
+                if (not first_argmax_found) and argmax_step:
+                    first_argmax_found = True
+                elif first_argmax_found and (not argmax_step):
+                    second_argmax_finding = True
+                elif first_argmax_found and second_argmax_finding and argmax_step:
+                    multiple_attention_list[i_iter] = True
+                    break
+        multiple_attention_ratio = sum(multiple_attention_list) / len(multiple_attention_list)
+        batch_multiple_attention_ratio[i] = multiple_attention_ratio'''
         argmax_alignment = torch.argmax(alignment, dim=1)
         argmax_alignment = argmax_alignment.tolist()
 
