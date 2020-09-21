@@ -12,6 +12,7 @@ from utils import get_spk_adv_inputs, get_emo_adv_inputs
 from utils import hard_clip, soft_clip
 from utils import discretize_att_w
 from coordconv import CoordConv2d
+from measures import SecondStopPredictor
 
 
 class LocationLayer(nn.Module):
@@ -410,6 +411,8 @@ class Decoder(nn.Module):
             self.get_linear_input_dim(), 1,
             bias=True, w_init_gain='sigmoid')
 
+        self.stop_predictor2 = SecondStopPredictor(hparams.max_decoder_steps)
+
     def add_ref_enc(self, reference_encoder):
         self.reference_encoder = reference_encoder
 
@@ -704,15 +707,19 @@ class Decoder(nn.Module):
         return decoder_output, gate_prediction, self.attention_weights, self.attention_context, \
             prosody_pred
 
-    def forward(self, memory, memory_lengths,
+    def forward(self, memory, text_inputs, memory_lengths,
             speaker_embeddings, emotion_embeddings, residual_encoding,
             prosody_ref=None, global_prosody_ref=None,
             decoder_inputs=None, teacher_forcing=True,
-            discrete_attention_weight=False):
+            discrete_attention_weight=False,
+            stop_prediction2=False):
         """ Decoder forward pass for training
         PARAMS
         ------
         memory: Encoder outputs
+        text_inputs: text inputs.
+        - Type: torch.IntTensor.
+        - Size: [B, max_text_length].
         decoder_inputs: Decoder inputs for teacher forcing. i.e. mel-specs
         memory_lengths: Encoder output lengths for attention masking.
         prosody_ref: [B, seq_len, prosody_dim]
@@ -731,6 +738,7 @@ class Decoder(nn.Module):
 
             self.initialize_decoder_states(
                 memory, mask=~get_mask_from_lengths(memory_lengths))
+            self.stop_predictor2.initialize(text_inputs, memory_lengths)
 
             mel_outputs, gate_outputs, alignments, attention_contexts, \
                 prosody_hiddens = [], [], [], [], []
@@ -756,6 +764,11 @@ class Decoder(nn.Module):
                 attention_contexts += [attention_context]
                 prosody_hiddens += [prosody_hidden]
 
+                if stop_prediction2:
+                    _, end_points = self.stop_predictor2.predict(attention_weights)
+                else:
+                    end_points = self.stop_predictor2.get_end_points()
+
             (mel_outputs, gate_outputs, alignments,
                 attention_contexts, prosody_hiddens) = self.parse_decoder_outputs(
                     mel_outputs, gate_outputs, alignments, attention_contexts,
@@ -764,21 +777,25 @@ class Decoder(nn.Module):
             att_means = self.get_attention_means()
 
             return mel_outputs, gate_outputs, alignments, attention_contexts, \
-                prosody_hiddens, att_means
+                prosody_hiddens, end_points, att_means
         else:
-            fr_outputs = self.free_running(memory, memory_lengths,
+            fr_outputs = self.free_running(memory, text_inputs, memory_lengths,
                 speaker_embeddings, emotion_embeddings,
                 residual_encoding, discrete_attention_weight)
 
             return fr_outputs
 
-    def free_running(self, memory, memory_lengths, speaker_indices, emotion_vectors,
+    def free_running(self, memory, text_inputs, memory_lengths, speaker_indices, emotion_vectors,
             residual_encoding, discrete_attention_weight=False):
         """ Decoder inference
         PARAMS
         ------
         memory: Encoder outputs
-        - Size: [batch_size, n_mel_channels * n_frames_per_step)] == [B, 80]
+        - Size: [batch_size, max_batch_input_len, enc_dim]
+        - Type: torch.FloatTensor.
+        text_inputs: Encoder inputs. Text int seqeunce.
+        - Size: [batch_size, max_batch_input_len]
+        - Type: torch.IntTensor.
 
         RETURNS
         -------
@@ -794,12 +811,14 @@ class Decoder(nn.Module):
         #self.initialize_decoder_states(memory, mask=None)
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
+        self.stop_predictor2.initialize(text_inputs, memory_lengths)
         if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
             self.reference_encoder.initialize_states()
 
+        end_decoding = False
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = [], [], [], [], []
-        while len(mel_outputs) < self.max_decoder_steps:
+        while (not end_decoding) and (len(mel_outputs) < self.max_decoder_steps):
             t_temp_prosody_ref, prev_global_prosody_ref = None, None
             if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                 t_temp_prosody_ref, prev_global_prosody_ref = self.reference_encoder(prev_mel_output.unsqueeze(-1))
@@ -822,13 +841,16 @@ class Decoder(nn.Module):
             prosody_hiddens += [prosody_hidden]
             prev_mel_output = mel_output
 
+            end_decoding, end_points = self.stop_predictor2.predict(alignment)
+
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = self.parse_decoder_outputs(
             mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens)
 
-        return mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens
+        return mel_outputs, gate_outputs, alignments, attention_contexts, \
+            prosody_hiddens, end_points
 
-    def inference(self, memory, speaker_indices, emotion_vectors, residual_encoding,
+    def inference(self, memory, text_inputs, speaker_indices, emotion_vectors, residual_encoding,
             discrete_attention_weight=False):
         """ Decoder inference
         PARAMS
@@ -844,6 +866,8 @@ class Decoder(nn.Module):
         prev_mel_output = self.get_go_frame(memory)
 
         self.initialize_decoder_states(memory, mask=None)
+        self.stop_predictor2.initialize(text_inputs, torch.IntTensor([text_inputs.size(-1)]))
+
         if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
             self.reference_encoder.initialize_states()
 
@@ -870,7 +894,12 @@ class Decoder(nn.Module):
             prosody_hiddens += [prosody_hidden]
             prev_mel_output = mel_output
 
+            end_decoding, end_points = self.stop_predictor2.predict(alignment)
             if torch.sigmoid(gate_output.data) > self.gate_threshold:
+                print("Stopped by 1st ending predictor")
+                break
+            if end_decoding:
+                print("Stopped by 2nd ending predictor")
                 break
             elif len(mel_outputs) == self.max_decoder_steps:
                 print("Warning! Reached max decoder steps")
@@ -980,6 +1009,7 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs, speakers, emotion_vectors,
+            stop_prediction2=False,
             teacher_forcing=True, zero_res_en=False,
             discrete_attention_weight=False):
         self.int_dtype = speakers.dtype
@@ -1021,11 +1051,11 @@ class Tacotron2(nn.Module):
                 global_prosody_ref = None
 
             (mel_outputs, gate_outputs, alignments,
-                attention_contexts, prosody_preds, att_means) = self.decoder(
-                    encoder_outputs, text_lengths,
+                attention_contexts, prosody_preds, end_points, att_means) = self.decoder(
+                    encoder_outputs, text_inputs, text_lengths,
                         speaker_embeddings, emotion_embeddings, residual_encoding,
                         prosody_ref, global_prosody_ref,
-                        mels, teacher_forcing=True)
+                        mels, stop_prediction2=stop_prediction2, teacher_forcing=True)
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -1043,7 +1073,7 @@ class Tacotron2(nn.Module):
                 logit_emotions, prob_emotions, int_pred_emotions = None, None, None
 
             outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
-                gate_outputs, alignments, prosody_ref, prosody_preds],
+                gate_outputs, alignments, prosody_ref, prosody_preds, end_points],
                 output_lengths)
 
             return (outputs,
@@ -1076,9 +1106,10 @@ class Tacotron2(nn.Module):
         else:
             residual_encoding = None
 
-        mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
+        mel_outputs, gate_outputs, alignments, attention_contexts, \
+            prosody_hiddens, end_points \
             = self.decoder(
-            encoder_outputs, text_lengths,
+            encoder_outputs, text_inputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
             teacher_forcing=False,
@@ -1088,7 +1119,7 @@ class Tacotron2(nn.Module):
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
 
         outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
-            gate_outputs, alignments, None, prosody_hiddens])
+            gate_outputs, alignments, None, prosody_hiddens, end_points])
 
         return outputs
 
@@ -1114,7 +1145,7 @@ class Tacotron2(nn.Module):
 
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = self.decoder.inference(
-            encoder_outputs, speaker_embeddings, emotion_embeddings, residual_encoding,
+            encoder_outputs, text_inputs, speaker_embeddings, emotion_embeddings, residual_encoding,
             discrete_attention_weight)
 
         mel_outputs_postnet = self.postnet(mel_outputs)

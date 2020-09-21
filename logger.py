@@ -102,6 +102,7 @@ class Tacotron2Logger(SummaryWriter):
 
         self.sum_gate_accuracy = 0
         self.sum_gate_mae = 0
+        self.sum_end_point_mae = 0
 
         self.sum_grad_norm = 0
 
@@ -135,6 +136,7 @@ class Tacotron2Logger(SummaryWriter):
 
         dict_vars['sum_gate_accuracy'] = self.sum_gate_accuracy
         dict_vars['sum_gate_mae'] = self.sum_gate_mae
+        dict_vars['sum_end_point_mae'] = self.sum_end_point_mae
 
         dict_vars['sum_grad_norm'] = self.sum_grad_norm
 
@@ -169,6 +171,8 @@ class Tacotron2Logger(SummaryWriter):
 
         self.sum_gate_accuracy = dict_vars['sum_gate_accuracy']
         self.sum_gate_mae = dict_vars['sum_gate_mae']
+        if 'sum_end_point_mae' in dict_vars.keys():
+            self.sum_end_point_mae = dict_vars['sum_end_point_mae']
 
         self.sum_grad_norm = dict_vars['sum_grad_norm']
 
@@ -333,6 +337,7 @@ class Tacotron2Logger(SummaryWriter):
         int_pred_speakers = dict_log_values['int_pred_speakers']
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
+        end_point_mae = dict_log_values['end_point_mae']
         att_measures = dict_log_values['att_measures']
         w_steps_abs_mean = dict_log_values['w_steps_abs_mean']
         adam_steps_abs_mean = dict_log_values['adam_steps_abs_mean']
@@ -355,7 +360,7 @@ class Tacotron2Logger(SummaryWriter):
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = losses
         text_padded, input_lengths, mel_padded, max_len, output_lengths = x
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw, wav_paths = etc
-        _, mel_outputs, gate_outputs, alignments, _, _ = y_pred
+        _, mel_outputs, gate_outputs, alignments, _, _, end_points = y_pred
         mean_far, batch_far = att_measures[0]
         mean_ar, batch_ar = att_measures[1]
         mean_letter_ar, batch_letter_ar, best_letter_ar, worst_letter_ar = att_measures[2]
@@ -378,6 +383,7 @@ class Tacotron2Logger(SummaryWriter):
 
         self.sum_gate_accuracy += gate_accuracy
         self.sum_gate_mae += gate_mae
+        self.sum_end_point_mae += end_point_mae
 
         self.sum_grad_norm += grad_norm
 
@@ -402,6 +408,7 @@ class Tacotron2Logger(SummaryWriter):
                    "train/loss_gate": loss_gate,
                    "train/gate_accuracy": gate_accuracy,
                    "train/gate_mean_absolute_error":gate_mae,
+                   #"train/end_point_mae":end_point_mae,
                    "train/grad_norm": grad_norm,
                    "train/clipped_grad_norm": clipped_grad_norm,
                    "train/learning_rate": learning_rate,
@@ -515,6 +522,7 @@ class Tacotron2Logger(SummaryWriter):
                        "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),
                        "train_epoch/gate_accuracy": (self.sum_gate_accuracy / self.batches_per_epoch),
                        "train_epoch/gate_mean_absolute_error": (self.sum_gate_mae / self.batches_per_epoch),
+                       #"train_epoch/end_point_mae": (self.sum_end_point_mae / self.batches_per_epoch),
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),
@@ -590,7 +598,7 @@ class Tacotron2Logger(SummaryWriter):
         text_padded, input_lengths, mel_padded, max_len, output_lengths = dict_log_values['x']
         speakers, sex, emotion_input_vectors, emotion_target_vectors, lang, text_raw, wav_paths = dict_log_values['etc']
         mel_targets, gate_targets = dict_log_values['y']
-        _, mel_outputs, gate_outputs, alignments, _, _ = dict_log_values['y_pred']
+        _, mel_outputs, gate_outputs, alignments, _, _, end_points = dict_log_values['y_pred']
         int_pred_speakers = dict_log_values['int_pred_speakers']
 
         loss, loss_mel, loss_gate, loss_KLD, loss_ref_enc, loss_spk_adv, loss_emo_adv, loss_att_means = dict_log_values['losses']
@@ -599,6 +607,7 @@ class Tacotron2Logger(SummaryWriter):
 
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
+        end_point_mae = dict_log_values['end_point_mae']
 
         synth_dict_rand = dict_log_values['synth_dict_rand']
         synth_dict_min_aq_tf = dict_log_values['synth_dict_min_aq_tf']
@@ -654,6 +663,7 @@ class Tacotron2Logger(SummaryWriter):
                    "{}/loss_gate".format(log_prefix): loss_gate,
                    "{}/gate_accuracy".format(log_prefix): gate_accuracy,
                    "{}/gate_mean_absolute_error".format(log_prefix): gate_mae,
+                   "{}/end_point_mae".format(log_prefix): end_point_mae,
                    "{}/mean_forward_attention_ratio".format(log_prefix):mean_far,
                    "{}/mean_attention_ratio".format(log_prefix):mean_ar,
                    "{}/mean_letter_attention_ratio".format(log_prefix):mean_letter_ar,
