@@ -1267,7 +1267,7 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 # Pass training logging objects to logger.
                 logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
-            if not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch) or is_first_iteration):
+            if hparams.log_validation and (not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch) or is_first_iteration)):
                 validate(model, criterion, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          False, rank, hparams)

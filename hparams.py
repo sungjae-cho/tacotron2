@@ -27,6 +27,7 @@ def create_hparams(hparams_string=None, verbose=False):
         compute_alignments=False,
 
         # Logging options
+        log_validation=True,
         log_fr_test=False, # Control for logging free-running test
         # Free-running test text
         test_text = "This is a synthesized audio without teacher-forcing. Any question?",
