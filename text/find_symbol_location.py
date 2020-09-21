@@ -20,7 +20,7 @@ def find_letter_locations(text_sequence):
     locations: int list. A sorted list of letter indices.
     '''
     locations = list()
-    letter_list = list(_letters) + _arpabet
+    letter_list = list(_letters) + _arpabet + _hangul
     for i in range(len(text_sequence)):
         symbol_id = text_sequence[i]
         if symbol_id in _id_to_symbol:
