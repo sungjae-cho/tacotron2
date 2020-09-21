@@ -87,6 +87,9 @@ def forward_attention_ratio(alignments, input_lengths,
     batch_forward_attention_ratio: torch.Tensor((batch_size),dtype=torch.float).
     - Each element is the forward attention ratio of each batch sample.
     '''
+    alignments = alignments.detach().cpu()
+    input_lengths = input_lengths.detach().cpu()
+
     # torch.Tensor. Shape: [batch_size, mel_steps]
     argmax_alignments = torch.argmax(alignments, dim=2)
 
@@ -146,6 +149,9 @@ def attention_ratio(alignments, input_lengths, text_padded,
     batch_attention_ratio
     - torch.Tensor((batch_size),dtype=torch.float).
     '''
+    alignments = alignments.detach().cpu()
+    input_lengths = input_lengths.detach().cpu()
+    text_padded = text_padded.detach().cpu()
     batch_size = alignments.size(0)
     batch_attention_ratio = torch.empty((batch_size), dtype=torch.float)
     batch_letter_attention_ratio = torch.empty((batch_size), dtype=torch.float)
@@ -250,6 +256,8 @@ def attention_range_ratio(alignments, input_lengths,
     batch_attention_ratio
     - torch.Tensor((batch_size),dtype=torch.float).
     '''
+    alignments = alignments.detach().cpu()
+    input_lengths = input_lengths.detach().cpu()
     batch_size = alignments.size(0)
     batch_attention_range_ratio = torch.empty((batch_size), dtype=torch.float)
 
@@ -304,7 +312,9 @@ def multiple_attention_ratio(alignments, input_lengths,
     - torch.Tensor((batch_size),dtype=torch.float).
     '''
     batch_size = alignments.size(0)
-    batch_multiple_attention_ratio = torch.empty((batch_size), dtype=torch.float)
+    alignments = alignments.detach().cpu()
+    text_padded = text_padded.detach().cpu()
+    batch_multiple_attention_ratio = torch.zeros((batch_size), dtype=torch.float)
 
     for i in range(batch_size):
         if mode_mel_length == "ground_truth":
