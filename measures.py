@@ -121,7 +121,8 @@ def forward_attention_ratio(alignments, input_lengths,
 
 
 def attention_ratio(alignments, input_lengths, text_padded,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token"):
+        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        top_k=5):
     '''
     Attention ratio is a measure for
     "how much encoding steps are attended over all encoding steps".
@@ -174,8 +175,10 @@ def attention_ratio(alignments, input_lengths, text_padded,
         text_sequence_list = text_sequence.squeeze().tolist()
 
         alignment = alignments[i,:mel_length,:text_length]
-        argmax_alignment = torch.argmax(alignment, dim=1)
-        n_unique_argmax = torch.unique(argmax_alignment).size(0)
+        #argmax_alignment = torch.argmax(alignment, dim=1)
+        argmax_alignment = torch.argsort(alignment, dim=1, descending=True)[:,:top_k]
+        argmax_alignment = torch.unique(argmax_alignment.reshape(-1))
+        n_unique_argmax = argmax_alignment.size(0)
         sample_attention_ratio = n_unique_argmax / text_length
         batch_attention_ratio[i] = sample_attention_ratio
 
@@ -229,7 +232,8 @@ def attention_ratio(alignments, input_lengths, text_padded,
 
 
 def attention_range_ratio(alignments, input_lengths,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token"):
+        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        top_k=3):
     '''
     Attention ratio is a measure for
     "how much encoding steps are attended over all encoding steps".
@@ -272,7 +276,8 @@ def attention_range_ratio(alignments, input_lengths,
                 continue
         text_length = input_lengths[i].item()
         alignment = alignments[i,:mel_length,:text_length]
-        argmax_alignment = torch.argmax(alignment, dim=1)
+        #argmax_alignment = torch.argmax(alignment, dim=1)
+        argmax_alignment = torch.argsort(alignment, dim=1, descending=True)[:,:top_k]
         unique_argmax_set = torch.unique(argmax_alignment)
         range_length = torch.max(unique_argmax_set) - torch.min(unique_argmax_set) + 1
         range_length = range_length.item()
@@ -283,8 +288,9 @@ def attention_range_ratio(alignments, input_lengths,
     return mean_attention_range_ratio, batch_attention_range_ratio
 
 
-def multiple_attention_ratio(alignments, input_lengths,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token"):
+def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
+        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        enc_element='letter', top_k=3):
     '''
     Multiple attention ratio is a measure for
     "how much encoding steps are attended multiple times over all encoding steps".
