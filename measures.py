@@ -336,6 +336,16 @@ def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
         argmax_alignment = torch.argmax(alignment, dim=1)
         argmax_alignment = argmax_alignment.tolist()
 
+        if enc_element == 'letter':
+            text_sequence = text_padded[i,:text_length].view(1, -1)
+            text_sequence_list = text_sequence.squeeze().tolist()
+            letter_locations = find_letter_locations(text_sequence_list)
+            for i in reversed(range(len(argmax_alignment))):
+                if argmax_alignment[i] not in letter_locations:
+                    del argmax_alignment[i]
+            mel_length = len(argmax_alignment)
+            text_length = len(letter_locations)
+
         for j in range((mel_length-2), -1, -1):
             j_prev = j + 1
             if argmax_alignment[j] == argmax_alignment[j_prev]:
