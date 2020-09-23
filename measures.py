@@ -399,12 +399,13 @@ class SecondStopPredictor():
         self.stop_same_forward_steps = 20 # 10 *
         self.lar_lb = 0.95 # the lower bound of letter attention ratio
 
-    def initialize(self, text_padded, input_lengths):
+    def initialize(self, text_padded, input_lengths, output_lengths=None):
         '''
         Params
         -----
         text_padded: torch.LongTensor. Shape: [batch_size, max_batch_input_len].
         input_lengths: torch.Tenor. A 1-D tensor that keeps input text lengths. Shape: [batch_size].
+        output_lengths: torch.Tenor. A 1-D tensor that keeps output mel lengths. Shape: [batch_size].
         '''
         self.text_padded = text_padded.detach().cpu()
         self.batch_size = text_padded.size(0)
@@ -423,7 +424,7 @@ class SecondStopPredictor():
         self.letter_locations = list()
         #self.max_aq = torch.zeros((self.batch_size))
         self.cnt_same_argmax_att = torch.zeros((self.batch_size))
-        self.end_points = [self.max_decoder_steps] * self.batch_size
+        self.end_points = output_lengths.detach().cpu().tolist() if output_lengths is not None else [self.max_decoder_steps] * self.batch_size
         self.end_found = [False] * self.batch_size
         self.forward_attention_ratio = torch.zeros((self.batch_size))
         self.letter_attention_ratio = torch.zeros((self.batch_size))

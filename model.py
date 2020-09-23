@@ -738,7 +738,7 @@ class Decoder(nn.Module):
 
             self.initialize_decoder_states(
                 memory, mask=~get_mask_from_lengths(memory_lengths))
-            self.stop_predictor2.initialize(text_inputs, memory_lengths)
+            self.stop_predictor2.initialize(text_inputs, memory_lengths, output_lengths)
 
             mel_outputs, gate_outputs, alignments, attention_contexts, \
                 prosody_hiddens = [], [], [], [], []
