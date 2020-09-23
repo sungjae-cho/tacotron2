@@ -1057,7 +1057,7 @@ class Tacotron2(nn.Module):
                     encoder_outputs, text_inputs, text_lengths,
                         speaker_embeddings, emotion_embeddings, residual_encoding,
                         prosody_ref, global_prosody_ref,
-                        mels, stop_prediction2=stop_prediction2, teacher_forcing=True)
+                        mels, output_lengths, stop_prediction2=stop_prediction2, teacher_forcing=True)
 
             mel_outputs_postnet = self.postnet(mel_outputs)
             mel_outputs_postnet = mel_outputs + mel_outputs_postnet
