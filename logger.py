@@ -98,7 +98,6 @@ class Tacotron2Logger():
 
         self.sum_gate_accuracy = 0
         self.sum_gate_mae = 0
-        self.sum_end_point_mae = 0
 
         self.sum_grad_norm = 0
 
@@ -132,7 +131,6 @@ class Tacotron2Logger():
 
         dict_vars['sum_gate_accuracy'] = self.sum_gate_accuracy
         dict_vars['sum_gate_mae'] = self.sum_gate_mae
-        dict_vars['sum_end_point_mae'] = self.sum_end_point_mae
 
         dict_vars['sum_grad_norm'] = self.sum_grad_norm
 
@@ -167,8 +165,6 @@ class Tacotron2Logger():
 
         self.sum_gate_accuracy = dict_vars['sum_gate_accuracy']
         self.sum_gate_mae = dict_vars['sum_gate_mae']
-        if 'sum_end_point_mae' in dict_vars.keys():
-            self.sum_end_point_mae = dict_vars['sum_end_point_mae']
 
         self.sum_grad_norm = dict_vars['sum_grad_norm']
 
@@ -333,7 +329,6 @@ class Tacotron2Logger():
         int_pred_speakers = dict_log_values['int_pred_speakers']
         gate_accuracy = dict_log_values['gate_accuracy']
         gate_mae = dict_log_values['gate_mae']
-        end_point_mae = dict_log_values['end_point_mae']
         att_measures = dict_log_values['att_measures']
         w_steps_abs_mean = dict_log_values['w_steps_abs_mean']
         adam_steps_abs_mean = dict_log_values['adam_steps_abs_mean']
@@ -379,7 +374,6 @@ class Tacotron2Logger():
 
         self.sum_gate_accuracy += gate_accuracy
         self.sum_gate_mae += gate_mae
-        self.sum_end_point_mae += end_point_mae
 
         self.sum_grad_norm += grad_norm
 
@@ -404,7 +398,6 @@ class Tacotron2Logger():
                    "train/loss_gate": loss_gate,
                    "train/gate_accuracy": gate_accuracy,
                    "train/gate_mean_absolute_error":gate_mae,
-                   #"train/end_point_mae":end_point_mae,
                    "train/grad_norm": grad_norm,
                    "train/clipped_grad_norm": clipped_grad_norm,
                    "train/learning_rate": learning_rate,
@@ -518,7 +511,6 @@ class Tacotron2Logger():
                        "train_epoch/loss_gate": (self.sum_loss_gate / self.batches_per_epoch),
                        "train_epoch/gate_accuracy": (self.sum_gate_accuracy / self.batches_per_epoch),
                        "train_epoch/gate_mean_absolute_error": (self.sum_gate_mae / self.batches_per_epoch),
-                       #"train_epoch/end_point_mae": (self.sum_end_point_mae / self.batches_per_epoch),
                        "train_epoch/grad_norm": (self.sum_grad_norm / self.batches_per_epoch),
                        "train_epoch/mean_forward_attention_ratio":(self.sum_mean_far / self.batches_per_epoch),
                        "train_epoch/mean_attention_ratio":(self.sum_mean_ar / self.batches_per_epoch),

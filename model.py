@@ -739,7 +739,8 @@ class Decoder(nn.Module):
 
             self.initialize_decoder_states(
                 memory, mask=~get_mask_from_lengths(memory_lengths))
-            self.stop_predictor2.initialize(text_inputs, memory_lengths, output_lengths)
+            if stop_prediction2:
+                self.stop_predictor2.initialize(text_inputs, memory_lengths, output_lengths)
 
             mel_outputs, gate_outputs, alignments, attention_contexts, \
                 prosody_hiddens = [], [], [], [], []
@@ -768,7 +769,7 @@ class Decoder(nn.Module):
                 if stop_prediction2:
                     _, end_points = self.stop_predictor2.predict(attention_weights)
                 else:
-                    end_points = self.stop_predictor2.get_end_points()
+                    end_points = None
 
             (mel_outputs, gate_outputs, alignments,
                 attention_contexts, prosody_hiddens) = self.parse_decoder_outputs(

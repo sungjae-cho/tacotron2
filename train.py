@@ -1083,7 +1083,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
             gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
             # Compute stop gate MAE(pred_lengths, true_lengths)
             gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
-            end_point_mae = mean_absolute_error(np.asarray(end_points), np_mel_lengths)
 
             # Compute forward_attention_ratio.
             mean_far, batch_far = forward_attention_ratio(alignments, input_lengths, output_lengths=output_lengths, mode_mel_length="ground_truth")
@@ -1143,7 +1142,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 reduced_loss = reduce_tensor(loss).item()
                 gate_accuracy = reduce_scalar(gate_accuracy)
                 gate_mae = reduce_scalar(gate_mae)
-                end_point_mae = reduce_scalar(end_point_mae)
                 mean_far = reduce_scalar(mean_far)
                 mean_ar = reduce_scalar(mean_ar)
                 mean_letter_ar = reduce_scalar(mean_letter_ar)
@@ -1222,7 +1220,6 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     'int_pred_speakers':int_pred_speakers,
                     'gate_accuracy':gate_accuracy,
                     'gate_mae':gate_mae,
-                    'end_point_mae':end_point_mae,
                     'att_measures':att_measures,
                     'w_steps_abs_mean':w_steps_abs_mean,
                     'adam_steps_abs_mean':adam_steps_abs_mean,
