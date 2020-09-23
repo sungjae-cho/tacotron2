@@ -710,7 +710,7 @@ class Decoder(nn.Module):
     def forward(self, memory, text_inputs, memory_lengths,
             speaker_embeddings, emotion_embeddings, residual_encoding,
             prosody_ref=None, global_prosody_ref=None,
-            decoder_inputs=None, teacher_forcing=True,
+            decoder_inputs=None, output_lengths=None, teacher_forcing=True,
             discrete_attention_weight=False,
             stop_prediction2=False):
         """ Decoder forward pass for training
@@ -721,6 +721,7 @@ class Decoder(nn.Module):
         - Type: torch.IntTensor.
         - Size: [B, max_text_length].
         decoder_inputs: Decoder inputs for teacher forcing. i.e. mel-specs
+        output_lengths: The length of Mel-specs
         memory_lengths: Encoder output lengths for attention masking.
         prosody_ref: [B, seq_len, prosody_dim]
 
