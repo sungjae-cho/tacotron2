@@ -24,14 +24,12 @@ class Tacotron2Logger():
     def __init__(self, hparams, run_name, prj_name, logdir, model, resume):
         self.hparams = hparams
         self.run_name = run_name
-        if resume == "":
-            wandb.init(name=run_name, project=prj_name, resume=resume)
-        else:
-            wandb.init(project=prj_name, resume=resume)
-        wandb.watch(model)
+        self.wandb_run_id = resume
         self.waveglow = None
         self.waveglow_path = hparams.waveglow_path
         self.init_training_epoch_variables()
+        
+        wandb.watch(model)
 
     def load_waveglow(self, waveglow_path):
         waveglow = torch.load(waveglow_path)['model']

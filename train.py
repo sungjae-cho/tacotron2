@@ -7,6 +7,7 @@ import sys
 import random
 import numpy as np
 import pandas as pd
+import wandb
 from numpy import finfo
 from apex import amp
 from torch.cuda.amp import autocast, GradScaler
@@ -1375,6 +1376,11 @@ if __name__ == '__main__':
     random.seed(hparams.seed)
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
+
+    if args.resume == "":
+        wandb.init(name=args.run_name, project=args.prj_name, resume=args.resume)
+    else:
+        wandb.init(project=args.prj_name, resume=args.resume)
 
     print("FP16 Run:", hparams.fp16_run)
     print("Dynamic Loss Scaling:", hparams.dynamic_loss_scaling)
