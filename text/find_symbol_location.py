@@ -1,4 +1,4 @@
-from text.symbols import _pad, _punctuation, _blank, _special, _letters, _arpabet
+from text.symbols import _pad, _punctuation, _blank, _special, _letters, _arpabet, _hangul
 from text import _id_to_symbol
 
 """
