@@ -10,7 +10,7 @@ import pandas as pd
 import wandb
 from numpy import finfo
 from apex import amp
-from torch.cuda.amp import autocast, GradScaler
+#from torch.cuda.amp import autocast, GradScaler
 from tqdm import tqdm
 
 import torch
