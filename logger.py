@@ -7,7 +7,6 @@ sys.path.append('waveglow/')
 import warnings
 warnings.filterwarnings('ignore')
 from sklearn.metrics import accuracy_score
-from torch.utils.tensorboard import SummaryWriter
 
 from plotting_utils import plot_alignment_to_numpy, plot_spectrogram_to_numpy, \
     plot_embeddings_to_numpy, plot_prosody_dims_to_numpy
@@ -21,9 +20,8 @@ from text import text_to_sequence
 from utils import to_gpu, get_spk_adv_targets
 
 
-class Tacotron2Logger(SummaryWriter):
+class Tacotron2Logger():
     def __init__(self, hparams, run_name, prj_name, logdir, model, resume):
-        super(Tacotron2Logger, self).__init__(logdir)
         self.hparams = hparams
         self.run_name = run_name
         if resume == "":
