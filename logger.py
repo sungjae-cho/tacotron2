@@ -248,8 +248,7 @@ class Tacotron2Logger():
         if self.hparams.prosody_predictor:
             prosody_pred_tf = synth_dict['prosody_pred_tf']
             np_prosody_dims = prosody_pred_tf.cpu().numpy()
-            int_text_seq = text_to_sequence(text_string,
-                self.hparams.text_cleaners, valset.get_g2p_dictionary())
+            int_text_seq = text_sequence.tolist()
             text_seq = sequence_to_text_list(int_text_seq)
             np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf,
                 np_wav_tf, text_seq, np_alignment_tf, np_prosody_dims,
@@ -261,8 +260,7 @@ class Tacotron2Logger():
         if self.hparams.reference_encoder:
             prosody_ref_tf = synth_dict['prosody_ref_tf']
             np_prosody_dims = prosody_ref_tf.cpu().numpy()
-            int_text_seq = text_to_sequence(text_string,
-                self.hparams.text_cleaners, valset.get_g2p_dictionary())
+            int_text_seq = text_sequence.tolist()
             text_seq = sequence_to_text_list(int_text_seq)
             np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf,
                 np_wav_tf, text_seq, np_alignment_tf, np_prosody_dims,
