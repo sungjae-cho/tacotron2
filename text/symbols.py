@@ -26,4 +26,4 @@ _arpabet = ['@' + s for s in cmudict.valid_symbols]
 _hangul = list(set(ChoSung_LIST + JungSung_LIST + JongSung_LIST[1:]))
 
 # Export all symbols:
-symbols = [_pad] + list(_special) + list(_punctuation) + list(_blank) + list(_letters) + _arpabet + _hangul
+symbols = [_pad] + list(_special) + list(_punctuation) + list(_blank) + list(_letters) + _arpabet  #+ _hangul
