@@ -783,12 +783,14 @@ class Decoder(nn.Module):
         else:
             fr_outputs = self.free_running(memory, text_inputs, memory_lengths,
                 speaker_embeddings, emotion_embeddings,
-                residual_encoding, discrete_attention_weight)
+                residual_encoding, prosody_ref, global_prosody_ref,
+                discrete_attention_weight, stop_prediction2)
 
             return fr_outputs
 
     def free_running(self, memory, text_inputs, memory_lengths, speaker_indices, emotion_vectors,
-            residual_encoding, discrete_attention_weight=False):
+            residual_encoding, prosody_ref=None, global_prosody_ref=None, discrete_attention_weight=False,
+            stop_prediction2=True):
         """ Decoder inference
         PARAMS
         ------
@@ -813,7 +815,8 @@ class Decoder(nn.Module):
         #self.initialize_decoder_states(memory, mask=None)
         self.initialize_decoder_states(
             memory, mask=~get_mask_from_lengths(memory_lengths))
-        self.stop_predictor2.initialize(text_inputs, memory_lengths)
+        if stop_prediction2:
+            self.stop_predictor2.initialize(text_inputs, memory_lengths)
         if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
             self.reference_encoder.initialize_states()
 
@@ -843,7 +846,10 @@ class Decoder(nn.Module):
             prosody_hiddens += [prosody_hidden]
             prev_mel_output = mel_output
 
-            end_decoding, end_points = self.stop_predictor2.predict(alignment)
+            if stop_prediction2:
+                end_decoding, end_points = self.stop_predictor2.predict(alignment)
+            else:
+                end_decoding, end_points = False, None
 
         mel_outputs, gate_outputs, alignments, attention_contexts, prosody_hiddens \
             = self.parse_decoder_outputs(
@@ -1084,14 +1090,19 @@ class Tacotron2(nn.Module):
                     (residual_encoding, mu, logvar),
                     att_means)
         else:
-            text_inputs, text_lengths = inputs
-            fr_outputs = self.free_running(text_inputs, text_lengths, speakers, emotion_vectors,
-                discrete_attention_weight)
+
+            fr_outputs = self.free_running(inputs, speakers, emotion_vectors,
+                discrete_attention_weight, stop_prediction2)
 
             return fr_outputs
 
-    def free_running(self, text_inputs, text_lengths, speakers, emotion_vectors,
-            discrete_attention_weight=False):
+    def free_running(self, inputs, speakers, emotion_vectors,
+            discrete_attention_weight=False, stop_prediction2=True):
+        if self.hparams.reference_encoder == 'Glob2Temp':
+            text_inputs, text_lengths, ref_mels, max_ref_mel_len, ref_mel_lengths = inputs
+        else:
+            text_inputs, text_lengths = inputs
+
         embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         if len(self.hparams.all_speakers) > 1:
@@ -1115,7 +1126,8 @@ class Tacotron2(nn.Module):
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
             teacher_forcing=False,
-            discrete_attention_weight=discrete_attention_weight)
+            discrete_attention_weight=discrete_attention_weight,
+            stop_prediction2=stop_prediction2)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
