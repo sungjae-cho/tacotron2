@@ -433,9 +433,10 @@ def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
     return mean_multiple_attention_ratio, batch_multiple_attention_ratio
 
 class SecondStopPredictor():
-    def __init__(self, max_decoder_steps, letter_att_top_k=5):
+    def __init__(self, max_decoder_steps, letter_att_top_k=5, print_end_decision=False):
         self.max_decoder_steps = max_decoder_steps
         self.letter_att_top_k = letter_att_top_k
+        self.print_end_decision = print_end_decision
         self.stop_same_forward_steps = 20 # 10 *
         self.lar_lb = 0.95 # the lower bound of letter attention ratio
 
@@ -561,9 +562,11 @@ class SecondStopPredictor():
                 and (self.cnt_same_argmax_att[i] > self.stop_same_forward_steps \
                     or (self.backward_steps[i] > self.prev_backward_steps[i] and not one_step_diff)):
                     # or self.max_aq[i] > aq):
-                if self.cnt_same_argmax_att[i] > self.stop_same_forward_steps:
+                if not self.print_end_decision:
+                    pass
+                elif self.cnt_same_argmax_att[i] > self.stop_same_forward_steps:
                     print("Stopped by self.cnt_same_argmax_att[i] > self.stop_same_forward_steps")
-                if self.backward_steps[i] > self.prev_backward_steps[i] and not one_step_diff:
+                elif self.backward_steps[i] > self.prev_backward_steps[i] and not one_step_diff:
                     print("Stopped by self.backward_steps[i] > self.prev_backward_steps[i] and not one_step_diff")
                 # If an enpoint is found, ...
                 self.end_points[i] = self.dec_step
