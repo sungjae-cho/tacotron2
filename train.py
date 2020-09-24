@@ -214,8 +214,7 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
         alignments, alignments_fr,
         prosody_tf, prosody_pred_fr) = outputs
     mel_length = output_lengths[idx].item()
-    #mel_length_fr = get_mel_length(gate_outputs_fr[idx])
-    mel_length_fr = end_points_fr[idx]
+    mel_length_fr = min(get_mel_length(gate_outputs_fr[idx]), end_points_fr[idx])
     synth_dict['mel_true'] = mel_padded[idx,:,:mel_length]
     synth_dict['mel_output_tf'] = mel_outputs_postnet[idx,:,:mel_length]
     synth_dict['mel_output_fr'] = mel_outputs_postnet_fr[idx,:,:mel_length_fr]
