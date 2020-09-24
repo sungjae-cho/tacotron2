@@ -214,7 +214,9 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
         alignments, alignments_fr,
         prosody_tf, prosody_pred_fr) = outputs
     mel_length = output_lengths[idx].item()
-    mel_length_fr = min(get_mel_length(gate_outputs_fr[idx]), end_points_fr[idx])
+    mel_length_fr = get_mel_length(gate_outputs_fr[idx])
+    if end_points_fr is not None:
+        mel_length_fr = min(mel_length_fr, end_points_fr[idx])
     synth_dict['mel_true'] = mel_padded[idx,:,:mel_length]
     synth_dict['mel_output_tf'] = mel_outputs_postnet[idx,:,:mel_length]
     synth_dict['mel_output_fr'] = mel_outputs_postnet_fr[idx,:,:mel_length_fr]
@@ -478,7 +480,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 (y_pred, y_pred_speakers, y_pred_emotions, y_pred_res_en,
                     att_means) = model(
                         x, speakers, emotion_input_vectors,
-                        stop_prediction2=True,
+                        stop_prediction2=hparams.val_tf_stop_pred2,
                         zero_res_en=hparams.val_tf_zero_res_en)
 
                 # Forward propagtion results
@@ -540,25 +542,25 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 else:
                     inputs_fr = text_padded, input_lengths
 
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, _, prosody_pred_fr, end_points_fr = model(inputs_fr, speakers, emotion_input_vectors, teacher_forcing=False, stop_prediction2=False)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, _, prosody_pred_fr, end_points_fr = model(inputs_fr, speakers, emotion_input_vectors, teacher_forcing=False, stop_prediction2=hparams.val_fr_stop_pred2)
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
-                #_, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
-                _, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
+                _, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, pred_end_points=end_points_fr, mode_mel_length="stop_token")
+                #_, batch_far_fr = forward_attention_ratio(alignments_fr, input_lengths, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
                 # [M2] attention_ratio
-                #ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
-                ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
+                ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, pred_end_points=end_points_fr, mode_mel_length="stop_token")
+                #ar_fr_pairs = attention_ratio(alignments_fr, input_lengths, text_padded, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
                 batch_ar_fr = ar_fr_pairs[0][1]
                 batch_letter_ar_fr = ar_fr_pairs[1][1]
                 batch_punct_ar_fr = ar_fr_pairs[2][1]
                 batch_blank_ar_fr = ar_fr_pairs[3][1]
                 # [M3] attention_range_ratio
-                #_, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
-                _, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
+                _, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, gate_outputs=gate_outputs_fr, pred_end_points=end_points_fr, mode_mel_length="stop_token")
+                #_, batch_arr_fr = attention_range_ratio(alignments_fr, input_lengths, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
                 # [M4] multiple_attention_ratio
-                #_, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, mode_mel_length="stop_token")
-                _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, text_padded, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
+                _, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, text_padded, gate_outputs=gate_outputs_fr, pred_end_points=end_points_fr, mode_mel_length="stop_token")
+                #_, batch_mar_fr = multiple_attention_ratio(alignments_fr, input_lengths, text_padded, output_lengths=torch.IntTensor(end_points_fr), mode_mel_length="ground_truth")
                 # [M_total] Attention quality
                 batch_attention_quality_fr = get_attention_quality(batch_far_fr, batch_mar_fr, batch_letter_ar_fr)
 

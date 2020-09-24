@@ -61,7 +61,9 @@ def get_attention_quality(
 
 
 def forward_attention_ratio(alignments, input_lengths,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        output_lengths=None,
+        gate_outputs=None, pred_end_points=None,
+        mode_mel_length="stop_token",
         hop_size=1):
     '''
     Params
@@ -73,6 +75,11 @@ def forward_attention_ratio(alignments, input_lengths,
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
     - 0 indicates a signal to generate the next decoding step.
     - 1 indicates a signal to generate this decoding step and stop generating the next stop.
+    pred_end_points: End points predicted by SecondStopPredictor.
+    - Type: torch.LongTensor.
+    - Shape: [batch_size]
+    - A 1-D tensor that contains predicted end points for all batch samples.
+    - This is required only if mode_mel_length=="stop_token".
     mode_mel_length: str.
     - "ground_truth"
     -- This option requires output_lengths.
@@ -106,6 +113,9 @@ def forward_attention_ratio(alignments, input_lengths,
         if mode_mel_length == "stop_token":
             gate_output = gate_outputs[i]
             mel_length = get_mel_length(gate_output)
+            if pred_end_points is not None:
+                pred_end_point = pred_end_points[i].item()
+                mel_length = min(mel_length, pred_end_point)
             if mel_length == 0:
                 batch_forward_attention_ratio[i] = 0
                 continue
@@ -121,7 +131,9 @@ def forward_attention_ratio(alignments, input_lengths,
 
 
 def attention_ratio(alignments, input_lengths, text_padded,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        output_lengths=None,
+        gate_outputs=None, pred_end_points=None,
+        mode_mel_length="stop_token",
         top_k=5):
     '''
     Attention ratio is a measure for
@@ -133,6 +145,11 @@ def attention_ratio(alignments, input_lengths, text_padded,
     input_lengths: torch.Tenor. A 1-D tensor that keeps input text lengths. Shape: [batch_size].
     text_padded: torch.LongTensor. Shape: [batch_size, max_batch_input_len].
     output_lengths: torch.Tensor. A 1-D tensor that keeps output mel lengths. Shape: [batch_size].
+    pred_end_points: End points predicted by SecondStopPredictor.
+    - Type: torch.LongTensor.
+    - Shape: [batch_size]
+    - A 1-D tensor that contains predicted end points for all batch samples.
+    - This is required only if mode_mel_length=="stop_token".
     gate_outputs: torch.Tensor. Shape: [batch_size, stop_token_seq].
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
     - 0 indicates a signal to generate the next decoding step.
@@ -166,6 +183,9 @@ def attention_ratio(alignments, input_lengths, text_padded,
         if mode_mel_length == "stop_token":
             gate_output = gate_outputs[i]
             mel_length = get_mel_length(gate_output)
+            if pred_end_points is not None:
+                pred_end_point = pred_end_points[i].item()
+                mel_length = min(mel_length, pred_end_point)
             if mel_length == 0:
                 batch_attention_ratio[i] = 0
                 continue
@@ -232,7 +252,9 @@ def attention_ratio(alignments, input_lengths, text_padded,
 
 
 def attention_range_ratio(alignments, input_lengths,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        output_lengths=None,
+        gate_outputs=None, pred_end_points=None,
+        mode_mel_length="stop_token",
         top_k=3):
     '''
     Attention ratio is a measure for
@@ -247,6 +269,11 @@ def attention_range_ratio(alignments, input_lengths,
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
     - 0 indicates a signal to generate the next decoding step.
     - 1 indicates a signal to generate this decoding step and stop generating the next stop.
+    pred_end_points: End points predicted by SecondStopPredictor.
+    - Type: torch.LongTensor.
+    - Shape: [batch_size]
+    - A 1-D tensor that contains predicted end points for all batch samples.
+    - This is required only if mode_mel_length=="stop_token".
     mode_mel_length: str.
     - "ground_truth"
     -- This option requires output_lengths.
@@ -271,6 +298,9 @@ def attention_range_ratio(alignments, input_lengths,
         if mode_mel_length == "stop_token":
             gate_output = gate_outputs[i]
             mel_length = get_mel_length(gate_output)
+            if pred_end_points is not None:
+                pred_end_point = pred_end_points[i].item()
+                mel_length = min(mel_length, pred_end_point)
             if mel_length == 0:
                 batch_attention_range_ratio[i] = 0
                 continue
@@ -289,7 +319,9 @@ def attention_range_ratio(alignments, input_lengths,
 
 
 def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
-        output_lengths=None, gate_outputs=None, mode_mel_length="stop_token",
+        output_lengths=None,
+        gate_outputs=None, pred_end_points=None,
+        mode_mel_length="stop_token",
         enc_element='letter', top_k=3):
     '''
     Multiple attention ratio is a measure for
@@ -304,6 +336,11 @@ def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
     - A 2-D tensor that is a predicted sequence of the stopping decoding step
     - 0 indicates a signal to generate the next decoding step.
     - 1 indicates a signal to generate this decoding step and stop generating the next stop.
+    pred_end_points: End points predicted by SecondStopPredictor.
+    - Type: torch.LongTensor.
+    - Shape: [batch_size]
+    - A 1-D tensor that contains predicted end points for all batch samples.
+    - This is required only if mode_mel_length=="stop_token".
     mode_mel_length: str.
     - "ground_truth"
     -- This option requires output_lengths.
@@ -328,6 +365,9 @@ def multiple_attention_ratio(alignments, input_lengths, text_padded=None,
         if mode_mel_length == "stop_token":
             gate_output = gate_outputs[i]
             mel_length = get_mel_length(gate_output)
+            if pred_end_points is not None:
+                pred_end_point = pred_end_points[i].item()
+                mel_length = min(mel_length, pred_end_point)
             if mel_length == 0:
                 batch_multiple_attention_ratio[i] = 1
                 continue
@@ -424,7 +464,10 @@ class SecondStopPredictor():
         self.letter_locations = list()
         #self.max_aq = torch.zeros((self.batch_size))
         self.cnt_same_argmax_att = torch.zeros((self.batch_size))
-        self.end_points = output_lengths.detach().cpu().tolist() if output_lengths is not None else [self.max_decoder_steps] * self.batch_size
+        if output_lengths is not None:
+            self.end_points = output_lengths.detach().cpu()
+        else:
+            self.end_points = torch.full((self.batch_size,), self.max_decoder_steps, dtype=torch.long).cpu()
         self.end_found = [False] * self.batch_size
         self.forward_attention_ratio = torch.zeros((self.batch_size))
         self.letter_attention_ratio = torch.zeros((self.batch_size))
