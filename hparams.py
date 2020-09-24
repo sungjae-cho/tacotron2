@@ -22,7 +22,7 @@ def create_hparams(hparams_string=None, verbose=False):
         dist_port=54321,
         cudnn_enabled=True,
         cudnn_benchmark=False,
-        cudnn_deterministic=True,
+        cudnn_deterministic=False,
         ignore_layers=['embedding.weight'],
         compute_alignments=False,
 
