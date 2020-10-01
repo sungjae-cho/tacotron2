@@ -421,7 +421,7 @@ class Decoder(nn.Module):
             + self.hparams.encoder_embedding_dim)
 
         if self.hparams.has_style_token_lstm_1:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 attention_rnn_input_dim += self.hparams.prosody_dim
             else:
                 if len(self.hparams.all_speakers) > 1:
@@ -438,7 +438,7 @@ class Decoder(nn.Module):
             + self.hparams.encoder_embedding_dim)
 
         if self.hparams.has_style_token_lstm_2:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 decoder_rnn_input_dim += self.hparams.prosody_dim
             else:
                 if len(self.hparams.all_speakers) > 1:
@@ -455,7 +455,7 @@ class Decoder(nn.Module):
             + self.hparams.encoder_embedding_dim)
 
         if self.hparams.has_style_token_linear:
-            if self.hparams.prosody_predictor:
+            if self.hparams.reference_encoder:
                 linear_input_dim += self.hparams.prosody_dim
             else:
                 if len(self.hparams.all_speakers) > 1:
@@ -508,7 +508,7 @@ class Decoder(nn.Module):
         B = memory.size(0)
         MAX_TIME = memory.size(1)
 
-        if self.hparams.prosody_predictor:
+        if self.hparams.reference_encoder:
             self.prosody_encoding = Variable(memory.data.new(
                 B, self.prosody_dim).zero_())
         if self.hparams.prosody_predictor == 'LSTM':
