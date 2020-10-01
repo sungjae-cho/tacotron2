@@ -76,7 +76,7 @@ class ReferenceEncoder(nn.Module):
 
         self.gru.flatten_parameters()
         _, out = self.gru(out)
-        return out.squeeze(0)
+        return _, out.squeeze(0)
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
         for _ in range(n_convs):
@@ -155,7 +155,7 @@ class GST(nn.Module):
         self.stl = STL(hp)
 
     def forward(self, inputs, input_lengths=None):
-        enc_out = self.encoder(inputs, input_lengths=input_lengths)
+        _, enc_out = self.encoder(inputs, input_lengths=input_lengths)
         style_embed = self.stl(enc_out)
 
         return style_embed
