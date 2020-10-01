@@ -33,7 +33,7 @@ class TotalLoss(nn.Module):
             loss_KLD = torch.zeros(1).cuda()
 
         # Fitting prosody_pred to prosody_ref
-        if self.hparams.reference_encoder:
+        if self.hparams.prosody_predictor:
             fixed_prosody_ref = prosody_ref.detach()
             loss_ref_enc = self.L1Loss_fn(prosody_pred, fixed_prosody_ref)
         else:
