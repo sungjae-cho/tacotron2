@@ -14,8 +14,7 @@ from utils import discretize_att_w
 from coordconv import CoordConv2d
 from measures import SecondStopPredictor
 from modules import ReferenceEncoder
-from ref_encoders import ResidualEncoder, LocalRefEncoder, \
-    LocalRefEncoder2CNN2biLSTM, GlocalRefEncoderRNNCell, GlocalRefEncoder
+from ref_encoders import ResidualEncoder, LocalRefEncoder, GlocalRefEncoder
 
 
 class LocationLayer(nn.Module):
@@ -997,11 +996,6 @@ class Tacotron2(nn.Module):
         if hparams.reference_encoder:
             if hparams.reference_encoder == 'LocalRefEncoder':
                 self.reference_encoder = LocalRefEncoder(hparams)
-            elif hparams.reference_encoder == 'LocalRefEncoder2CNN2biLSTM':
-                self.reference_encoder = LocalRefEncoder2CNN2biLSTM(hparams)
-            elif hparams.reference_encoder == 'GlocalRefEncoderRNNCell':
-                self.reference_encoder = GlocalRefEncoderRNNCell(hparams)
-                self.decoder.add_ref_enc(self.reference_encoder)
             elif hparams.reference_encoder == 'GlocalRefEncoder':
                 self.reference_encoder = GlocalRefEncoder(hparams)
                 self.decoder.add_ref_enc(self.reference_encoder)
@@ -1096,7 +1090,7 @@ class Tacotron2(nn.Module):
                 residual_encoding, mu, logvar = None, None, None
 
             if self.hparams.reference_encoder:
-                if self.hparams.reference_encoder in ['GlocalRefEncoderRNNCell', 'GlocalRefEncoder']:
+                if self.hparams.reference_encoder in ['GlocalRefEncoder']:
                     self.reference_encoder.initialize_states()
                 prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
