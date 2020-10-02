@@ -13,6 +13,7 @@ from utils import hard_clip, soft_clip
 from utils import discretize_att_w
 from coordconv import CoordConv2d
 from measures import SecondStopPredictor
+from modules import ReferenceEncoder
 
 
 class LocationLayer(nn.Module):
