@@ -670,7 +670,7 @@ class Decoder(nn.Module):
 
         if not self.hparams.reference_encoder:
             pass
-        elif (t_prosody_ref is None) or (not self.training):
+        elif (self.hparams.prosody_predictor != '') and (not self.training):
             self.prosody_encoding = prosody_pred
         else:
             self.prosody_encoding = t_prosody_ref
