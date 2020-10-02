@@ -131,6 +131,11 @@ def create_hparams(hparams_string=None, verbose=False):
         ref_enc_gru_size=128,
         global_prosody_is_hidden=False,
 
+        # Style Token Layer
+        token_embedding_size=128, # in the paper, 256
+        token_num=10,
+        num_heads=8,
+
         # Residual encoder parameters
         res_en_out_dim=16,
         res_en_conv_kernels=512,
