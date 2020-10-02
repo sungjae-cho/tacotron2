@@ -993,15 +993,15 @@ class Tacotron2(nn.Module):
         else:
             self.residual_encoder = None
         if hparams.reference_encoder:
-            if hparams.reference_encoder == 'ref1':
-                self.reference_encoder = ReferenceEncoder1(hparams)
-            elif hparams.reference_encoder == 'ref2':
-                self.reference_encoder = ReferenceEncoder2(hparams)
-            elif hparams.reference_encoder == 'ref3':
-                self.reference_encoder = ReferenceEncoder3(hparams)
+            if hparams.reference_encoder == 'LocalRefEncoder':
+                self.reference_encoder = LocalRefEncoder(hparams)
+            elif hparams.reference_encoder == 'LocalRefEncoder2CNN2biLSTM':
+                self.reference_encoder = LocalRefEncoder2CNN2biLSTM(hparams)
+            elif hparams.reference_encoder == 'GlocalRefEncoderRNNCell':
+                self.reference_encoder = GlocalRefEncoderRNNCell(hparams)
                 self.decoder.add_ref_enc(self.reference_encoder)
-            elif hparams.reference_encoder == 'ref4':
-                self.reference_encoder = ReferenceEncoder4(hparams)
+            elif hparams.reference_encoder == 'GlocalRefEncoder':
+                self.reference_encoder = GlocalRefEncoder(hparams)
                 self.decoder.add_ref_enc(self.reference_encoder)
             elif hparams.reference_encoder == 'Glob2Temp':
                 self.reference_encoder = ReferenceEncoder(hparams)
@@ -1094,7 +1094,7 @@ class Tacotron2(nn.Module):
                 residual_encoding, mu, logvar = None, None, None
 
             if self.hparams.reference_encoder:
-                if self.hparams.reference_encoder in ['ref3', 'ref4']:
+                if self.hparams.reference_encoder in ['GlocalRefEncoderRNNCell', 'GlocalRefEncoder']:
                     self.reference_encoder.initialize_states()
                 prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
@@ -1507,13 +1507,13 @@ class ProsodyPredictorLSTMCell(nn.Module):
         return outputs, hidden, cell
 
 
-class ReferenceEncoder1(nn.Module):
+class LocalRefEncoder(nn.Module):
     '''
     inputs --- [N, n_mels, Ty]  mels
     outputs --- ([N, seq_len, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
-        super(ReferenceEncoder1, self).__init__()
+        super(LocalRefEncoder, self).__init__()
         self.hparams = hparams
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
@@ -1584,12 +1584,12 @@ class ReferenceEncoder1(nn.Module):
         return L
 
 
-class ReferenceEncoder2(nn.Module):
+class LocalRefEncoder2CNN2biLSTM(nn.Module):
     '''
     A lower part of ResidualEncoder
     '''
     def __init__(self, hparams):
-        super(ReferenceEncoder2, self).__init__()
+        super(LocalRefEncoder2CNN2biLSTM, self).__init__()
         self.hparams = hparams
         self.conv_in_channels = 1
         self.conv_out_channels = hparams.res_en_conv_kernels
@@ -1642,9 +1642,9 @@ class ReferenceEncoder2(nn.Module):
         return outputs
 
 
-class ReferenceEncoder3(nn.Module):
+class GlocalRefEncoderRNNCell(nn.Module):
     def __init__(self, hparams):
-        super(ReferenceEncoder3, self).__init__()
+        super(GlocalRefEncoderRNNCell, self).__init__()
         self.hparams = hparams
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
@@ -1748,13 +1748,13 @@ class ReferenceEncoder3(nn.Module):
             L = (L - kernel_size + 2 * pad) // stride + 1
         return L
 
-class ReferenceEncoder4(nn.Module):
+class GlocalRefEncoder(nn.Module):
     '''
     inputs --- [N, n_mels, Ty]  mels
     outputs --- ([N, seq_len, ref_enc_gru_size])
     '''
     def __init__(self, hparams):
-        super(ReferenceEncoder4, self).__init__()
+        super(GlocalRefEncoder, self).__init__()
         self.hparams = hparams
         K = len(hparams.ref_enc_filters)
         filters = [1] + hparams.ref_enc_filters
