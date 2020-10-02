@@ -416,6 +416,9 @@ class Decoder(nn.Module):
     def add_ref_enc(self, reference_encoder):
         self.reference_encoder = reference_encoder
 
+    def add_temp_prosody_decoder(self, temp_prosody_decoder):
+        self.temp_prosody_decoder = temp_prosody_decoder
+
     def get_attention_rnn_input_dim(self):
         attention_rnn_input_dim = (self.hparams.prenet_dim
             + self.hparams.encoder_embedding_dim)
@@ -756,7 +759,12 @@ class Decoder(nn.Module):
                 decoder_input = decoder_inputs[t]
                 t_prosody_ref = None
                 if self.hparams.reference_encoder:
-                    t_prosody_ref = prosody_ref[:,t,:]
+                    if self.hparams.reference_encoder == 'Glob2Temp':
+                        if t == 0:
+                            t_prosody_ref_hidden = global_prosody_ref
+                        t_prosody_ref_hidden, t_prosody_ref = self.temp_prosody_decoder(None, t_prosody_ref_hidden)
+                    else:
+                        t_prosody_ref = prosody_ref[:,t,:]
                 prev_global_prosody_ref = None
                 if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                     if t == 0:
@@ -834,12 +842,17 @@ class Decoder(nn.Module):
             prosody_encodings, prosody_preds \
             = [], [], [], [], [], []
         while (not end_decoding) and (len(mel_outputs) < self.max_decoder_steps):
+            t = len(mel_outputs)
             t_temp_prosody_ref, prev_global_prosody_ref = None, None
             if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                 t_temp_prosody_ref, prev_global_prosody_ref = self.reference_encoder(prev_mel_output.unsqueeze(-1))
                 # squeeze time step dim
                 t_temp_prosody_ref = t_temp_prosody_ref.squeeze(1)
                 prev_global_prosody_ref = prev_global_prosody_ref.squeeze(1)
+            elif self.hparams.reference_encoder == 'Glob2Temp':
+                if t == 0:
+                    t_temp_prosody_ref_hidden = global_prosody_ref
+                t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden)
 
             decoder_input = self.prenet(prev_mel_output)
 
@@ -989,6 +1002,10 @@ class Tacotron2(nn.Module):
             elif hparams.reference_encoder == 'ref4':
                 self.reference_encoder = ReferenceEncoder4(hparams)
                 self.decoder.add_ref_enc(self.reference_encoder)
+            elif hparams.reference_encoder == 'Glob2Temp':
+                self.reference_encoder = ReferenceEncoder(hparams)
+                self.temp_prosody_decoder = TemporalProsodyDecoder(hparams)
+                self.decoder.add_temp_prosody_decoder(self.temp_prosody_decoder)
         else:
             self.reference_encoder = None
 
@@ -1020,19 +1037,24 @@ class Tacotron2(nn.Module):
             # mask. dim0: batch_size. dim1:seq_len.
             mel_mask = mask.expand(self.n_mel_channels, mask.size(0), mask.size(1))
             mel_mask = mel_mask.permute(1, 0, 2)
-            prosody_mask = mask.expand(self.hparams.prosody_dim, mask.size(0), mask.size(1))
-            prosody_mask = prosody_mask.permute(1, 2, 0)
 
+            # outputs[0]: mel_outputs
             outputs[0].data.masked_fill_(mel_mask, 0.0)
+            # outputs[1]: mel_outputs_postnet
             outputs[1].data.masked_fill_(mel_mask, 0.0)
+            # outputs[2]: gate_outputs
             outputs[2].data.masked_fill_(mel_mask[:, 0, :], 1e3)  # gate energies
 
+            # outputs[4]: prosody_encodings
             if outputs[4] is not None:
-                # prosody_ref
-                outputs[4].masked_fill_(prosody_mask, 0.0)
+                prosody_encodings_mask = mask.expand(outputs[4].size(2), mask.size(0), mask.size(1))
+                prosody_encodings_mask = prosody_encodings_mask.permute(1, 2, 0)
+                outputs[4].masked_fill_(prosody_ref_mask, 0.0)
+            # outputs[5]: prosody_preds
             if outputs[5] is not None:
-                # prosody_preds
-                outputs[5].masked_fill_(prosody_mask, 0.0)
+                prosody_preds_mask = mask.expand(outputs[5].size(2), mask.size(0), mask.size(1))
+                prosody_preds_mask = prosody_preds_mask.permute(1, 2, 0)
+                outputs[5].masked_fill_(prosody_preds_mask, 0.0)
 
         return outputs
 
@@ -1141,12 +1163,16 @@ class Tacotron2(nn.Module):
         else:
             residual_encoding = None
 
+        if self.hparams.reference_encoder == 'Glob2Temp':
+            _, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
+
         mel_outputs, gate_outputs, alignments, attention_contexts, \
             prosody_encodings, prosody_preds, end_points \
             = self.decoder(
             encoder_outputs, text_inputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
+            global_prosody_ref=global_prosody_ref,
             teacher_forcing=False,
             discrete_attention_weight=discrete_attention_weight,
             stop_prediction2=stop_prediction2)
@@ -1819,3 +1845,35 @@ class ReferenceEncoder4(nn.Module):
         for _ in range(n_convs):
             L = (L - kernel_size + 2 * pad) // stride + 1
         return L
+
+
+class TemporalProsodyDecoder(nn.Module):
+    def __init__(self, hparams):
+        super(TemporalProsodyDecoder, self).__init__()
+        self.hparams = hparams
+        self.prosody_dim = hparams.prosody_dim
+        self.input_size = 1
+        self.gru_cell = nn.GRUCell(input_size=self.input_size, hidden_size=hparams.ref_enc_gru_size)
+        self.bn_lp = nn.BatchNorm1d(self.prosody_dim)
+        self.linear_layer = LinearNorm(hparams.ref_enc_gru_size, self.prosody_dim, bias=False,
+            w_init_gain='tanh')
+
+    def forward(self, input, hidden):
+        '''
+        Params
+        -----
+        input:
+        - size: [N, prosody_dim]
+
+        Returns
+        -----
+        hidden:
+        - size: [N, prosody_dim]
+        '''
+        if input is None:
+            N = hidden.size(0)
+            input = torch.zeros((N, self.input_size), dtype=hidden.dtype, requires_grad=False).cuda()
+        hidden = self.gru_cell(input, hidden)
+        t_prosody = F.tanh(self.bn_lp(self.linear_layer(hidden)))
+
+        return hidden, t_prosody
