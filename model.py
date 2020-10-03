@@ -1094,8 +1094,7 @@ class Tacotron2(nn.Module):
                     self.reference_encoder.initialize_states()
                 prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
             else:
-                prosody_ref = None
-                global_prosody_ref = None
+                prosody_ref, global_prosody_ref = None, None
 
             (mel_outputs, gate_outputs, alignments,
                 attention_contexts,
