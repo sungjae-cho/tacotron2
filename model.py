@@ -742,61 +742,14 @@ class Decoder(nn.Module):
         alignments: sequence of attention weights from the decoder
         """
         if teacher_forcing:
-            decoder_input = self.get_go_frame(memory).unsqueeze(0)
-            decoder_inputs = self.parse_decoder_inputs(decoder_inputs)
-            decoder_inputs = torch.cat((decoder_input, decoder_inputs), dim=0)
-            decoder_inputs = self.prenet(decoder_inputs)
+            tf_outputs = self.teacher_forcing(memory, text_inputs, memory_lengths,
+                speaker_embeddings, emotion_embeddings, residual_encoding,
+                prosody_ref, global_prosody_ref,
+                decoder_inputs, output_lengths, teacher_forcing,
+                discrete_attention_weight,
+                stop_prediction2)
 
-            self.initialize_decoder_states(
-                memory, mask=~get_mask_from_lengths(memory_lengths))
-            if stop_prediction2:
-                self.stop_predictor2.initialize(text_inputs, memory_lengths, output_lengths)
-
-            mel_outputs, gate_outputs, alignments, attention_contexts, \
-                prosody_encodings, prosody_preds = [], [], [], [], [], []
-            while len(mel_outputs) < decoder_inputs.size(0) - 1:
-                t = len(mel_outputs)
-                decoder_input = decoder_inputs[t]
-                t_prosody_ref = None
-                if self.hparams.reference_encoder:
-                    if self.hparams.reference_encoder == 'Glob2Temp':
-                        if t == 0:
-                            t_prosody_ref_hidden = global_prosody_ref
-                        t_prosody_ref_hidden, t_prosody_ref = self.temp_prosody_decoder(None, t_prosody_ref_hidden)
-                    else:
-                        t_prosody_ref = prosody_ref[:,t,:]
-                prev_global_prosody_ref = None
-                if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
-                    if t == 0:
-                        prev_global_prosody_ref = self.get_go_prosody(global_prosody_ref)
-                    else:
-                        prev_global_prosody_ref = global_prosody_ref[:,t-1,:]
-                mel_output, gate_output, attention_weights, attention_context, \
-                    prosody_encoding, prosody_pred = self.decode(
-                    decoder_input, speaker_embeddings, emotion_embeddings,
-                    residual_encoding, t_prosody_ref, prev_global_prosody_ref)
-                mel_outputs += [mel_output.squeeze(1)]
-                gate_outputs += [gate_output.squeeze(1)]
-                alignments += [attention_weights]
-                attention_contexts += [attention_context]
-                prosody_encodings += [prosody_encoding]
-                prosody_preds += [prosody_pred]
-
-                if stop_prediction2:
-                    _, end_points = self.stop_predictor2.predict(attention_weights)
-                else:
-                    end_points = None
-
-            (mel_outputs, gate_outputs, alignments, attention_contexts,
-                prosody_encodings, prosody_preds
-                ) = self.parse_decoder_outputs(
-                    mel_outputs, gate_outputs, alignments, attention_contexts,
-                    prosody_encodings, prosody_preds)
-
-            att_means = self.get_attention_means()
-
-            return mel_outputs, gate_outputs, alignments, attention_contexts, \
-                prosody_encodings, prosody_preds, end_points, att_means
+            return tf_outputs
         else:
             fr_outputs = self.free_running(memory, text_inputs, memory_lengths,
                 speaker_embeddings, emotion_embeddings,
@@ -804,6 +757,69 @@ class Decoder(nn.Module):
                 discrete_attention_weight, stop_prediction2)
 
             return fr_outputs
+
+    def teacher_forcing(self, memory, text_inputs, memory_lengths,
+            speaker_embeddings, emotion_embeddings, residual_encoding,
+            prosody_ref=None, global_prosody_ref=None,
+            decoder_inputs=None, output_lengths=None, teacher_forcing=True,
+            discrete_attention_weight=False,
+            stop_prediction2=False):
+
+        decoder_input = self.get_go_frame(memory).unsqueeze(0)
+        decoder_inputs = self.parse_decoder_inputs(decoder_inputs)
+        decoder_inputs = torch.cat((decoder_input, decoder_inputs), dim=0)
+        decoder_inputs = self.prenet(decoder_inputs)
+
+        self.initialize_decoder_states(
+            memory, mask=~get_mask_from_lengths(memory_lengths))
+        if stop_prediction2:
+            self.stop_predictor2.initialize(text_inputs, memory_lengths, output_lengths)
+
+        mel_outputs, gate_outputs, alignments, attention_contexts, \
+            prosody_encodings, prosody_preds = [], [], [], [], [], []
+        while len(mel_outputs) < decoder_inputs.size(0) - 1:
+            t = len(mel_outputs)
+            decoder_input = decoder_inputs[t]
+            t_prosody_ref = None
+            if self.hparams.reference_encoder:
+                if self.hparams.reference_encoder == 'Glob2Temp':
+                    if t == 0:
+                        t_prosody_ref_hidden = global_prosody_ref
+                    t_prosody_ref_hidden, t_prosody_ref = self.temp_prosody_decoder(None, t_prosody_ref_hidden)
+                else:
+                    t_prosody_ref = prosody_ref[:,t,:]
+            prev_global_prosody_ref = None
+            if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
+                if t == 0:
+                    prev_global_prosody_ref = self.get_go_prosody(global_prosody_ref)
+                else:
+                    prev_global_prosody_ref = global_prosody_ref[:,t-1,:]
+            mel_output, gate_output, attention_weights, attention_context, \
+                prosody_encoding, prosody_pred = self.decode(
+                decoder_input, speaker_embeddings, emotion_embeddings,
+                residual_encoding, t_prosody_ref, prev_global_prosody_ref)
+            mel_outputs += [mel_output.squeeze(1)]
+            gate_outputs += [gate_output.squeeze(1)]
+            alignments += [attention_weights]
+            attention_contexts += [attention_context]
+            prosody_encodings += [prosody_encoding]
+            prosody_preds += [prosody_pred]
+
+            if stop_prediction2:
+                _, end_points = self.stop_predictor2.predict(attention_weights)
+            else:
+                end_points = None
+
+        (mel_outputs, gate_outputs, alignments, attention_contexts,
+            prosody_encodings, prosody_preds
+            ) = self.parse_decoder_outputs(
+                mel_outputs, gate_outputs, alignments, attention_contexts,
+                prosody_encodings, prosody_preds)
+
+        att_means = self.get_attention_means()
+
+        return mel_outputs, gate_outputs, alignments, attention_contexts, \
+            prosody_encodings, prosody_preds, end_points, att_means
 
     def free_running(self, memory, text_inputs, memory_lengths, speaker_indices, emotion_vectors,
             residual_encoding, prosody_ref=None, global_prosody_ref=None, discrete_attention_weight=False,
@@ -1060,79 +1076,89 @@ class Tacotron2(nn.Module):
         self.int_dtype = speakers.dtype
         self.float_dtype = emotion_vectors.dtype
         if teacher_forcing:
-            text_inputs, text_lengths, mels, max_len, output_lengths = inputs
-            text_lengths, output_lengths = text_lengths.data, output_lengths.data
+            tf_outputs = self.teacher_forcing(inputs, speakers, emotion_vectors,
+                stop_prediction2, teacher_forcing, zero_res_en,
+                discrete_attention_weight)
 
-            embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
-
-            encoder_outputs = self.encoder(embedded_inputs, text_lengths)
-
-            if len(self.hparams.all_speakers) > 1:
-                speaker_embeddings = self.speaker_embedding_layer(speakers)
-            else:
-                speaker_embeddings = None
-            if len(self.hparams.all_emotions) > 1:
-                emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
-            else:
-                emotion_embeddings = None
-
-            if self.hparams.residual_encoder:
-                if zero_res_en:
-                    batch_size = text_inputs.size(0)
-                    residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
-                    mu = torch.zeros_like(residual_encoding)
-                    logvar = torch.zeros_like(residual_encoding)
-                else:
-                    residual_encoding, mu, logvar = self.residual_encoder(mels)
-            else:
-                residual_encoding, mu, logvar = None, None, None
-
-            if self.hparams.reference_encoder:
-                if self.hparams.reference_encoder in ['GlocalRefEncoder']:
-                    self.reference_encoder.initialize_states()
-                prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
-            else:
-                prosody_ref, global_prosody_ref = None, None
-
-            (mel_outputs, gate_outputs, alignments,
-                attention_contexts,
-                prosody_encodings, prosody_preds,
-                end_points, att_means) = self.decoder(
-                    encoder_outputs, text_inputs, text_lengths,
-                        speaker_embeddings, emotion_embeddings, residual_encoding,
-                        prosody_ref, global_prosody_ref,
-                        mels, output_lengths, stop_prediction2=stop_prediction2, teacher_forcing=True)
-
-            mel_outputs_postnet = self.postnet(mel_outputs)
-            mel_outputs_postnet = mel_outputs + mel_outputs_postnet
-
-            if self.speaker_adversarial_training:
-                spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
-                logit_speakers, prob_speakers, int_pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
-            else:
-                logit_speakers, prob_speakers, int_pred_speakers = None, None, None
-
-            if self.emotion_adversarial_training:
-                emo_adv_batch = get_emo_adv_inputs(encoder_outputs, text_lengths)
-                logit_emotions, prob_emotions, int_pred_emotions = self.emotion_advgrad_classifier(emo_adv_batch)
-            else:
-                logit_emotions, prob_emotions, int_pred_emotions = None, None, None
-
-            outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
-                gate_outputs, alignments, prosody_encodings, prosody_preds, end_points],
-                output_lengths)
-
-            return (outputs,
-                    (logit_speakers, prob_speakers, int_pred_speakers),
-                    (logit_emotions, prob_emotions, int_pred_emotions),
-                    (residual_encoding, mu, logvar),
-                    att_means)
+            return tf_outputs
         else:
 
             fr_outputs = self.free_running(inputs, speakers, emotion_vectors,
                 discrete_attention_weight, stop_prediction2)
 
             return fr_outputs
+
+    def teacher_forcing(self, inputs, speakers, emotion_vectors,
+            stop_prediction2=False,
+            teacher_forcing=True, zero_res_en=False,
+            discrete_attention_weight=False):
+        text_inputs, text_lengths, mels, max_len, output_lengths = inputs
+        text_lengths, output_lengths = text_lengths.data, output_lengths.data
+
+        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
+
+        encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+
+        if len(self.hparams.all_speakers) > 1:
+            speaker_embeddings = self.speaker_embedding_layer(speakers)
+        else:
+            speaker_embeddings = None
+        if len(self.hparams.all_emotions) > 1:
+            emotion_embeddings = self.emotion_embedding_layer(emotion_vectors)
+        else:
+            emotion_embeddings = None
+
+        if self.hparams.residual_encoder:
+            if zero_res_en:
+                batch_size = text_inputs.size(0)
+                residual_encoding = self.residual_encoder.inference(batch_size, self.float_dtype)
+                mu = torch.zeros_like(residual_encoding)
+                logvar = torch.zeros_like(residual_encoding)
+            else:
+                residual_encoding, mu, logvar = self.residual_encoder(mels)
+        else:
+            residual_encoding, mu, logvar = None, None, None
+
+        if self.hparams.reference_encoder:
+            if self.hparams.reference_encoder in ['GlocalRefEncoder']:
+                self.reference_encoder.initialize_states()
+            prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
+        else:
+            prosody_ref, global_prosody_ref = None, None
+
+        (mel_outputs, gate_outputs, alignments,
+            attention_contexts,
+            prosody_encodings, prosody_preds,
+            end_points, att_means) = self.decoder(
+                encoder_outputs, text_inputs, text_lengths,
+                    speaker_embeddings, emotion_embeddings, residual_encoding,
+                    prosody_ref, global_prosody_ref,
+                    mels, output_lengths, stop_prediction2=stop_prediction2, teacher_forcing=True)
+
+        mel_outputs_postnet = self.postnet(mel_outputs)
+        mel_outputs_postnet = mel_outputs + mel_outputs_postnet
+
+        if self.speaker_adversarial_training:
+            spk_adv_batch = get_spk_adv_inputs(encoder_outputs, text_lengths)
+            logit_speakers, prob_speakers, int_pred_speakers = self.speaker_advgrad_classifier(spk_adv_batch)
+        else:
+            logit_speakers, prob_speakers, int_pred_speakers = None, None, None
+
+        if self.emotion_adversarial_training:
+            emo_adv_batch = get_emo_adv_inputs(encoder_outputs, text_lengths)
+            logit_emotions, prob_emotions, int_pred_emotions = self.emotion_advgrad_classifier(emo_adv_batch)
+        else:
+            logit_emotions, prob_emotions, int_pred_emotions = None, None, None
+
+        outputs = self.parse_output([mel_outputs, mel_outputs_postnet,
+            gate_outputs, alignments, prosody_encodings, prosody_preds, end_points],
+            output_lengths)
+
+        return (outputs,
+                (logit_speakers, prob_speakers, int_pred_speakers),
+                (logit_emotions, prob_emotions, int_pred_emotions),
+                (residual_encoding, mu, logvar),
+                att_means)
 
     def free_running(self, inputs, speakers, emotion_vectors,
             discrete_attention_weight=False, stop_prediction2=True):
