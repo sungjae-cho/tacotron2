@@ -1044,7 +1044,7 @@ class Tacotron2(nn.Module):
             if outputs[4] is not None:
                 prosody_encodings_mask = mask.expand(outputs[4].size(2), mask.size(0), mask.size(1))
                 prosody_encodings_mask = prosody_encodings_mask.permute(1, 2, 0)
-                outputs[4].masked_fill_(prosody_ref_mask, 0.0)
+                outputs[4].masked_fill_(prosody_encodings_mask, 0.0)
             # outputs[5]: prosody_preds
             if outputs[5] is not None:
                 prosody_preds_mask = mask.expand(outputs[5].size(2), mask.size(0), mask.size(1))
