@@ -362,8 +362,6 @@ class Decoder(nn.Module):
         self.gate_threshold = hparams.gate_threshold
         self.p_attention_dropout = hparams.p_attention_dropout
         self.p_decoder_dropout = hparams.p_decoder_dropout
-        self.has_style_token_lstm_1 = hparams.has_style_token_lstm_1
-        self.has_style_token_lstm_2 = hparams.has_style_token_lstm_2
         self.monotonic_attention = hparams.monotonic_attention
         self.prosody_dim = self.hparams.prosody_dim
         self.pp_lstm_hidden_dim = hparams.pp_lstm_hidden_dim
@@ -425,7 +423,7 @@ class Decoder(nn.Module):
         attention_rnn_input_dim = (self.hparams.prenet_dim
             + self.hparams.encoder_embedding_dim)
 
-        if self.hparams.has_style_token_lstm_1:
+        if self.hparams.style_to_attention_rnn:
             if self.hparams.reference_encoder:
                 attention_rnn_input_dim += self.hparams.prosody_dim
             else:
@@ -442,7 +440,7 @@ class Decoder(nn.Module):
         decoder_rnn_input_dim = (self.hparams.attention_rnn_dim
             + self.hparams.encoder_embedding_dim)
 
-        if self.hparams.has_style_token_lstm_2:
+        if self.hparams.style_to_decoder_rnn:
             if self.hparams.reference_encoder:
                 decoder_rnn_input_dim += self.hparams.prosody_dim
             else:
@@ -459,7 +457,7 @@ class Decoder(nn.Module):
         linear_input_dim = (self.hparams.decoder_rnn_dim
             + self.hparams.encoder_embedding_dim)
 
-        if self.hparams.has_style_token_linear:
+        if self.hparams.style_to_decoder_linear:
             if self.hparams.reference_encoder:
                 linear_input_dim += self.hparams.prosody_dim
             else:
@@ -627,7 +625,7 @@ class Decoder(nn.Module):
         attention_weights:
         """
         cell_inputs = [decoder_input, self.attention_context]
-        if self.has_style_token_lstm_1:
+        if self.hparams.style_to_attention_rnn:
             if self.hparams.reference_encoder:
                 cell_inputs.append(self.prosody_encoding)
             else:
@@ -681,7 +679,7 @@ class Decoder(nn.Module):
             self.prosody_encoding = t_prosody_ref
 
         decoder_inputs = [self.attention_hidden, self.attention_context]
-        if self.has_style_token_lstm_2:
+        if self.hparams.style_to_decoder_rnn:
             if self.hparams.reference_encoder:
                 decoder_inputs.append(self.prosody_encoding)
             else:
@@ -700,7 +698,7 @@ class Decoder(nn.Module):
             self.decoder_hidden, self.p_decoder_dropout, self.training)
 
         linear_inputs = [self.decoder_hidden, self.attention_context]
-        if self.hparams.has_style_token_linear:
+        if self.hparams.style_to_decoder_linear:
             if self.hparams.reference_encoder:
                 linear_inputs.append(self.prosody_encoding)
             else:
