@@ -735,6 +735,10 @@ class Decoder(nn.Module):
             decoder_hidden_attention_context)
 
         gate_prediction = self.gate_layer(decoder_hidden_attention_context)
+
+        if self.hparams.reference_encoder != '' and self.hparams.style_to_encoder_output:
+            self.prosody_encoding = self.attention_context[:,self.hparams.encoder_embedding_dim:]
+
         return decoder_output, gate_prediction, self.attention_weights, self.attention_context, \
             self.prosody_encoding, prosody_pred
 
