@@ -94,6 +94,8 @@ def create_hparams(hparams_string=None, verbose=False):
         val_tf_zero_res_en=False,
         prosody_predictor='', # ['MLP', 'LSTM']
         reference_encoder='', # ['ref1', 'ref2', 'ref3', 'ref4']
+        reference_encoders_taking_mels_at_inference=['Glob2Temp', 'ReferenceEncoder', 'GST'],
+        reference_encoders_concat_global_styles_to_text=['ReferenceEncoder', 'GST'],
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,

@@ -1177,7 +1177,7 @@ class Tacotron2(nn.Module):
 
     def free_running(self, inputs, speakers, emotion_vectors,
             discrete_attention_weight=False, stop_prediction2=True):
-        if self.hparams.reference_encoder == 'Glob2Temp':
+        if self.hparams.reference_encoder in self.hparams.reference_encoders_taking_mels_at_inference:
             text_inputs, text_lengths, ref_mels, max_ref_mel_len, ref_mel_lengths = inputs
         else:
             text_inputs, text_lengths = inputs
@@ -1198,7 +1198,7 @@ class Tacotron2(nn.Module):
         else:
             residual_encoding = None
 
-        if self.hparams.reference_encoder == 'Glob2Temp':
+        if self.hparams.reference_encoder in self.hparams.reference_encoders_taking_mels_at_inference:
             _, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
 
         mel_outputs, gate_outputs, alignments, attention_contexts, \
