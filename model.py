@@ -1092,6 +1092,23 @@ class Tacotron2(nn.Module):
 
         return outputs
 
+    def concat_styles_to_encoder_output(self, encoder_outputs, styles):
+        global_prosody_ref, speaker_embeddings, emotion_embeddings, residual_encoding = styles
+        stack_decoder_inputs = [encoder_outputs]
+        if self.hparams.reference_encoder in self.hparams.reference_encoders_concat_global_styles_to_text:
+            # reference_encoder that can give styles by concatenating them to text encodings.
+            stack_decoder_inputs.append(global_prosody_ref.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1))
+        else:
+            if speaker_embeddings is not None:
+                stack_decoder_inputs.append(speaker_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1))
+            if emotion_embeddings is not None:
+                stack_decoder_inputs.append(emotion_embeddings.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1))
+            if residual_encoding is not None:
+                stack_decoder_inputs.append(residual_encoding.unsqueeze(1).repeat(1, encoder_outputs.size(1), 1))
+        decoder_inputs = torch.cat(stack_decoder_inputs, dim=2)
+
+        return decoder_inputs
+
     def forward(self, inputs, speakers, emotion_vectors,
             stop_prediction2=False,
             teacher_forcing=True, zero_res_en=False,
@@ -1149,11 +1166,17 @@ class Tacotron2(nn.Module):
         else:
             prosody_ref, global_prosody_ref = None, None
 
+        if self.hparams.style_to_encoder_output:
+            styles = global_prosody_ref, speaker_embeddings, emotion_embeddings, residual_encoding
+            decoder_inputs = self.concat_styles_to_encoder_output(encoder_outputs, styles)
+        else:
+            decoder_inputs = encoder_outputs
+
         (mel_outputs, gate_outputs, alignments,
             attention_contexts,
             prosody_encodings, prosody_preds,
             end_points, att_means) = self.decoder(
-                encoder_outputs, text_inputs, text_lengths,
+                decoder_inputs, text_inputs, text_lengths,
                     speaker_embeddings, emotion_embeddings, residual_encoding,
                     prosody_ref, global_prosody_ref,
                     mels, output_lengths, stop_prediction2=stop_prediction2, teacher_forcing=True)
@@ -1211,10 +1234,16 @@ class Tacotron2(nn.Module):
         else:
             global_prosody_ref = None
 
+        if self.hparams.style_to_encoder_output:
+            styles = global_prosody_ref, speaker_embeddings, emotion_embeddings, residual_encoding
+            decoder_inputs = self.concat_styles_to_encoder_output(encoder_outputs, styles)
+        else:
+            decoder_inputs = encoder_outputs
+
         mel_outputs, gate_outputs, alignments, attention_contexts, \
             prosody_encodings, prosody_preds, end_points \
             = self.decoder(
-            encoder_outputs, text_inputs, text_lengths,
+            decoder_inputs, text_inputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
             global_prosody_ref=global_prosody_ref,
