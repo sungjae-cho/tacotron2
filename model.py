@@ -1038,6 +1038,8 @@ class Tacotron2(nn.Module):
                 self.reference_encoder = ReferenceEncoder(hparams)
                 self.temp_prosody_decoder = TemporalProsodyDecoder(hparams)
                 self.decoder.add_temp_prosody_decoder(self.temp_prosody_decoder)
+            elif hparams.reference_encoder == 'ReferenceEncoder':
+                self.reference_encoder = ReferenceEncoder(hparams)
         else:
             self.reference_encoder = None
 
