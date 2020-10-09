@@ -537,7 +537,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 ############################################################
                 # FREE RUNNING #####
                 # Forward propagation by free running, i.e., feeding previous outputs to the current inputs.
-                if hparams.reference_encoder == 'Glob2Temp':
+                if hparams.reference_encoder in hparams.reference_encoders_taking_mels_at_inference:
                     inputs_fr = x
                 else:
                     inputs_fr = text_padded, input_lengths
