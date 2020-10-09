@@ -802,7 +802,7 @@ class Decoder(nn.Module):
             t = len(mel_outputs)
             decoder_input = decoder_inputs[t]
             t_prosody_ref = None
-            if self.hparams.reference_encoder:
+            if self.hparams.reference_encoder != '' and self.style_to_decoder():
                 if self.hparams.reference_encoder == 'Glob2Temp':
                     if t == 0:
                         t_prosody_ref_hidden = global_prosody_ref
