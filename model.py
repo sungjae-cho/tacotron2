@@ -1208,6 +1208,8 @@ class Tacotron2(nn.Module):
 
         if self.hparams.reference_encoder in self.hparams.reference_encoders_taking_mels_at_inference:
             _, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
+        else:
+            global_prosody_ref = None
 
         mel_outputs, gate_outputs, alignments, attention_contexts, \
             prosody_encodings, prosody_preds, end_points \
