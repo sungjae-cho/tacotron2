@@ -514,6 +514,12 @@ class Decoder(nn.Module):
             B, prosody_dim).zero_())
         return go_prosody
 
+    def style_to_decoder(self):
+        return (self.hparams.style_to_attention_rnn
+            or self.hparams.style_to_decoder_rnn
+            or self.hparams.style_to_decoder_linear)
+
+
     def initialize_decoder_states(self, memory, mask):
         """ Initializes attention rnn states, decoder rnn states, attention
         weights, attention cumulative weights, attention context, stores memory
