@@ -354,7 +354,7 @@ class Decoder(nn.Module):
         self.hparams = hparams
         self.n_mel_channels = hparams.n_mel_channels
         self.n_frames_per_step = hparams.n_frames_per_step
-        self.encoder_embedding_dim = hparams.encoder_embedding_dim
+        self.decoder_input_dim = self.get_decoder_input_dim()
         self.attention_rnn_dim = hparams.attention_rnn_dim
         self.decoder_rnn_dim = hparams.decoder_rnn_dim
         self.prenet_dim = hparams.prenet_dim
@@ -380,12 +380,12 @@ class Decoder(nn.Module):
         if self.monotonic_attention:
             self.attention_layer = MontonicAttention(
                 hparams,
-                hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+                hparams.attention_rnn_dim, self.decoder_input_dim,
                 hparams.attention_dim, hparams.attention_location_n_filters,
                 hparams.attention_location_kernel_size)
         else:
             self.attention_layer = Attention(
-                hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+                hparams.attention_rnn_dim, self.decoder_input_dim,
                 hparams.attention_dim, hparams.attention_location_n_filters,
                 hparams.attention_location_kernel_size)
 
@@ -421,7 +421,7 @@ class Decoder(nn.Module):
 
     def get_attention_rnn_input_dim(self):
         attention_rnn_input_dim = (self.hparams.prenet_dim
-            + self.hparams.encoder_embedding_dim)
+            + self.decoder_input_dim)
 
         if self.hparams.style_to_attention_rnn:
             if self.hparams.reference_encoder:
@@ -438,7 +438,7 @@ class Decoder(nn.Module):
 
     def get_decoder_rnn_input_dim(self):
         decoder_rnn_input_dim = (self.hparams.attention_rnn_dim
-            + self.hparams.encoder_embedding_dim)
+            + self.decoder_input_dim)
 
         if self.hparams.style_to_decoder_rnn:
             if self.hparams.reference_encoder:
@@ -455,7 +455,7 @@ class Decoder(nn.Module):
 
     def get_linear_input_dim(self):
         linear_input_dim = (self.hparams.decoder_rnn_dim
-            + self.hparams.encoder_embedding_dim)
+            + self.decoder_input_dim)
 
         if self.hparams.style_to_decoder_linear:
             if self.hparams.reference_encoder:
@@ -469,6 +469,21 @@ class Decoder(nn.Module):
                     linear_input_dim += self.hparams.res_en_out_dim
 
         return linear_input_dim
+
+    def get_decoder_input_dim(self):
+        decoder_input_dim = self.hparams.encoder_embedding_dim
+        if self.hparams.style_to_encoder_output:
+            if self.hparams.reference_encoder:
+                decoder_input_dim += self.hparams.prosody_dim
+            else:
+                if len(self.hparams.all_speakers) > 1:
+                    decoder_input_dim += self.hparams.speaker_embedding_dim
+                if len(self.hparams.all_emotions) > 1:
+                    decoder_input_dim += self.hparams.emotion_embedding_dim
+                if self.hparams.residual_encoder:
+                    decoder_input_dim += self.hparams.res_en_out_dim
+
+        return decoder_input_dim
 
     def get_attention_means(self):
         if self.monotonic_attention:
@@ -537,7 +552,7 @@ class Decoder(nn.Module):
         self.attention_weights_cum = Variable(memory.data.new(
             B, MAX_TIME).zero_())
         self.attention_context = Variable(memory.data.new(
-            B, self.encoder_embedding_dim).zero_())
+            B, self.decoder_input_dim).zero_())
 
         self.memory = memory
         self.processed_memory = self.attention_layer.memory_layer(memory)
