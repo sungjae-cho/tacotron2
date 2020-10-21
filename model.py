@@ -951,13 +951,20 @@ class Decoder(nn.Module):
             prosody_encodings, prosody_preds \
             = [], [], [], [], [], []
         while True:
+            t = len(mel_outputs)
             t_temp_prosody_ref, prev_global_prosody_ref = None, None
             if 'prev_global_prosody' in self.hparams.pp_opt_inputs:
                 t_temp_prosody_ref, prev_global_prosody_ref = self.reference_encoder(prev_mel_output.unsqueeze(-1))
                 # squeeze time step dim
                 t_temp_prosody_ref = t_temp_prosody_ref.squeeze(1)
                 prev_global_prosody_ref = prev_global_prosody_ref.squeeze(1)
+            elif self.hparams.reference_encoder == 'Glob2Temp':
+                if t == 0:
+                    t_temp_prosody_ref_hidden = global_prosody_ref
+                t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden, t)
+
             decoder_input = self.prenet(prev_mel_output)
+
             mel_output, gate_output, alignment, attention_context, \
                 prosody_encoding, prosody_pred \
                 = self.decode(decoder_input,
