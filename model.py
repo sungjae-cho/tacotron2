@@ -1515,7 +1515,7 @@ class TemporalProsodyDecoder(nn.Module):
         self.gru_cell = nn.GRUCell(input_size=self.input_size, hidden_size=hparams.ref_enc_gru_size)
         self.bn_lp = nn.BatchNorm1d(self.prosody_dim)
         self.linear_layer = LinearNorm(hparams.ref_enc_gru_size, self.prosody_dim, bias=False,
-            w_init_gain='tanh')
+            w_init_gain='relu')
 
     def forward(self, input, hidden, decoding_step):
         '''
