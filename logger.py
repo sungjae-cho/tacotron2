@@ -28,7 +28,7 @@ class Tacotron2Logger():
         self.waveglow = None
         self.waveglow_path = hparams.waveglow_path
         self.init_training_epoch_variables()
-        
+
         wandb.watch(model)
 
     def load_waveglow(self, waveglow_path):
@@ -269,6 +269,16 @@ class Tacotron2Logger():
                 "{}/teacher_forcing/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)
 
+            temp_prosody_hiddens_tf = synth_dict['temp_prosody_hiddens_tf']
+            np_temp_prosody_hiddens_tf = temp_prosody_hiddens_tf.cpu().numpy()
+            np_img_temp_prosody_hiddens_tf = plot_prosody_dims_to_numpy(np_mel_output_tf,
+                np_wav_tf, text_seq, np_alignment_tf, np_temp_prosody_hiddens_tf,
+                self.hparams)
+            wandb.log({
+                "{}/teacher_forcing/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_tf)],
+            }, step=iteration)
+
+
         # [3] Logging data for free-running data ##############################
         mel_output_fr = synth_dict['mel_output_fr']
         decoding_steps = mel_output_fr.size(-1)
@@ -306,6 +316,27 @@ class Tacotron2Logger():
                 self.hparams)
             wandb.log({
                 "{}/free_running/prosody_dims_pred".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+            }, step=iteration)
+
+        if self.hparams.reference_encoder:
+            prosody_ref_fr = synth_dict['prosody_ref_fr']
+            np_prosody_dims = prosody_ref_fr.cpu().numpy()
+            int_text_seq = text_sequence.tolist()
+            text_seq = sequence_to_text_list(int_text_seq)
+            np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_fr,
+                np_wav_fr, text_seq, np_alignment_fr, np_prosody_dims,
+                self.hparams)
+            wandb.log({
+                "{}/free_running/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+            }, step=iteration)
+
+            temp_prosody_hiddens_fr = synth_dict['temp_prosody_hiddens_fr']
+            np_temp_prosody_hiddens_fr = temp_prosody_hiddens_fr.cpu().numpy()
+            np_img_temp_prosody_hiddens_fr = plot_prosody_dims_to_numpy(np_mel_output_fr,
+                np_wav_fr, text_seq, np_alignment_fr, np_temp_prosody_hiddens_fr,
+                self.hparams)
+            wandb.log({
+                "{}/free_running/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_fr)],
             }, step=iteration)
 
 
