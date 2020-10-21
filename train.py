@@ -198,7 +198,8 @@ def save_checkpoint(hparams, model, optimizer, learning_rate, iteration, float_e
 
 
 def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
-        batch_attention_measures_tf, batch_attention_measures_fr):
+        batch_attention_measures_tf, batch_attention_measures_fr,
+        temp_prosody_hiddens):
     # Inputs
     (input_lengths, text_padded, speakers, emotion_input_vectors, \
         text_raw) = inputs
@@ -252,6 +253,11 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     synth_dict['blank_ar_fr'] = batch_blank_ar_fr[idx].item()
     synth_dict['arr_fr'] = batch_arr_fr[idx].item()
     synth_dict['mar_fr'] = batch_mar_fr[idx].item()
+
+    # temp_prosody_hiddens
+    temp_prosody_hiddens_tf, temp_prosody_hiddens_fr = temp_prosody_hiddens
+    synth_dict['temp_prosody_hiddens_tf'] = temp_prosody_hiddens_tf[idx,:mel_length,:]
+    synth_dict['temp_prosody_hiddens_fr'] = temp_prosody_hiddens_tf[idx,:mel_length_fr,:]
 
 
 def compute_alignments(pretrained_path, hparams):
@@ -490,6 +496,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
                 residual_encoding, mu, logvar = y_pred_res_en
                 prosody = prosody_ref, prosody_pred
+                temp_prosody_hiddens_tf = model.decoder.temp_prosody_decoder.get_hiddens()
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -542,7 +549,9 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 else:
                     inputs_fr = text_padded, input_lengths
 
-                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, _, prosody_pred_fr, end_points_fr = model(inputs_fr, speakers, emotion_input_vectors, teacher_forcing=False, stop_prediction2=hparams.val_fr_stop_pred2)
+                _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, prosody_ref_fr, prosody_pred_fr, end_points_fr = model(inputs_fr, speakers, emotion_input_vectors, teacher_forcing=False, stop_prediction2=hparams.val_fr_stop_pred2)
+                prosody_fr = prosody_ref_fr, prosody_pred_fr
+                temp_prosody_hiddens_fr = model.decoder.temp_prosody_decoder.get_hiddens()
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
@@ -712,6 +721,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                     outputs = (output_lengths, gate_outputs_fr, end_points_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_pred_fr)
                     batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
+                    temp_prosody_hiddens = temp_prosody_hiddens_tf, temp_prosody_hiddens_fr
 
                     sum_output_lengths += output_lengths.sum().cpu().item()
 
@@ -722,21 +732,24 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                         # b/c the validation data reshuffled at every epoch
                         synth_dict_rand = dict()
                         fill_synth_dict(hparams, synth_dict_rand, i_rand, inputs, outputs,
-                                batch_attention_measures_tf, batch_attention_measures_fr)
+                                batch_attention_measures_tf, batch_attention_measures_fr,
+                                temp_prosody_hiddens)
 
                     # [SynthDict 2] A teacher-forcing sample that has the minimum attention quality.
                     if min_attention_quality_tf > batch_attention_quality.min().item():
                         min_attention_quality_tf = batch_attention_quality.min().item()
                         i_min = batch_attention_quality.argmin().item()
                         fill_synth_dict(hparams, synth_dict_min_aq_tf, i_min, inputs, outputs,
-                                batch_attention_measures_tf, batch_attention_measures_fr)
+                                batch_attention_measures_tf, batch_attention_measures_fr,
+                                temp_prosody_hiddens)
 
                     # [SynthDict 3] A free-running sample that has the minimum attention quality.
                     if min_attention_quality_fr > batch_attention_quality_fr.min().item():
                         min_attention_quality_fr = batch_attention_quality_fr.min().item()
                         i_min = batch_attention_quality_fr.argmin().item()
                         fill_synth_dict(hparams, synth_dict_min_aq_fr, i_min, inputs, outputs,
-                                batch_attention_measures_tf, batch_attention_measures_fr)
+                                batch_attention_measures_tf, batch_attention_measures_fr,
+                                temp_prosody_hiddens)
 
                     if hparams.prosody_predictor:
                         np_sum_prosody_pred_dims += sum_prosody_pred_dims.detach().cpu().numpy()
