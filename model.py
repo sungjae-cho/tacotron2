@@ -810,7 +810,7 @@ class Decoder(nn.Module):
                 if self.hparams.reference_encoder == 'Glob2Temp':
                     if t == 0:
                         t_prosody_ref_hidden = global_prosody_ref
-                    t_prosody_ref_hidden, t_prosody_ref = self.temp_prosody_decoder(None, t_prosody_ref_hidden)
+                    t_prosody_ref_hidden, t_prosody_ref = self.temp_prosody_decoder(None, t_prosody_ref_hidden, t)
                 else:
                     t_prosody_ref = prosody_ref[:,t,:]
             prev_global_prosody_ref = None
@@ -893,7 +893,7 @@ class Decoder(nn.Module):
             elif self.hparams.reference_encoder == 'Glob2Temp':
                 if t == 0:
                     t_temp_prosody_ref_hidden = global_prosody_ref
-                t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden)
+                t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden, t)
 
             decoder_input = self.prenet(prev_mel_output)
 
@@ -1517,7 +1517,7 @@ class TemporalProsodyDecoder(nn.Module):
         self.linear_layer = LinearNorm(hparams.ref_enc_gru_size, self.prosody_dim, bias=False,
             w_init_gain='tanh')
 
-    def forward(self, input, hidden):
+    def forward(self, input, hidden, decoding_step):
         '''
         Params
         -----
@@ -1529,10 +1529,20 @@ class TemporalProsodyDecoder(nn.Module):
         hidden:
         - size: [N, prosody_dim]
         '''
+        if decoding_step == 0:
+            self.hidden_list = [hidden]
+            self.t_prosody_list = list()
         if input is None:
             N = hidden.size(0)
             input = torch.zeros((N, self.input_size), dtype=hidden.dtype, requires_grad=False).cuda()
         hidden = self.gru_cell(input, hidden)
-        t_prosody = F.tanh(self.bn_lp(self.linear_layer(hidden)))
+        #t_prosody = F.relu(self.bn_lp(self.linear_layer(hidden)))
+        t_prosody = F.relu(self.linear_layer(hidden))
+        self.hidden_list.append(hidden)
+        self.t_prosody_list.append(t_prosody)
 
         return hidden, t_prosody
+
+    def get_hiddens(self):
+        hiddens = torch.stack(self.hidden_list).transpose(0,1)
+        return hiddens
