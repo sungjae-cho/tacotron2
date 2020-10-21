@@ -213,7 +213,7 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     (output_lengths, gate_outputs_fr, end_points_fr,
         mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr,
         alignments, alignments_fr,
-        prosody_tf, prosody_pred_fr) = outputs
+        prosody_tf, prosody_fr) = outputs
     mel_length = output_lengths[idx].item()
     mel_length_fr = get_mel_length(gate_outputs_fr[idx])
     if end_points_fr is not None:
@@ -224,11 +224,14 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     synth_dict['alignment_tf'] = alignments[idx,:mel_length,:text_length]
     synth_dict['alignment_fr'] = alignments_fr[idx,:mel_length_fr,:text_length]
     prosody_ref_tf, prosody_pred_tf = prosody_tf
+    prosody_ref_fr, prosody_pred_fr = prosody_fr
     if hparams.reference_encoder:
-        synth_dict['prosody_ref_tf'] = prosody_ref_tf[idx,:mel_length,:text_length]
+        synth_dict['prosody_ref_tf'] = prosody_ref_tf[idx,:mel_length,:]
+        synth_dict['prosody_ref_fr'] = prosody_ref_fr[idx,:mel_length_fr,:]
     if hparams.prosody_predictor:
-        synth_dict['prosody_pred_tf'] = prosody_pred_tf[idx,:mel_length,:text_length]
-        synth_dict['prosody_pred_fr'] = prosody_pred_fr[idx,:mel_length_fr,:text_length]
+        synth_dict['prosody_pred_tf'] = prosody_pred_tf[idx,:mel_length,:]
+        synth_dict['prosody_pred_fr'] = prosody_pred_fr[idx,:mel_length_fr,:]
+
 
     # Teacher forcing attention measures
     (batch_attention_quality,
@@ -718,7 +721,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 if rank == 0:
                     # Wrap up data of audios to be logged.
                     inputs = (input_lengths, text_padded, speakers, emotion_input_vectors, text_raw)
-                    outputs = (output_lengths, gate_outputs_fr, end_points_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_pred_fr)
+                    outputs = (output_lengths, gate_outputs_fr, end_points_fr, mel_padded, mel_outputs_postnet, mel_outputs_postnet_fr, alignments, alignments_fr, prosody, prosody_fr)
                     batch_attention_measures_tf = (batch_attention_quality, batch_ar, batch_letter_ar, batch_punct_ar, batch_blank_ar, batch_arr, batch_mar)
                     batch_attention_measures_fr = (batch_attention_quality_fr, batch_ar_fr, batch_letter_ar_fr, batch_punct_ar_fr, batch_blank_ar_fr, batch_arr_fr, batch_mar_fr)
                     temp_prosody_hiddens = temp_prosody_hiddens_tf, temp_prosody_hiddens_fr
