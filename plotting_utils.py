@@ -171,16 +171,16 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
 
     # [3] Third figure: Amplitude
     # Learned from https://towardsdatascience.com/getting-to-know-the-mel-spectrogram-31bca3e2d9d0
-    D = np.abs(
+    D = np.square(
             librosa.core.stft(wav,
                 n_fft=hparams.filter_length,
                 hop_length=hparams.hop_length,
                 win_length=hparams.win_length))
     D = D[:,:n_decoding_steps]
     axes[2].set_xlabel("Frames")
-    axes[2].set_ylabel("Amplitude (ΣSTFT(f))")
+    axes[2].set_ylabel("Amplitude (sqrt(ΣSTFT(f)^2)/n_freqs)")
     axes[2].set_xlim(x[0], x[-1])
-    axes[2].plot(x, D.sum(axis=0))
+    axes[2].plot(x, np.sqrt(D.sum(axis=0))/hparams.n_mel_channels)
 
     # [4] Fourth figure: Duration
     durations, x_chunks, att_text_seq = get_text_durations(alignment)
