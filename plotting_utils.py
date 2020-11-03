@@ -119,7 +119,7 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
     spectrogram: Mel Spectrogram of speech.
     - type: numpy.ndarray.
     - shape: (frames, n_mel_channels)
-    : A wav sequence of speech.
+    wav: A wav sequence of speech.
     - type: numpy.ndarray.
     - shape: (sample_len,)
     text_seq: A list of graphemes or phonemes.
