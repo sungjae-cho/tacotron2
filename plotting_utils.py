@@ -163,11 +163,12 @@ def plot_prosody_dims_to_numpy(spectrogram, wav, text_seq, alignment, prosody, h
             hparams.filter_length, hparams.hop_length, hparams.f0_min,
             hparams.f0_max, hparams.harm_thresh)
     f0 = f0[:n_decoding_steps]
+    f0_steps = min(len(x), len(f0))
     axes[1].set_xlabel("Frames")
     axes[1].set_ylabel("F0 (Hz)")
     axes[1].set_xlim(x[0], x[-1])
     axes[1].set_ylim(hparams.f0_min, f0.max())
-    axes[1].plot(x, f0)
+    axes[1].plot(x[:f0_steps], f0[:f0_steps])
 
     # [3] Third figure: Amplitude
     # Learned from https://towardsdatascience.com/getting-to-know-the-mel-spectrogram-31bca3e2d9d0
