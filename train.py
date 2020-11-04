@@ -500,7 +500,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 logit_emotions, prob_emotions, int_pred_emotions = y_pred_emotions
                 residual_encoding, mu, logvar = y_pred_res_en
                 prosody = prosody_ref, prosody_pred
-                temp_prosody_hiddens_tf = model.decoder.temp_prosody_decoder.get_hiddens()
+                temp_prosody_hiddens_tf = model.get_temp_prosody_hiddens()
 
                 # Compute stop gate accuracy
                 np_output_lengths = output_lengths.cpu().numpy()
@@ -555,7 +555,7 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
 
                 _, mel_outputs_postnet_fr, gate_outputs_fr, alignments_fr, prosody_ref_fr, prosody_pred_fr, end_points_fr = model(inputs_fr, speakers, emotion_input_vectors, teacher_forcing=False, stop_prediction2=hparams.val_fr_stop_pred2)
                 prosody_fr = prosody_ref_fr, prosody_pred_fr
-                temp_prosody_hiddens_fr = model.decoder.temp_prosody_decoder.get_hiddens()
+                temp_prosody_hiddens_fr = model.get_temp_prosody_hiddens()
 
                 # Computing attention measures.
                 # [M1] forward_attention_ratio
@@ -1004,6 +1004,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                     y_pred_res_en, att_means
                 ) = model(x, speakers, emotion_input_vectors)'''
             forward_duration = time.perf_counter() - start_foward
+            temp_prosody = model.get_temp_prosody()
+            temp_prosody_hiddens = model.get_temp_prosody_hiddens()
 
             # Forward propagtion results
             mel_outputs, mel_outputs_postnet, gate_outputs, alignments, \

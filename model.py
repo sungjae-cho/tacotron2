@@ -1173,9 +1173,9 @@ class Tacotron2(nn.Module):
         if self.hparams.reference_encoder:
             if self.hparams.reference_encoder in ['GlocalRefEncoder']:
                 self.reference_encoder.initialize_states()
-            prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
+            self.temp_prosody_ref, global_prosody_ref = self.reference_encoder(mels) # [batch_size, seq_len, prosody_dim]
         else:
-            prosody_ref, global_prosody_ref = None, None
+            self.temp_prosody_ref, global_prosody_ref = None, None
 
         if self.hparams.style_to_encoder_output:
             styles = global_prosody_ref, speaker_embeddings, emotion_embeddings, residual_encoding
@@ -1189,7 +1189,7 @@ class Tacotron2(nn.Module):
             end_points, att_means) = self.decoder(
                 decoder_inputs, text_inputs, text_lengths,
                     speaker_embeddings, emotion_embeddings, residual_encoding,
-                    prosody_ref, global_prosody_ref,
+                    self.temp_prosody_ref, global_prosody_ref,
                     mels, output_lengths, stop_prediction2=stop_prediction2, teacher_forcing=True)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
@@ -1241,7 +1241,7 @@ class Tacotron2(nn.Module):
             residual_encoding = None
 
         if self.hparams.reference_encoder in self.hparams.reference_encoders_taking_mels_at_inference:
-            _, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
+            self.temp_prosody_ref, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
         else:
             global_prosody_ref = None
 
@@ -1257,6 +1257,7 @@ class Tacotron2(nn.Module):
             decoder_inputs, text_inputs, text_lengths,
             speaker_embeddings, emotion_embeddings,
             residual_encoding,
+            prosody_ref=self.temp_prosody_ref,
             global_prosody_ref=global_prosody_ref,
             teacher_forcing=False,
             discrete_attention_weight=discrete_attention_weight,
@@ -1317,6 +1318,20 @@ class Tacotron2(nn.Module):
             emotion_embeddings = None
 
         return speaker_embeddings, emotion_embeddings
+
+    def get_temp_prosody(self):
+        if self.hparams.reference_encoder == 'Glob2Temp':
+            temp_prosody = self.decoder.temp_prosody_decoder.get_temp_prosody()
+        else:
+            temp_prosody = self.temp_prosody_ref
+        return temp_prosody
+
+    def get_temp_prosody_hiddens(self):
+        if self.hparams.reference_encoder == 'Glob2Temp':
+            temp_prosody_hiddens = self.decoder.temp_prosody_decoder.get_hiddens()
+        else:
+            temp_prosody_hiddens = None
+        return temp_prosody_hiddens
 
 
 class SpeakerEncoder(nn.Module):
@@ -1549,6 +1564,10 @@ class TemporalProsodyDecoder(nn.Module):
         self.t_prosody_list.append(t_prosody)
 
         return hidden, t_prosody
+
+    def get_temp_prosody(self):
+        t_prosody = torch.stack(self.t_prosody_list).transpose(0,1)
+        return t_prosody
 
     def get_hiddens(self):
         hiddens = torch.stack(self.hidden_list).transpose(0,1)
