@@ -895,6 +895,8 @@ class Decoder(nn.Module):
                 if t == 0:
                     t_temp_prosody_ref_hidden = global_prosody_ref
                 t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden, t)
+            elif prosody_ref is not None:
+                t_temp_prosody_ref = prosody_ref[:,t,:]
 
             decoder_input = self.prenet(prev_mel_output)
 
@@ -963,6 +965,8 @@ class Decoder(nn.Module):
                 if t == 0:
                     t_temp_prosody_ref_hidden = global_prosody_ref
                 t_temp_prosody_ref_hidden, t_temp_prosody_ref = self.temp_prosody_decoder(None, t_temp_prosody_ref_hidden, t)
+            elif prosody_ref is not None:
+                t_temp_prosody_ref = prosody_ref[:,t,:]
 
             decoder_input = self.prenet(prev_mel_output)
 
