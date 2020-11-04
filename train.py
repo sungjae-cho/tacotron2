@@ -258,9 +258,10 @@ def fill_synth_dict(hparams, synth_dict, idx, inputs, outputs,
     synth_dict['mar_fr'] = batch_mar_fr[idx].item()
 
     # temp_prosody_hiddens
-    temp_prosody_hiddens_tf, temp_prosody_hiddens_fr = temp_prosody_hiddens
-    synth_dict['temp_prosody_hiddens_tf'] = temp_prosody_hiddens_tf[idx,:mel_length,:]
-    synth_dict['temp_prosody_hiddens_fr'] = temp_prosody_hiddens_tf[idx,:mel_length_fr,:]
+    if hparams.reference_encoder == 'Glob2Temp':
+        temp_prosody_hiddens_tf, temp_prosody_hiddens_fr = temp_prosody_hiddens
+        synth_dict['temp_prosody_hiddens_tf'] = temp_prosody_hiddens_tf[idx,:mel_length,:]
+        synth_dict['temp_prosody_hiddens_fr'] = temp_prosody_hiddens_tf[idx,:mel_length_fr,:]
 
 
 def compute_alignments(pretrained_path, hparams):

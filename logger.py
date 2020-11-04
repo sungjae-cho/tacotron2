@@ -269,14 +269,15 @@ class Tacotron2Logger():
                 "{}/teacher_forcing/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)
 
-            temp_prosody_hiddens_tf = synth_dict['temp_prosody_hiddens_tf']
-            np_temp_prosody_hiddens_tf = temp_prosody_hiddens_tf.cpu().numpy()
-            np_img_temp_prosody_hiddens_tf = plot_prosody_dims_to_numpy(np_mel_output_tf,
-                np_wav_tf, text_seq, np_alignment_tf, np_temp_prosody_hiddens_tf,
-                self.hparams)
-            wandb.log({
-                "{}/teacher_forcing/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_tf)],
-            }, step=iteration)
+            if self.hparams.reference_encoder == 'Glob2Temp':
+                temp_prosody_hiddens_tf = synth_dict['temp_prosody_hiddens_tf']
+                np_temp_prosody_hiddens_tf = temp_prosody_hiddens_tf.cpu().numpy()
+                np_img_temp_prosody_hiddens_tf = plot_prosody_dims_to_numpy(np_mel_output_tf,
+                    np_wav_tf, text_seq, np_alignment_tf, np_temp_prosody_hiddens_tf,
+                    self.hparams)
+                wandb.log({
+                    "{}/teacher_forcing/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_tf)],
+                }, step=iteration)
 
 
         # [3] Logging data for free-running data ##############################
@@ -330,14 +331,16 @@ class Tacotron2Logger():
                 "{}/free_running/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
             }, step=iteration)
 
-            temp_prosody_hiddens_fr = synth_dict['temp_prosody_hiddens_fr']
-            np_temp_prosody_hiddens_fr = temp_prosody_hiddens_fr.cpu().numpy()
-            np_img_temp_prosody_hiddens_fr = plot_prosody_dims_to_numpy(np_mel_output_fr,
-                np_wav_fr, text_seq, np_alignment_fr, np_temp_prosody_hiddens_fr,
-                self.hparams)
-            wandb.log({
-                "{}/free_running/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_fr)],
-            }, step=iteration)
+
+            if self.hparams.reference_encoder == 'Glob2Temp':
+                temp_prosody_hiddens_fr = synth_dict['temp_prosody_hiddens_fr']
+                np_temp_prosody_hiddens_fr = temp_prosody_hiddens_fr.cpu().numpy()
+                np_img_temp_prosody_hiddens_fr = plot_prosody_dims_to_numpy(np_mel_output_fr,
+                    np_wav_fr, text_seq, np_alignment_fr, np_temp_prosody_hiddens_fr,
+                    self.hparams)
+                wandb.log({
+                    "{}/free_running/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_fr)],
+                }, step=iteration)
 
 
     def log_training(self, trainset, hparams, dict_log_values, batches_per_epoch):
