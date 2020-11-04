@@ -14,7 +14,8 @@ from utils import discretize_att_w
 from coordconv import CoordConv2d
 from measures import SecondStopPredictor
 from gst import ReferenceEncoder
-from ref_encoders import ResidualEncoder, LocalRefEncoder, GlocalRefEncoder
+from ref_encoders import ResidualEncoder, LocalRefEncoder, GlocalRefEncoder, \
+    LocalConvRefEncoder
 
 
 class LocationLayer(nn.Module):
@@ -1051,6 +1052,8 @@ class Tacotron2(nn.Module):
                 self.decoder.add_temp_prosody_decoder(self.temp_prosody_decoder)
             elif hparams.reference_encoder == 'ReferenceEncoder':
                 self.reference_encoder = ReferenceEncoder(hparams)
+            elif hparams.reference_encoder == 'LocalConvRefEncoder':
+                self.reference_encoder = LocalConvRefEncoder(hparams)
         else:
             self.reference_encoder = None
 

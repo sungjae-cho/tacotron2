@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
+from layers import ConvNorm, LinearNorm
+from coordconv import CoordConv2d
 
 class ResidualEncoder(nn.Module):
     '''
@@ -415,6 +417,72 @@ class GlocalRefEncoder(nn.Module):
             out_global = out_cat[N:,:,:].transpose(1,2) # [2*N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
 
             return out_temp, out_global
+
+    def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
+        for _ in range(n_convs):
+            L = (L - kernel_size + 2 * pad) // stride + 1
+        return L
+
+
+class LocalConvRefEncoder(nn.Module):
+    '''
+    inputs --- [N, n_mels, Ty]  mels
+    outputs --- ([N, seq_len, ref_enc_gru_size])
+    '''
+    def __init__(self, hparams):
+        super(LocalConvRefEncoder, self).__init__()
+        self.hparams = hparams
+        hparams.ref_enc_filters = [32, 32, 64, 64, 128, 128]
+        print("hparams.ref_enc_filters", hparams.ref_enc_filters)
+        K = len(hparams.ref_enc_filters)
+        filters = [1] + hparams.ref_enc_filters
+
+        #convs = [nn.Conv2d(in_channels=filters[i],
+        convs = [CoordConv2d(in_channels=filters[i],
+                                out_channels=filters[i + 1],
+                                kernel_size=hparams.ref_enc_filter_size,
+                                stride=hparams.ref_enc_strides,
+                                padding=hparams.ref_enc_pad) for i in range(K)]
+        self.convs = nn.ModuleList(convs)
+        self.bns = nn.ModuleList(
+            [nn.BatchNorm2d(num_features=hparams.ref_enc_filters[i])
+             for i in range(K)])
+
+        #out_channels = self.calculate_channels(hparams.n_mel_channels, 3, 2, 1, K)
+        #out_channels = hparams.n_mel_channels
+        out_channels = self.calculate_channels(hparams.n_mel_channels,
+            hparams.ref_enc_filter_size[1], hparams.ref_enc_strides[1],
+            hparams.ref_enc_pad[1], K)
+        print("out_channels", out_channels)
+
+        self.n_mel_channels = hparams.n_mel_channels
+        self.prosody_dim = hparams.prosody_dim
+
+        # 1dConv linear project at each step.
+        self.linear_projection = ConvNorm(
+            in_channels=out_channels*hparams.ref_enc_filters[-1],
+            out_channels=self.prosody_dim,
+            bias=False,
+            w_init_gain='relu')
+        self.bn_lp = nn.BatchNorm1d(self.prosody_dim)
+
+    def forward(self, inputs, input_lengths=None):
+        inputs = inputs.transpose(1, 2) #  [N, n_mels, Ty] -> [N, Ty, n_mels]
+        out = inputs.view(inputs.size(0), 1, -1, self.n_mel_channels) # [N, Ty, n_mels] -> [N, 1, Ty, n_mels]
+        for conv, bn in zip(self.convs, self.bns):
+            out = conv(out)
+            out = bn(out)
+            out = F.relu(out)
+
+        out = out.transpose(1, 2)  # [N, 128, Ty, n_mels] -> [N, Ty, 128, n_mels // 2 ** mel_wise_stride]
+        N, T = out.size(0), out.size(1)
+        out = out.contiguous().view(N, T, -1)  # [N, Ty, 128*(n_mels // 2 ** mel_wise_stride)]
+        out = out.transpose(1, 2) # [N, Ty, h] -> [N, h, Ty]
+        out = F.relu(self.bn_lp(self.linear_projection(out))) # [N, h, Ty] -> [N, prosody_dim, Ty]
+        out = out.transpose(1, 2) # [N, prosody_dim, Ty] -> [N, Ty, prosody_dim]
+
+        print("LocalConvRefEncoder out.size()", out.size())
+        return out, None
 
     def calculate_channels(self, L, kernel_size, stride, pad, n_convs):
         for _ in range(n_convs):
