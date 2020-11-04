@@ -605,6 +605,53 @@ class Tacotron2Logger():
                            }, step=iteration)
 
 
+def log_training_prosody(self, hparams,
+          iteration,
+          input_lengths, text_padded, text_raw,
+          output_lengths, mel_outputs_postnet,
+          alignments,
+          prosody_ref_tf,
+          temp_prosody_hiddens_tf):
+      idx = random.randint(0, hparams.batch_size - 1)
+      text_length = input_lengths[idx].item()
+      text_sequence = text_padded[idx,:text_length]
+      text_raw =  text_raw[idx]
+      mel_length = output_lengths[idx].item()
+      mel_output_tf = mel_outputs_postnet[idx,:,:mel_length]
+      alignment_tf = alignments[idx,:mel_length,:text_length]
+      np_wav_tf = self.mel2wav(mel_output_tf.unsqueeze(0).cuda().half())
+      np_mel_output_tf = mel_output_tf.detach().cpu().numpy()
+      np_alignment_tf = alignment_tf.detach().cpu().numpy()
+
+      log_prefix = 'train'
+      caption_string = text_raw
+      wandb.log({
+          "{}/teacher_forcing/random_pick/wav".format(log_prefix): [wandb.Audio(np_wav_tf.astype(np.float32), caption=caption_string, sample_rate=self.hparams.sampling_rate)],
+      }, step=iteration)
+
+      if self.hparams.reference_encoder:
+          prosody_ref_tf = prosody_ref_tf[idx,:mel_length,:]
+          np_prosody_dims = prosody_ref_tf.detach().cpu().numpy()
+          int_text_seq = text_sequence.tolist()
+          text_seq = sequence_to_text_list(int_text_seq)
+          np_img_prosody_dims = plot_prosody_dims_to_numpy(np_mel_output_tf,
+              np_wav_tf, text_seq, np_alignment_tf, np_prosody_dims,
+              self.hparams)
+          wandb.log({
+              "{}/teacher_forcing/random_pick/prosody_dims".format(log_prefix): [wandb.Image(np_img_prosody_dims)],
+          }, step=iteration)
+
+          if self.hparams.reference_encoder == 'Glob2Temp':
+              temp_prosody_hiddens_tf = temp_prosody_hiddens_tf[idx,:mel_length,:]
+              np_temp_prosody_hiddens_tf = temp_prosody_hiddens_tf.detach().cpu().numpy()
+              np_img_temp_prosody_hiddens_tf = plot_prosody_dims_to_numpy(np_mel_output_tf,
+                  np_wav_tf, text_seq, np_alignment_tf, np_temp_prosody_hiddens_tf,
+                  self.hparams)
+              wandb.log({
+                  "{}/teacher_forcing/random_pick/temp_prosody_hiddens".format(log_prefix): [wandb.Image(np_img_temp_prosody_hiddens_tf)],
+              }, step=iteration)
+
+
     def log_validation(self, trainset, valset, val_type, hparams, dict_log_values):
 
         # Validation type: {('all', 'all'), ('speaker1', 'emotion1'), ...}

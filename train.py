@@ -1306,6 +1306,11 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
                 logger.log_training(trainset, hparams, dict_log_values, batches_per_epoch)
 
             if hparams.log_validation and (not is_overflow and ((iteration % hparams.iters_per_checkpoint == 0) or (i+1 == batches_per_epoch) or is_first_iteration)):
+                logger.log_training_prosody(hparams, iteration,
+                    input_lengths, text_padded, text_raw,
+                    output_lengths, mel_outputs_postnet,
+                    alignments,
+                    temp_prosody, temp_prosody_hiddens)
                 validate(model, criterion, trainset, valsets, iteration, float_epoch,
                          hparams.batch_size, n_gpus, collate_fn, logger,
                          False, rank, hparams)
