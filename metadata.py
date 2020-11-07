@@ -215,7 +215,7 @@ class MetaData:
             self.set_split_labels(split_ratio)
             self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang','segmented','book','chapter','sentence_id']]
 
-    def get_split_labels(self, split_ratio):
+
     def set_split_labels(self, split_ratio, random_seed=3141):
         self.df['split'] = ''
         if self.use_nvidia_ljs_split and self.db == "ljspeech":
