@@ -21,6 +21,8 @@ class MetaData:
         self.ljs_path = '/data2/sungjaecho/data_tts/LJSpeech-1.1'
         self.emovdb_path = '/data2/sungjaecho/data_tts/EmoV-DB/EmoV-DB'
         self.bc2013_path = '/data2/sungjaecho/data_tts/BC2013'
+        self.ketts_path = '/data2/sungjaecho/data_tts/KETTS/KETTS'
+        self.ketts2_path = '/data2/sungjaecho/data_tts/KETTS2/KETTS2'
         self.metadata_path = 'metadata'
         self.df = None
         self.use_nvidia_ljs_split = use_nvidia_ljs_split
@@ -186,6 +188,100 @@ class MetaData:
 
             self.df = df_txt_books
 
+        if self.db == 'ketts':
+            dir_txt = os.path.join(self.ketts_path, 'txt')
+            dir_wav = os.path.join(self.ketts_path, 'wav')
+            txt_names = os.listdir(dir_txt)
+            wav_names = os.listdir(dir_wav)
+            txt_paths = [os.path.join(dir_txt, txt) for txt in txt_names]
+            wav_paths = [os.path.join(dir_wav, wav) for wav in wav_names]
+
+            duration_list = list()
+            text_list = list()
+            id_list = list()
+            speaker_list = list()
+            emotion_list = list()
+            sex_list = list()
+            for txt_name, txt_path, wav_name, wav_path in tqdm(zip(txt_names, txt_paths, wav_names, wav_paths),total=len(wav_names)):
+                str_id = os.path.splitext(wav_name)[0]
+                speaker, emotion, _ = str_id.split('_')
+
+                id_list.append(str_id)
+                speaker_list.append(speaker)
+                emotion_list.append(emotion)
+                if speaker[-1] == 'm':
+                    sex_list.append('m')
+                if speaker[-1] == 'f':
+                    sex_list.append('w')
+                with open(txt_path, 'r') as f:
+                    script = f.read().strip()
+                text_list.append(script)
+
+                y, sr = librosa.load(wav_path)
+                duration = librosa.get_duration(y, sr)
+                duration = round(duration, 3)
+                duration_list.append(duration)
+
+            n_samples = len(wav_paths)
+            self.df = pd.DataFrame({
+                'database':[self.db]*n_samples,
+                'id':id_list,
+                'wav_path':wav_paths,
+                'duration':duration_list,
+                'text':text_list,
+                'speaker':speaker_list,
+                'sex':sex_list,
+                'emotion':emotion_list,
+                'lang':['ko']*n_samples,
+            })
+
+        if self.db == 'ketts2':
+            dir_database = self.ketts2_path
+            dir_wav = os.path.join(dir_database, 'wav')
+            df_script = pd.read_csv(os.path.join(dir_database, 'KETTS2_script.csv'), encoding='utf-8')
+            wav_names = os.listdir(dir_wav)
+            wav_paths = [os.path.join(dir_wav, wav) for wav in wav_names]
+            print("Total #wavs:", len(wav_names))
+
+            text_list = list()
+            id_list = list()
+            speaker_list = list()
+            emotion_list = list()
+            sex_list = list()
+            duration_list = list()
+            for wav_name, wav_path in tqdm(zip(wav_names, wav_paths), total=len(wav_paths)):
+                str_id = os.path.splitext(wav_name)[0]
+                speaker, emotion, script_id = str_id.split('_')
+
+                id_list.append(str_id)
+                speaker_list.append(speaker)
+                emotion_list.append(emotion)
+                if speaker[-1] == 'm':
+                    sex_list.append('m')
+                if speaker[-1] == 'f':
+                    sex_list.append('w')
+
+                script = df_script[df_script['index'] == int(script_id)].script.values[0]
+                text_list.append(script)
+
+                y, sr = librosa.load(wav_path)
+                duration = librosa.get_duration(y, sr)
+                duration = round(duration, 3)
+                duration_list.append(duration)
+
+            n_samples = len(wav_paths)
+            self.df = pd.DataFrame({
+                'database':[self.db]*n_samples,
+                'id':id_list,
+                'wav_path':wav_paths,
+                'duration':duration_list,
+                'text':text_list,
+                'speaker':speaker_list,
+                'sex':sex_list,
+                'emotion':emotion_list,
+                'lang':['ko']*n_samples,
+            })
+
     def add_columns(self, split_ratio):
         '''
         split_ratio: dict. e.g., {'train':0.8, 'val':0.1, 'test':0.1}
@@ -216,6 +312,14 @@ class MetaData:
             self.df['lang'] = ['en'] * len(self.df)
             self.set_split_labels(split_ratio)
             self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang','segmented','book','chapter','sentence_id']]
+
+        if self.db == 'ketts':
+            self.set_split_labels(split_ratio)
+            self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang']]
+
+        if self.db == 'ketts2':
+            self.set_split_labels(split_ratio)
+            self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang']]
 
 
     def set_split_labels(self, split_ratio, random_seed=3141):
@@ -481,6 +585,21 @@ def save_csv_db(db):
         md = MetaData(db)
         md.make_new_db(split_ratio)
 
+    if db == "ketts":
+        val_size = 10
+        test_size = 10
+        split_ratio = {'val':val_size, 'test':test_size}
+        md = MetaData(db)
+        md.make_new_db(split_ratio)
+
+    if db == "ketts2":
+        val_size = 10
+        test_size = 10
+        split_ratio = {'val':val_size, 'test':test_size}
+        md = MetaData(db)
+        md.make_new_db(split_ratio)
+
+
 
 def rm_outliers(db):
     if db == "bc2013":
@@ -502,6 +621,14 @@ def print_data_stat():
     md.print_data_stat()
 
     db = "bc2013"
+    md = MetaData(db)
+    md.print_data_stat()
+
+    db = "ketts"
+    md = MetaData(db)
+    md.print_data_stat()
+
+    db = "ketts2"
     md = MetaData(db)
     md.print_data_stat()
 
