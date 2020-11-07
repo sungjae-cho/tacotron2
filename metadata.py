@@ -711,12 +711,19 @@ def convert_sec(seconds):
 
 
 def main():
-    save_csv_db("bc2013")
-    rm_outliers("bc2013")
-    make_one_sample_rate("bc2013")
-    print_data_stat()
+    #save_csv_db("ketts2")
+    #sr = 22050
+    #print("sample rate:", sr)
+    #make_one_sample_rate("ketts", sr)
+    #reset_split('ketts', {'val':10, 'test':10})
+    #reset_split('ketts2', {'val':10, 'test':10})
+
+    #rm_outliers("bc2013")
+    #make_one_sample_rate("bc2013")
+    #print_data_stat()
     #debug()
     #make_one_sample_rate(db = "emovdb", sample_rate=22050)
+    print_data_stat()
 
 if __name__ == "__main__":
     main()
