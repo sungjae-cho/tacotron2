@@ -195,7 +195,7 @@ class MetaData:
             self.df['emotion'] = ['neutral'] * len(self.df)
             self.df['sex'] = ['w'] * len(self.df)
             self.df['lang'] = 'en'
-            self.df['split'] = self.get_split_labels(split_ratio)
+            self.set_split_labels(split_ratio)
             self.df = self.df[['database','split','id','wav_path','text_raw','text','speaker','sex','emotion','lang']]
 
         if self.db == "emovdb":
@@ -203,7 +203,7 @@ class MetaData:
             print(self.df['wav_path'])
             self.df['sex'] = self.df.speaker.apply(self.get_sex)
             self.df['lang'] = 'en'
-            self.df['split'] = self.get_split_labels(split_ratio)
+            self.set_split_labels(split_ratio)
             self.df = self.df[['database','split','id','wav_path','duration','text','speaker','sex','emotion','lang']]
 
         if self.db == "bc2013":
@@ -212,12 +212,13 @@ class MetaData:
             self.df['emotion'] = ['neutral'] * len(self.df)
             self.df['sex'] = ['w'] * len(self.df)
             self.df['lang'] = ['en'] * len(self.df)
-            self.df['split'] = self.get_split_labels(split_ratio)
+            self.set_split_labels(split_ratio)
             self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang','segmented','book','chapter','sentence_id']]
 
     def get_split_labels(self, split_ratio):
+    def set_split_labels(self, split_ratio, random_seed=3141):
+        self.df['split'] = ''
         if self.use_nvidia_ljs_split and self.db == "ljspeech":
-            split_labels = list()
 
             split_types = ['train', 'val', 'test']
             db_path = dict()
@@ -238,32 +239,40 @@ class MetaData:
             for i, row in self.df.iterrows():
                 for split_type in split_types:
                     if row.id in id_sets[split_type]:
-                        split_labels.append(split_type)
+                        self.df.at[i, 'split'] = split_type
 
         else:
-            df_len = len(self.df)
-            if split_ratio['val'] < 1:
-                i_val_start = int(df_len * split_ratio['train'])
-                i_test_start = int(df_len * (split_ratio['train'] + split_ratio['val']))
-            else:
-                # This case specifies split ratio using the number of samples
-                i_val_start = df_len - split_ratio['val'] - split_ratio['test']
-                i_test_start = df_len - split_ratio['test']
+            df_unique_classes = self.df[self.speech_classes].drop_duplicates(subset=self.speech_classes)
+            n_unique_classes = df_unique_classes.shape[0]
 
-            n_train = i_val_start
-            n_val = i_test_start - i_val_start
-            n_test = df_len - i_test_start
+            # Split the dataset by (speaker, emotion) pairs.
+            # If split_ratio['val'] and split_ratio['train'] are given as integers,
+            # those numbers are sampled from each set of (speaker, emotion) pairs.
+            for i, row in df_unique_classes.iterrows():
+                df_selected = self.df[(self.df.speaker == row.speaker) & (self.df.emotion == row.emotion)]
 
-            print("split_ratio", split_ratio)
-            print("(n_train, n_val, n_test)", (n_train, n_val, n_test))
+                df_selected_len = df_selected.shape[0]
 
-            split_labels = (['train'] * n_train) + (['val'] * n_val) + (['test'] * n_test)
+                if split_ratio['val'] < 1:
+                    i_val_start = int(df_selected_len * split_ratio['train'])
+                    i_test_start = int(df_selected_len * (split_ratio['train'] + split_ratio['val']))
+                else:
+                    # This case specifies split ratio using the number of samples
+                    i_val_start = df_selected_len - split_ratio['val'] - split_ratio['test']
+                    i_test_start = df_selected_len - split_ratio['test']
 
-            random.seed(3141)
-            random.shuffle(split_labels)
+                n_train = i_val_start
+                n_val = i_test_start - i_val_start
+                n_test = df_selected_len - i_test_start
 
+                split_labels = (['train'] * n_train) + (['val'] * n_val) + (['test'] * n_test)
 
-        return split_labels
+                random.seed(random_seed)
+                random.shuffle(split_labels)
+
+                indexes = df_selected.index.tolist()
+                self.df.at[indexes, 'split'] = split_labels
+
 
     def get_wav_path(self, col):
         if self.db == "ljspeech":
@@ -401,7 +410,7 @@ class MetaData:
         self.df = df_inliers
 
         # Reset data split
-        self.df['split'] = self.get_split_labels(split_ratio)
+        self.set_split_labels(split_ratio)
 
         # Save CSV files for each data split
         csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
