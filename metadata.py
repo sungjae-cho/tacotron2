@@ -488,6 +488,15 @@ def print_data_stat():
     md = MetaData(db)
     md.print_data_stat()
 
+
+def reset_split(db, split_ratio, random_seed=3141):
+    md = MetaData(db)
+    md.load_from_csv()
+    md.set_split_labels(split_ratio, random_seed)
+    md.save_df_to_csv()
+    print("reset_split finished!")
+
+
 def debug():
     db = "ljspeech"
     split_ratio = {'train':0.99, 'val':0.005, 'test':0.005}
