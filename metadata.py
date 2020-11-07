@@ -519,21 +519,23 @@ def make_one_sample_rate(db, sample_rate=22050):
             os.remove(src_wav)
 
 def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
-    frame_rate, _  = read_wav(src_wav)
+    '''
+    1. change sample rate
+    2. multiple channels -> mono channel
+    '''
+    samples, frame_rate  = librosa.load(src_wav, sr=None)
     #print("Original sample rate:", frame_rate)
 
-    if frame_rate == sample_rate:
+    if frame_rate == sample_rate and len(samples.shape) == 1:
         return
 
     ff = FFmpeg(
         inputs={src_wav: None},
-        outputs={dst_wav: "-ar {} -y".format(sample_rate)}
+        outputs={dst_wav: "-ar {} -ac 1 -y".format(sample_rate)}
     )
 
     ff.run()
 
-    #frame_rate, _  = read_wav(dst_wav)
-    #print("New sample rate:", frame_rate)
 
 def convert_sec(seconds):
     hours = seconds // 3600
