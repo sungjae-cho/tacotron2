@@ -16,6 +16,8 @@ from sklearn import linear_model
 class MetaData:
     def __init__(self, db, use_nvidia_ljs_split=True):
         self.db = db
+        self.all_dbs = ['ljspeech', 'emovdb', 'bc2013', 'ketts', 'ketts2']
+        self.speech_classes = ['speaker', 'emotion']
         self.ljs_path = '/data2/sungjaecho/data_tts/LJSpeech-1.1'
         self.emovdb_path = '/data2/sungjaecho/data_tts/EmoV-DB/EmoV-DB'
         self.bc2013_path = '/data2/sungjaecho/data_tts/BC2013'
