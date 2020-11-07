@@ -322,6 +322,21 @@ class MetaData:
             df.to_csv(csv_path, index=False)
             print("Saved! {}".format(csv_path))
 
+
+    def save_df_to_csv(self):
+        df = self.get_df()
+        csv_path = os.path.join(self.metadata_path, '{}.csv'.format(self.db))
+        df.to_csv(csv_path, index=False)
+        print("Saved! {}".format(csv_path))
+
+        splits = ['train', 'val', 'test']
+        for split in splits:
+            df = self.get_df(split)
+            csv_path = os.path.join(self.metadata_path, '{}_{}.csv'.format(self.db, split))
+            df.to_csv(csv_path, index=False)
+            print("Saved! {}".format(csv_path))
+
+
     def rm_outliers(self, min_duration=1, max_duration=10,
             split_ratio={'train':0.95, 'val':0.025, 'test':0.025}):
         '''
