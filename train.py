@@ -509,7 +509,11 @@ def validate(model, criterion, trainset, valsets, iteration, epoch, batch_size, 
                 gate_accuracy = accuracy_score(np_output_lengths, np_mel_lengths)
                 # Compute stop gate MAE(pred_lengths, true_lengths)
                 gate_mae = mean_absolute_error(np_output_lengths, np_mel_lengths)
-                end_point_mae = mean_absolute_error(np.asarray(end_points), np_mel_lengths)
+                if end_points is not None:
+                    end_point_mae = mean_absolute_error(np.asarray(end_points), np_mel_lengths)
+                else:
+                    end_point_mae = 0
+
 
                 if hparams.speaker_adversarial_training:
                     spk_adv_targets = get_spk_adv_targets(speakers, input_lengths)
