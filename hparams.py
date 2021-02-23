@@ -30,8 +30,8 @@ def create_hparams(hparams_string=None, verbose=False):
         log_validation=True,
         log_fr_test=False, # Control for logging free-running test
         # SecondStopPredictor control
-        val_tf_stop_pred2=True,
-        val_fr_stop_pred2=True,
+        val_tf_stop_pred2=False,
+        val_fr_stop_pred2=False,
         # Free-running test text
         test_text = "This is a synthesized audio without teacher-forcing. Any question?",
 
