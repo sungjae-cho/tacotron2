@@ -76,7 +76,7 @@ def text_to_sequence(text, cleaner_names, txt_type='g', dictionary=None, p_arpab
   # Check for curly braces and treat their contents as ARPAbet:
   while len(text):
     m = _curly_re.match(text)
-    if not m:
+    if m is not None:
       clean_text = _clean_text(text, cleaner_names)
       if dictionary is not None:
         clean_text = re.sub('([a-zA-Z])-([a-zA-Z])', r'\1 \2', clean_text)
