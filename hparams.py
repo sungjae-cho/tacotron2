@@ -96,7 +96,7 @@ def create_hparams(hparams_string=None, verbose=False):
         reference_encoder='', # ['ref1', 'ref2', 'ref3', 'ref4']
         reference_encoders_taking_mels_at_inference=['Glob2Temp', 'ReferenceEncoder', 'GST', 'LocalConvRefEncoder'],
         reference_encoders_concat_global_styles_to_text=['ReferenceEncoder', 'GST'],
-        reference_encoders_with_prosody_attention=['LocalConvRefEncoder']
+        reference_encoders_with_prosody_attention=['LocalConvRefEncoder'],
 
         # (Text) Encoder parameters
         encoder_kernel_size=5,
