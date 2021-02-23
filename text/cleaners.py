@@ -66,6 +66,27 @@ def convert_to_ascii(text):
   return unidecode(text)
 
 
+def decompose_hangul(text):
+    line_dec = ""
+    line = list(text.strip())
+
+    for keyword in line:
+        if re.match('.*[ㄱ-ㅎㅏ-ㅣ가-힣]+.*', keyword) is not None:
+            if keyword in _phone_LIST:
+                line_dec += keyword
+            else:
+                char_code = ord(keyword) - _Start_Code
+                char1 = int(char_code / _ChoSung)
+                line_dec += _ChoSung_LIST[char1]
+                char2 = int((char_code - (_ChoSung * char1)) / _JungSung)
+                line_dec += _JungSung_LIST[char2]
+                char3 = int((char_code - (_ChoSung * char1) - (_JungSung * char2)))
+                line_dec += _JongSung_LIST[char3]
+        else:
+            line_dec += keyword
+    return line_dec
+
+
 def basic_cleaners(text):
   '''Basic pipeline that lowercases and collapses whitespace without transliteration.'''
   text = lowercase(text)
@@ -90,5 +111,12 @@ def english_cleaners(text):
   text = expand_numbers(text)
   text = expand_abbreviations(text)
   text = collapse_whitespace(text)
+  text = text.strip()
+  return text
+
+
+def korean_cleaners(text):
+  text = txt_preprocessing(text)
+  text = decompose_hangul(text)
   text = text.strip()
   return text
