@@ -942,6 +942,10 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
         output_directory, log_directory, rank, run_name, prj_name, resume, model)
 
     train_loader, trainset, valsets, collate_fn = prepare_dataloaders(hparams)
+    with open(os.path.join(output_directory, prj_name, run_name, 'model.txt'), 'w') as f:
+        f.write(str(model))
+    with open(os.path.join(output_directory, prj_name, run_name, 'hparams.txt'), 'w') as f:
+        f.write(str(hparams.to_json(indent=4)))
 
     # Load checkpoint if one exists
     iteration = 0

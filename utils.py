@@ -474,6 +474,8 @@ def get_checkpoint_iter2path(outdir, prj_name, run_name, cp_iter):
     cp_dir_path = join(outdir, prj_name, run_name)
     cp_files = get_files(cp_dir_path)
     for cp_file in cp_files:
+        if 'checkpoint' not in cp_file:
+            continue
         i = get_checkpoint_iteration(cp_file)
         if int(i) == int(cp_iter):
             cp_path = join(cp_dir_path, cp_file)
