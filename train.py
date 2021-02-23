@@ -1408,10 +1408,11 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.visible_gpus
 
-    if args.resume == "":
-        wandb.init(name=args.run_name, project=args.prj_name, resume=args.resume)
-    else:
-        wandb.init(project=args.prj_name, resume=args.resume)
+    if args.rank == 0:
+        if args.resume == "":
+            wandb.init(name=args.run_name, project=args.prj_name, resume=args.resume)
+        else:
+            wandb.init(project=args.prj_name, resume=args.resume)
 
     print("FP16 Run:", hparams.fp16_run)
     print("Dynamic Loss Scaling:", hparams.dynamic_loss_scaling)
