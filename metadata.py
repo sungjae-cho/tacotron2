@@ -16,7 +16,7 @@ from sklearn import linear_model
 class MetaData:
     def __init__(self, db, use_nvidia_ljs_split=True):
         self.db = db
-        self.all_dbs = ['ljspeech', 'emovdb', 'bc2013', 'ketts', 'ketts2', 'kss']
+        self.all_dbs = ['ljspeech', 'emovdb', 'bc2013', 'ketts', 'ketts2', 'kss', 'nc']
         self.speech_classes = ['speaker', 'emotion']
         self.ljs_path = '/data2/sungjaecho/data_tts/LJSpeech-1.1'
         self.emovdb_path = '/data2/sungjaecho/data_tts/EmoV-DB/EmoV-DB'
@@ -24,6 +24,7 @@ class MetaData:
         self.ketts_path = '/data2/sungjaecho/data_tts/KETTS/KETTS'
         self.ketts2_path = '/data2/sungjaecho/data_tts/KETTS2/KETTS2'
         self.kss_path = '/data2/sungjaecho/data_tts/KSS/KSS'
+        self.kss_path = '/data2/sungjaecho/data_tts/NC/NC'
         self.metadata_path = 'metadata'
         self.df = None
         self.use_nvidia_ljs_split = use_nvidia_ljs_split
@@ -632,11 +633,19 @@ def print_data_stat():
     md = MetaData(db)
     md.print_data_stat()
 
+    db = "kss"
+    md = MetaData(db)
+    md.print_data_stat()
+
     db = "ketts"
     md = MetaData(db)
     md.print_data_stat()
 
     db = "ketts2"
+    md = MetaData(db)
+    md.print_data_stat()
+
+    db = "nc"
     md = MetaData(db)
     md.print_data_stat()
 
