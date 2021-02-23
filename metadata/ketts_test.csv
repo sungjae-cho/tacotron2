@@ -1,141 +1,141 @@
 database,split,wav_path,duration,text,speaker,sex,emotion,lang
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00081.wav,9.943,영업시간 제한으로 장사가 안되는 입장에서야 이 조치를 완화해주길 바라는 마음 굴뚝 같지만 먼저 퇴폐문화 곧 이태원이라는 인식부터 고쳐지도록 하자는 데 의견을 모았습니다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00840.wav,3.103,케이엔씨씨가 남북대화에 적극적이었던 것은 칠십년대말부터입니다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02613.wav,3.837,인간은 누구나 이기적인 본성을 가지고 있다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_01519.wav,3.21,학생들이 뒤에서 별명을 부르는 것을 듣고 교사는 몹시 불쾌해했다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00861.wav,4.738,자동차 경주에서 선두 그룹의 차가 앞서거니 뒤서거니 하고 있다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01839.wav,6.24,현재 세계적으로 자녀를 적게 두는 것이 추세이다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_01993.wav,3.67,병원에 가서 아픈 환자들을 보면 건강의 소중함을 느끼게 된다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_02903.wav,16.68,그 집은 항상 웃음소리가 들려온다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00508.wav,3.5,노조원들 중에는 파업을 내심 원치 않는 근로자들이 더 많다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01228.wav,4.835,포도주는 심장과 혈액순환에 도움이 된다고 한다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_01896.wav,4.705,얘기가 나왔으나 내가 앞으로 얼마든지 논의할 수 있으므로 깊이 얘기하지 말자고 해 중요하게 논의되지는 않았다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00052.wav,12.21,병원에 입원한 후로는 한 번도 술을 마시지 않았다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00130.wav,10.2,유알협상에서 우리측 실무대표를 이끌고 있는 이상옥 제네바대사는 유알협상을 이렇게 전망했다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00501.wav,4.68,한번 난 사고야 어쩔 수 없다손 치더라도 사고 수습에 최선을 다해야 할 철도청이 이날 보인 탈선은 거기에 그치지 않았다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01853.wav,1.86,나는 너무 튀는 옷은 좋아하지 않는다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_01298.wav,5.305,요새는 남자들도 머리를 기르는 사람이 많다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00603.wav,3.971,소득이 아무리 높아도 그것을 저축해서 다음 생산에 투입하지 않고 다 써버린다거나 일하기를 게을리하면 가계든 국가 경제든 경쟁력을 잃고 성장은 둔화되고 만다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00179.wav,5.37,이번 추석연휴는 열흘이나 된다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00661.wav,5.1389999999999985,페디르코회장은 소련이 이 같은 분야에 대한 한국의 참여를 바라는 것은 국내생산및 자본만으로는 도저히 수급을 충족시킬 수 없기 때문이라고 설명했다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01921.wav,4.44,비록 대설주위보 해제로 많은 눈을 즐길수는 없지만 그래도 블리스 걸은 너무 신나요.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02778.wav,6.206,또 체르노빌사고 이후 안전한 핵연료 수용장치개발에 심혈을 기울이고 있으며 과학기술협력을 통해 세계평화에 기여할 수 있을 것이라고 말했다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03592.wav,4.02,이 책의 필자는 아직 누구인지 알려지지 않았다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02988.wav,4.404,매사에 합리적이지만 지나치게 앞뒤를 재기 때문에 결단력이 부족하고 기회주의적이란 지적을 받기도 한다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_01427.wav,12.69,그는 경제사회위원회가 만장일치의 찬성결론을 낸 경우엔 의회에서의 법안통과도 쉽고 찬반의견이 엇갈리면 의회에서도 난상토론이 벌어진다고 설명한다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01279.wav,7.35,부정적인 현상도 없지 않지만 돈으로 표를 매수하는 부정은 없을 것이다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00551.wav,4.68,그와 눈이 마주치는 순간 떨려서 심장이 멎을 것만 같았다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01298.wav,4.23,그래도 달달한 데이트 장면들 때문에 정말 정말 행복했다우.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00289.wav,11.879,전임 김재순 의장이 나서 교섭은 해 본 모양입니다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00177.wav,5.04,오늘 보는 선이 무려 백번째 선이다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00874.wav,11.345,구겐하임 박물관은 뒤집어진 원뿔 나선형 모양의 건물이다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00298.wav,4.438,요즘 장이 안 좋아서 금주를 하고 있다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00210.wav,8.91,우유는 반드시 냉장고에 보관해야 한다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02882.wav,4.204,불편한 관계가 건강한 관계로 바뀐 셈인데 이것은 한미관계가 전반적으로 동반자적 관계에 들어갔다는 뜻인지.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00986.wav,6.34,대한항공에 대한 교통부의 감사보고서는 우리들에게 큰 충격을 던져주고 있다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02472.wav,7.407,사건이 나도 쉬쉬하기만 한다 상부에는 보고조차 하지 않는다 그렇다고 고양이처럼 갈아치울 수도 없다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02919.wav,3.57,어느 분하고 특별하게 깊은 관계가 있는 것은 아니다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_01985.wav,2.669,일기를 매일 쓴다는 것은 쉬운 일이 아니다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02973.wav,4.92,최근 미국 언론은 소련내의 여러 가지 어려움으로 과연 고르바초프 대통령이 앞으로 일년을 더 견딜 수 있을까 하는 의문을 강력히 제기하고 있는데.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01513.wav,6.444,태국 관광지에서 터무니 없이 비싼 가격을 불러 화가 났다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02718.wav,3.03,이 영화가 젊은 사람들에게도 좋은 반응을 얻을 수 있을지 걱정이다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00001.wav,7.59,때로는 정직한 말이 상대방의 기분을 더 상하게 하기도 한다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02738.wav,3.77,쉴 새 없이 먹어대는 아들의 먹성을 감당하기가 어렵다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02951.wav,11.345,서울 강남 북에 걸쳐 주택가에서 육십여건이나 발생한 방화사건에 대해서도 경찰은 너무 안이한 수사자세를 보이고 있는 듯한 느낌이다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01976.wav,3.78,노태우대통령은 이십팔일 육이구선언 삼주년을 맞아 청와대 출입기자들과 약 한 시간반 동안 오찬간담회를 갖고 최근의 국내외정세등에 관한 견해를 밝혔다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01659.wav,3.45,그 섬에는 사람들이 모르는 비밀 장소가 있다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02999.wav,4.273,담임선생은 자기가 부리는 채점기계의 묵묵한 작업에 눈을 보낸 채 자못 흐뭇한 표정이었다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00480.wav,7.62,다시는 이런 끔찍한 아동 성폭행 사건이 일어나서는 안 됩니다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_01353.wav,3.637,박씨 부부에게 그후 칠 개월은 안타깝기 그지 없는 기간이었다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_01543.wav,3.57,소련단에 정부측 인사도 포함되는가.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00409.wav,5.46,금융소득에 대한 종합과세를 추진하되 소액가계저축에 대해서는 우대하겠습니다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02869.wav,4.26,엄마 지갑에서 몰래 만원을 가져간 것이 들켜서 엄마에게 호되게 혼이 났다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00408.wav,12.446,﻿그러나 기본적으로 개인의 사리추구가 시장경제의 뿌리라는 것을 전제 한다면 일단 제도적으로 허점을 보완하는 게 첩경이다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02803.wav,4.05,자신의 조건에 딱 맞는 배우자를 찾는 것은 상당히 어렵다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_01991.wav,5.472,그는 전철 안에서 다리를 꼰 채로 신문을 읽고 있다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_01528.wav,3.237,각서 유출이 공작적 차원에서 이루어졌다고 주장하는 근거는 무엇인가.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01139.wav,10.41,장관하나 가는 것까지 내가 일일이 코멘트해서야 되겠는가.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01098.wav,7.11,비가 오는데도 그 가게는 손님들로 넘쳤다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00193.wav,3.837,처음에는 국민들이 사당으로 하여금 대화정치를 훈련하라고 만들어 준 체제로 받아들였다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00391.wav,9.18,이 호텔은 수표를 받지 않기 때문에 미리 현금을 준비하지 않으면 안 된다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00334.wav,9.109,어느 시대나 완급이 있다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01440.wav,5.79,경제협력개발기구에서도 경제통합에 따라 인플레율은 삼쩜칠퍼센트까지 올라갈 것으로 봤는데 연방 은행이 너무 낙관적이지 않은가.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02163.wav,4.32,국민은 사당체제하의 일부 정치적 표류 현상에도 우려를 표했지만 동시에 거대여당의 일방통행적 휩쓸기의 가능성 역시 달가워하지 않는다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00953.wav,8.19,더욱이 종이포장이 비닐포장으로 전환되면서 환경공해의 원흉으로 원흉삼관왕이 되고 있다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_01776.wav,3.37,기업이 기술과 서비스면에서 비교우위를 확보할 수 있다면 우루과이라운드협상은 오히려 해외진출의 활로가 될 수 있기 때문이다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00318.wav,7.53,건강과 장수를 위한 어떤 비결은 따로 전할 것이 없다 그러나 충분히 잠을 잔다는 것이 중요하다는 말은 할 수 있다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02839.wav,3.303,여자친구에게 팔베개를 오랫동안 해주었더니 팔이 저려서 한동안 움직일 수가 없었다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01027.wav,6.93,다음 이번 시중은행 주총이 형식상 모양은 갖추되 그 인사 내용은 아직도 관변에서 결정돼 주총은 단순히 이를 확인하는 모임이 될 것이라고 한다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00470.wav,10.53,현재 한국팀은 삼승 일무 일패입니다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01549.wav,4.872,최근 남성의 흡연율은 줄고 있지만 여성과 청소년의 흡연율은 오히려 늘고 있다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02638.wav,3.237,얼마 전에는 총체적 위기로 규정했다가 요즘은 난국이 아니라고 강변한다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02977.wav,3.45,병마개를 뽑고 한 모금 빤다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00881.wav,9.71,회사에 처음 입사해 교육을 받을 때와 같은 기분입니다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00847.wav,6.27,심국장은 도에서도 주민들의 뜻에 발맞춰 삼일부터 칠일까지 산짐승들이 즐겨먹는 옥수수 고구마 시래기 등 십톤을 눈덮인 산간지방의 계곡 능선 등에 뿌렸고 십일에는 산림청의 도움을 받아 접근이 불가능한 오지산골에도 헬기를 동원 먹이를 살포하는 등 이달말까지 먹이주기를 계속할 예정이라고 밝혔다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01903.wav,3.18,굉장히 복잡한 문제다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00177.wav,3.07,박씨 부부에게 그후 칠개월은 안타깝기 그지 없는 기간이었다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00701.wav,8.31,한국방송공사와의 차별 대우에 노조원들이 큰 분노를 느끼고 있던데.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_01975.wav,9.91,원숭이는 인간에 가까운 지적인 동물이다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00017.wav,9.72,일 더하기 일이 삼이 될 리 없다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02338.wav,9.91,금융실명제 실시와 이를 위한 세제개편은 무엇보다 국민적 합의가 전제되어야 하지 않겠습니까.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00974.wav,3.704,고속도로를 통한 이번 설날 귀향길이 그런대로 순조롭게 이루어질 수 있었던 것은 높은 시민정신과 사백 육십오명 고속도로 순찰대원들의 노력 덕분입니다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00004.wav,8.399,심국장은 한국엽도협회등의 협조를 받아 계도를 하고 있지만 일부 엽사들이 여전히 불법엽구를 이용 밀렵하는 행위가 근절되지 않고 있다고 안타까워했다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_01745.wav,6.282,면접에서는 누가 가장 자기 표현을 정확히 할 수 있는가가 관건이다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00466.wav,7.507999999999999,당국은 이미 창립대회의 원천봉쇄 방침을 밝힌 바 있고 창립 뒤에도 실제 활동이 그리 순탄치만은 않을 것 같은데.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01948.wav,1.98,나는 항상 벼락치기로 시험공부를 한다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01276.wav,9.0,나는 시험지를 풀다가 전혀 모르는 문제가 나오면 미련없이 포기하고 다음 문제를 푼다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00957.wav,7.47,또 이날 회의에 참석한 어느 장관은 재무부측이 증시에 대한 단기대책을 검토하지 않는다고 말한 적이 없다고 했다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01841.wav,4.32,코치용 아이디카드를 들고 이곳저곳을 누비기 때문에 정작 활동해야 할 어떤 코치는 스탠드에 앉아 발만동동 구르는 안타까운 모습조차 보였다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_01151.wav,5.739,날씨가 안 좋아서 기대하고 있던 이벤트가 취소되었다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00313.wav,3.37,그 가수의 본명을 듣고 너무 촌스러워서 배를 잡고 웃었다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_01771.wav,4.972,이번 회의 결과 여하로 교육 방침이 결정됩니다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_00668.wav,12.87,이번 한소 정상회담은 중국과 일본의 대한반도 정책에도 상당한 파급효과를 미칠 것으로 보입니다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02510.wav,5.1,이번에 노벨상을 받은 미국의 세 경제학자들에 대해서는 각 신문마다 별로 크게 다루지 않았다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03862.wav,2.37,이 세상에서 내게 가장 소중한 존재는 늘 그윽한 향기로 날 맞는 바로 당신이야.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03024.wav,9.96,민자당의 분명한 당론결정을 보면서 평민당의 입장을 정하겠다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_02363.wav,8.4,혹시 막후에서 개헌 문제를 조정하려는 것 아니냐고 물었다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00414.wav,3.871,위급한 상황을 맞으면 우선 자기부터 살고 보려는 게 생물의 본성이다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01841.wav,3.75,죄송하지만 월요일에 만나기로 한 약속을 금요일로 변경해도 될까요.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_01234.wav,8.776,그러나 노사관계의 안정은 절대적인 과제다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01813.wav,4.11,이라크의 엄청난 군사력에 놀라 우리군은 전의를 상실했다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00936.wav,4.705,컨디션이 몹시 안 좋았지만 명랑한 척 굴었다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02471.wav,4.705,그리고 양국간 정치적 관계가 호전될수록 경제적 측면에서의 발전 전망도 따라서 밝아질 것이라고 확신합니다 그러나 우리는 기업인이기 때문에 정치적인 예측은 못합니다 이번 정상회담이 성공적으로 끝나기를 바랄 뿐입니다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02559.wav,3.72,십년이나 사귀었던 그녀와 헤어지는 것은 괴로운 일이었다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00508.wav,3.804,현재 캘리포니아주립대학에서 공부하고 있는 육백 오십여명의 아시아권 유학생들 중 오십여명의 한국유학생들은 대부분이 우수한 성적을 올리고 있다고 해크총장은 전했다 그는 또 지난 십년 사이 한국의 너무나 빠른 성장에 놀랐다면서 구십년대도 한국경제가 잘 풀려 나가길 바란다고 말한다.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01878.wav,6.172999999999999,우리는 모든 우호관계의 증진을 환영한다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00348.wav,5.79,아무리 천재라도 끊임없는 노력 없이는 성공을 거둘 수 없습니다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02139.wav,3.51,전노협 창립 뒤 곧바로 닥치는 것이 임금인상투쟁인데 올해 임투는 어떤 양상으로 전개될 것으로 보는가.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02278.wav,2.67,이 꽃의 이름은 우리 중 누구도 알지 못한다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_01748.wav,5.1389999999999985,손님이 오기 전에 얼른 깨끗이 청소를 해 놓자.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_01191.wav,4.371,비대위 지도부가 방송민주화에 대한 철저한 신념과 이론으로 무장돼 있었다면 사태는 많이 달라졌을 것이다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_01358.wav,5.7,팩스를 보내려면 문서를 이 곳에 놓고 초록색 버튼을 누르면 되요.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01913.wav,1.835,여자가 주부로써만 살다보면 경제력이 없어지고 사회적 시야가 좁아질 우려가 있다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00904.wav,5.939,출발하기 전 선생님은 인원수를 체크했다.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00413.wav,10.644,이 도로는 한산해서 씽씽 달릴 수 있다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00146.wav,4.605,그 마라톤 선수는 약물복용을 한 혐의가 밝혀져 안타깝게 금메달이 취소되었다.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00700.wav,4.3039999999999985,요새 감기가 유행이니 건강 조심하세요.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_01991.wav,5.37,세계적으로 가장 어려운 기술중 하나로 평가되는 디지털 녹화기술까지 개발할 정도이다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_02796.wav,5.472,몇 번을 전화해도 그가 받지 않아 무슨일이 있는 게 아닌지 걱정이 된다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02707.wav,4.95,두 회사는 점유율을 둘러싸고 격렬하게 다투고 있다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02237.wav,3.137,너무 속상해 하지 마시고 나가실때 즐거워예.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01080.wav,5.31,그분은 신념이 너무 강해 공정한 사회자는 못됐을 거요.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02499.wav,4.74,여기는 그와 내가 가장 좋아하는 아지트이다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02273.wav,4.08,이는 이십팔일 열린 하산 대책회의에서 마지막 날을 기념하기 위해 함께 하룻밤을 지내자는 제의에 따라 이뤄진 것.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_02025.wav,3.45,미군철수에 앞서 주한미군 부대에서 일하는 이만 오천여명의 한국인 노동자들에 대한 사후대책을 마련해 달라는 것입니다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00142.wav,3.36,한마디로 조세부담의 공평과 적정화라고 하겠습니다.,ketts-30f,w,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03182.wav,9.06,우선 튼튼하고 강한 군대를 만들어야겠다는 생각이다.,ketts-30f,w,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02322.wav,3.904,그는 초등학교때부터 담배를 피웠다고 해서 모두를 경악하게 했다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02372.wav,5.61,외국에서 몇 년 살았다고 해서 그 나라에 대해 완전히 이해할 수는 없다.,ketts-30f,w,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01354.wav,3.804,자원이 있는데도 원자력을 하는 것이 아니잖는가.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00062.wav,6.74,한국방송공사와의 차별 대우에 노조원들이 큰 분노를 느끼고 있던데.,ketts-30m,m,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_01074.wav,23.59,산재보험은 산업현장에서 재해를 당하는 근로자와 그 가족이 입게 될 경제적 손실을 보상하기 위한 사회보험이다.,ketts-30m,m,happy,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02020.wav,9.143,이렇게 어려운 한자까지 알다니 정말 똑똑한 아이로군요.,ketts-30m,m,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00031.wav,6.44,남편의 쥐꼬리만한 월급으로는 생활하기가 너무 빠듯하다.,ketts-30m,m,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02832.wav,10.844,요새는 줄무늬가 없는 수박이나 네모난 수박도 있다고 한다.,ketts-30m,m,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00488.wav,7.89,정현씨의 차디찬 시신은 어머니와 동생의 오열 속에 이십일일 오전 열시 영안실을 떠나 경기도 고양군 벽제 화장터에서 한줌의 재로 변해 강물에 뿌려졌다.,ketts-30f,w,neutral,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02213.wav,4.605,지난주에 바다낚시에 갔었는데 뱃멀미가 심해서 낚시를 제대로 할 수가 없었어.,ketts-30m,m,fearful,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_01649.wav,8.041,결혼을 앞두고 언니는 예민하고 우울해졌다.,ketts-30m,m,angry,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_01956.wav,3.51,총무 인준이 끝나면 야당 총재를 방문할 생각이며 그후 야당측과 본격적으로 대화를 하겠다.,ketts-30f,w,disgusted,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02132.wav,4.2,어머니와의 근친상간을 욕말로 삼은 나라는 중국 한국뿐 아니라 스페인의 투마들 영어의 이어 마더도 상간형 욕말이다.,ketts-30f,w,surprised,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00180.wav,5.88,너무 이론이 어려워서인가 했더니 증권가에서는 누구나 다 알고 있는 상식적인 이론들이다.,ketts-30f,w,sad,ko
-ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03956.wav,5.37,그는 공처가라 퇴근하자마자 항상 총알 같이 집으로 향한다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00550.wav,7.86,방송에서 사용되는 말은 표준말이어야 하고 게다가 품위가 있어야 하며 알아듣기 쉽고 분명해야 하며 자연스러워야 한다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00573.wav,5.31,불행하게도 그것이 우리에게는 너무 큰 무리였음이 팔십구년부터 입증되었다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00766.wav,1.95,평양에는 언제 가시게 됩니까.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00911.wav,3.45,그 기간에 우리나라 현대정치사에는 굴곡이 많았어요.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00955.wav,6.72,이총재는 두 후보는 물론 당내 여러 동지들과 상의해 그분들이 부총재를 수락하도록 할 생각입니다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_00964.wav,4.11,야당세를 하나로 뭉쳐야 한다는 것은 시대적 요청이라고 생각합니다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02153.wav,4.53,어릴때는 잘 못먹었던 풋고추를 어른이 되고서는 아주 잘 먹게 되었다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02373.wav,3.51,그는 십년동안 모은 돈을 전부 도박으로 날려버렸다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02759.wav,4.86,공항 근처에 가면 택시 운전사들이 자기 차를 타라고 끈덕지게 들러붙는다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_angry_02854.wav,5.55,부장님은 윗사람에게는 아부를 잘 하지만 아랫사람에게는 매우 함부로 대하는 이중성이 있다.,ketts-30f,w,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00549.wav,9.06,사투리를 자랑스럽게 고집하며 발음과 억양에 문제가 있어서 의미전달이 순조롭지 않은 것은 물론 시청자의 혐오감마저 자아내는 경우다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00572.wav,7.38,아울러 여야 정당과 정치인들은 정치가 정치게임 자체를 위해서만 존재하는 것처럼 착각해선 안된다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00765.wav,4.95,음악회가 십이일부터 시작되므로 최소한 십일일까지는 도착할 예정입니다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00910.wav,5.76,육십년대 중반부터 한국기독교교회협의회 총무를 맡아 십이년 동안 일했습니다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00954.wav,9.48,이총재는 끝으로 경선결과에 대해 예상된 수준의 득표였으며 그것은 창당준비위원장이 가지는 프리미엄때문이라며 활짝 웃어 보였다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_00963.wav,3.21,앞으로 당을 이끌어 나갈 지도력을 어디에 둘 것인가.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02154.wav,3.27,외국인들이 가장 좋아하는 한국 음식은 불고기다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02374.wav,2.7,이것이 내가 아는 유일한 아랍어 단어이다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02759.wav,4.86,공항 근처에 가면 택시 운전사들이 자기 차를 타라고 끈덕지게 들러붙는다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_disgusted_02854.wav,5.64,부장님은 윗사람에게는 아부를 잘 하지만 아랫사람에게는 매우 함부로 대하는 이중성이 있다.,ketts-30f,w,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00176.wav,5.67,역사적인 모스크바 한소 정상회담 개최로 한소 관계는 새로운 장을 맞게 됐다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00827.wav,7.11,남쪽 신문들이 이 같은 사실을 자주 크게 보도해 북남간의 동질성회복과 화해에 기여해야 합니다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00901.wav,3.33,처음부터 촉매역할에 그치겠다고 밝혔습니다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_00946.wav,8.22,이 위원회는 법정기구이나 정부로부터 독립돼 있으며 재정은 네덜란드상의등 재계에서 자발적으로 지원하고 있다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_01063.wav,8.91,그 말은 쉽게 말해 노조원들이 인사권에 개입하고 사장임명에 반대하는 행동을 계속하는한 그만둘 수 없다는 뜻이었다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_01123.wav,2.91,모든 외교 문제는 외무부가 맡아야 한다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02146.wav,3.42,뱀장어는 미끄러워서 손에 잘 잡히지 않는다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02388.wav,3.33,잃어버렸던 다이아 반지를 찾아서 너무 기쁘다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02763.wav,4.17,매일 부모님께 거짓말만 하는 내 자신이 정말 싫다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_fearful_02855.wav,2.85,내 비서는 센스가 있어서 마음에 든다.,ketts-30f,w,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_00007.wav,8.79,일 안하고도 돈 더 받고 유쾌가 있고 빌어먹는 것보다 점잖고 일본말로 하자면 삼박자 같은 좋은 일이 이것뿐이었다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_00195.wav,9.93,그날 밤 윤애가 일찌감치 자리를 뜨고 나간 뒤에 명준은 팔베개를 하고 누워 그녀가 앉았던 방석을 물끄러미 바라보면서 흐뭇한 기쁨을 즐긴다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_01007.wav,8.88,드라마나 영화에서의 성지루씨 감칠맛나는 연기도 좋지만 일상 속에서의 있는 그대로의 모습을 볼 수 있어서 더 좋았습니다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_01048.wav,4.23,구석구석 볼거리가 풍부하고 내용도 훈훈하다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_01129.wav,4.74,행복은 대개의 경우 쾌락이 아니며 대체로 승리인 것이다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_02450.wav,6.33,안 되겠다 싶었는지 음악이 멎고 아이들도 깔깔대며 무대 뒤로 사라졌다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_02493.wav,9.48,여북해야 나보다 출세하고 돈도 더 잘 버는 친구들 사이에서도 기가 죽기는 커녕 자신을 군계일학처럼 느낄 적이 있는 걸요.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03145.wav,6.36,그도 그럴것이 이만원만 지불을 하여 사용자가 책을 많이 읽으면 읽을수록 이익이 되기 때문이다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03744.wav,7.71,혼자라고 생각했을 때 혹은 힘들다고 느낄 때 휴먼 드라마를 보며 따뜻한 감동과 위안을 얻을 때가 있다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_happy_03883.wav,4.08,만새기는 맛이 좋아 폴리네시아에서는 인기 만점이다.,ketts-30f,w,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00038.wav,6.21,지난 일월 오일 의원직 사퇴와 함께 탈당하려 했으나 지구당원들이 흥분상태였기 때문에 늦췄다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00904.wav,4.11,제도자체보다도 운영의 묘가 더 중요하다고 생각됩니다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00952.wav,7.38,퀘네씨가 위원장으로 있는 이 위원회는 경제 및 사회 문제에 대해 정부에 조언을 해주는 정책자문기관.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_00984.wav,3.0,중앙은행의 역할과 기능을 강조했습니다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01183.wav,4.92,국간의 상호 의존성이 그 만큼 증대된 관계라고 하는 편이 옳을 것이다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_01330.wav,7.17,우리의 이 같은 요구가 받아들여지지 않으면 앞으로는 무기한 총파업을 포함한 강경투쟁을 벌일 계획이다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02147.wav,2.73,장미의 가시에 손가락이 찔려 피가 났다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02386.wav,3.15,나는 부모님이 안 계셔서 숙모의 손에서 컸다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02761.wav,3.18,승마용 말을 운송하고 있던 트럭이 전복되었다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_neutral_02854.wav,5.94,부장님은 윗사람에게는 아부를 잘 하지만 아랫사람에게는 매우 함부로 대하는 이중성이 있다.,ketts-30f,w,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00587.wav,9.96,물론 이 같은 외국의 시각에는 정부의 잘못과 미숙의 탓이 크다 이점 새 정부는 깊은 연구와 노력이 필요하다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00841.wav,4.17,현재 사우디내 쿠웨이트군의 병력과 사기는 어떤가.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00876.wav,3.33,구체적인 논의와 준비는 십일부터 했다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_00946.wav,9.6,이 위원회는 법정기구이나 정부로부터 독립돼 있으며 재정은 네덜란드상의등 재계에서 자발적으로 지원하고 있다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_01348.wav,5.37,건자재의 수급조절에 힘을 쏟고 있어 하반기에는 진정될 것이다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_01429.wav,8.91,특히 이번 조치와 관련 재무부가 은행을 기업과 정부 사이의 완충역으로 끌어들인 것은 주목된다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02101.wav,3.99,그는 내가 미니스커트를 입는 것에 불만을 가진다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02424.wav,5.52,어젯밤 심하게 가위에 눌려서 이대로 죽는건 아닐까 하는 생각까지 들었다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02777.wav,4.68,부모님의 체면 때문에 할 수 없이 마지못해 선을 나갔다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_sad_02866.wav,6.51,최근 남성의 흡연율은 줄고 있지만 여성과 청소년의 흡연율은 오히려 늘고 있다.,ketts-30f,w,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00186.wav,5.19,적어도 한국학연구만큼은 한국 측에서 적극 지원해주었으면 합니다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00900.wav,7.29,김목사는 기독교에서도 자신이 앞에 나서지 않고 뒤에서 지원하는 울타리역으로 널리 알려져 있다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_00944.wav,6.6,육이구 이전까지 정치문화의 주류를 이뤄 왔던 권위주의가 많은 분야에서 없어졌습니다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01356.wav,4.95,그 문제도 논의해야 하며 그밖에도 어떤 해결책이 있는지 논의해야 한다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01841.wav,3.96,고베 대지진 참사에 사람들은 경악을 금치 못하고 있다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_01883.wav,5.19,박찬욱 감독은 다음에는 세련된 느와르 영화를 만들고 싶다고 말했다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02149.wav,2.07,나는 간지럼을 잘 타지 않는다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02386.wav,3.18,나는 부모님이 안 계셔서 숙모의 손에서 컸다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02762.wav,6.36,한국의 경제는 점점 좋아지고 있는데 반해 실업률은 좀처럼 내려가지 않고 있어 마음에 걸린다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30f_surprised_02854.wav,6.3,부장님은 윗사람에게는 아부를 잘 하지만 아랫사람에게는 매우 함부로 대하는 이중성이 있다.,ketts-30f,w,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00009.wav,2.76,뭐든지 익숙해지려면 어느 정도의 시간이 필요한 법이지.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00039.wav,3.42,양국의 외교관계를 오늘 날짜를 기해 수립하기로 결정했다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00074.wav,1.89,한국의 집 규모는 지금도 크다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00698.wav,2.61,적당한 경로를 통해서 저쪽과 협의할 것이다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00901.wav,2.61,돈 많은 사람만 잘 사는 이 세상이 구역질 난다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_00942.wav,2.1,나는 맥주 한 잔만 마셔도 취해버린다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_01365.wav,4.62,정무장관은 외무부 안기부 내무부일 등 모든 부처를 책임지는 것이 아니다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_02330.wav,3.54,친구와 너무 오랫동안 통화를 했더니 전화기가 뜨끈뜨끈해졌다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_02743.wav,6.48,인플레와 마르크화 폭락을 우려해 동독인들이 예금인출 및 소비를 자제하는 바람직한 모습이 뚜렷해지고 있다.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_angry_02843.wav,2.31,지금 통화중이니까 오분 후에 다시 전화해.,ketts-30m,m,angry,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00230.wav,3.36,그 사람 미국에서 십년이나 살았으니까 영어를 잘하겠네요.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00355.wav,6.78,밤길을 가다가 사람을 만나면 반갑다는 시절이 있었던가 싶을 정도로 언제부터인가 우리는 사람이 무서운 사회에 살고 있다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00872.wav,6.15,물론 이 같은 외국의 시각에는 정부의 잘못과 미숙의 탓이 크다 이점 새 정부는 깊은 연구와 노력이 필요하다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00911.wav,3.84,셋째 국민을 설득시키기 위한 여야의 협력체제가 이루어져야 한다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_00951.wav,9.33,나는 과거 야당에서도 김영삼 김대중 이민우씨 등 이 지도부에 있는 집단지도체제 때 총무를 했는데 이번에도 공교롭게 집단지도 여당의 총무가 됐습니다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_01148.wav,4.35,군과 국방부 인사패턴에 미세하나마 의미심장한 변화가 감지되고 있다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_01639.wav,2.22,우유는 반드시 냉장고에 보관해야 한다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02334.wav,5.19,너무 이론이 어려워서인가 했더니 증권가에서는 누구나 다 알고 있는 상식적인 이론들이다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02745.wav,2.73,나는 지루한 클래식보다 대중가요를 좋아한다.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_disgusted_02844.wav,2.1,어느 분야가 가장 쟁점이 되고 있는가.,ketts-30m,m,disgusted,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00609.wav,2.97,겨우 일점 차로 우승을 놓쳐버려 원통하다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00802.wav,5.01,따지고 보면 바로 그런 노력 때문에 지금 우리가 한글날을 기릴 수 있는 것이다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00820.wav,8.76,잘 하려다가 결과가 잘못된 일은 시도하지 않은 것보다 더 평가를 해주고 잘한 일은 포상을 더욱 적극적으로 하라고 지시했습니다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00858.wav,6.6,동유럽 사태와 니카라과 선거를 보면서 세계적으로 반마르크스주의가 번지고 있다는 주장도 있다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_00898.wav,4.83,그녀는 누구의 앞에서도 기죽지 않고 자신의 의견을 당당히 말한다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_01492.wav,5.1,온 세계에 가장 보편적으로 쓰이는 욕말은 짐승을 빗댄 동물형 욕말이다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02101.wav,3.84,핸드폰은 현대사회에 없어서는 안 될 유용한 도구이다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02344.wav,8.37,암환자를 수술해서 고쳐놓은 의사의 공헌과 전문성은 표출되지만 교사의 교육적 역할은 곧바로 눈에 띄는 것이 아니다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02745.wav,3.12,나는 지루한 클래식보다 대중가요를 좋아한다.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_fearful_02844.wav,2.28,어느 분야가 가장 쟁점이 되고 있는가.,ketts-30m,m,fearful,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00509.wav,5.16,하지만 식당에서 한 번 쓰고 버리기 아까운 수입 나무젓가락은 아무래도 과소비다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00759.wav,3.36,여름을 타는지 아무것도 하기 싫고 식욕도 없다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00841.wav,7.23,북한에 대해서 강압적으로 하지는 않을 것이며 북한도 통일을 향해 동참할 수 있도록 최선의 방법을 강구할 것이다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_00882.wav,3.57,특히 인플레억제를 위한 조치에 중점이 주어질 것입니다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_01223.wav,5.85,미 북한 관계개선 문제가 칠월의 한미 정상회담에서 주요의제의 하나로 다뤄질 것 같다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_01249.wav,2.61,이래 갖고는 누구나 집을 더 가지려 한다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02119.wav,2.79,천둥소리에 아기가 놀라 울음을 터뜨렸다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02345.wav,4.23,소련 과학아카데미의 예브게니 벨리코프는 이런 제안을 했다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02748.wav,3.0,나는 아침형 인간이라기보다 저녁형 인간이다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_happy_02847.wav,5.58,노동자들도 이제 정치의 장에 뛰어들어 스스로 권익을 찾아야 할 때가 왔다고 봅니다.,ketts-30m,m,happy,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00030.wav,3.69,팬들은 그 소설가의 신작 발간 소식에 설레어 했다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00625.wav,3.03,상사에게 새로운 계획을 제안했는데 거절당했다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00874.wav,9.78,그는 경제사회위원회가 만장일치의 찬성결론을 낸 경우엔 의회에서의 법안통과도 쉽고 찬반의견이 엇갈리면 의회에서도 난상토론이 벌어진다고 설명한다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_00915.wav,4.02,나이가 서른이 넘었는데 나이값도 못하고 그런 철없는 행동을 하다니.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01224.wav,2.79,계산을 하려고보니 지갑에 돈이 하나도 없었다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01531.wav,2.52,공원에서 불꽃놀이로 인한 화재가 일어났다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_01733.wav,3.78,죄송하지만 월요일에 만나기로 한 약속을 금요일로 변경해도 될까요.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02335.wav,3.69,남북관계등을 볼 때 혁신정당은 반드시 발전해야 합니다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02745.wav,2.82,나는 지루한 클래식보다 대중가요를 좋아한다.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_neutral_02844.wav,2.13,어느 분야가 가장 쟁점이 되고 있는가.,ketts-30m,m,neutral,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00055.wav,4.86,카터는 폴란드측의 희망을 이해하기 위해 왔다고 인사했다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00780.wav,3.9,땡볕에서 매일 일했더니 얼굴에 주근깨가 생겼다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_00818.wav,3.51,니가 뿌린 향수 참 달콤하고 좋은 향이 나.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01204.wav,3.66,제가 재직하던 시절 그런 경우는 한번도 없었어요.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01251.wav,4.26,백화점 일층에서 나는 화장품과 향수 냄새가 참 좋다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_01518.wav,3.24,누구에게도 지지 않을 정도로 강해지고 싶다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_02074.wav,3.81,딸이 다른 아이들에 비해 야무지지 못해서 걱정입니다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_02353.wav,7.41,적금에 가입할 때의 약관에는 이자율이 바뀌면 지급액이 달라질 수 있다는 깨알 같은 글씨가 적혀 있다고 한다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_02744.wav,8.7,백혈병을 앓는 생후 팔 개월 된 둘째아들 규의 치료비에 써 달라고 돈을 놓고간 은인을 찾아 감사의 말을 꼭 하고 싶다는 것이었다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_sad_02842.wav,6.24,대부분의 일반 학생들은 도서관안에서 민중집회를 거들떠보기 조차 않게 되었다.,ketts-30m,m,sad,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00029.wav,2.58,그렇게 먹다가는 금방 돼지가 되고 말 걸.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00624.wav,3.54,그토록 사랑했던 너였는데 이젠 아무 감정도 느낄 수 없다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00873.wav,2.49,마마보이는 여자들에게 비호감 대상이다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_00914.wav,3.99,직선제를 한 지 이년밖에 안됐는데 헌법개정을 얘기할 필요가 없다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_01223.wav,5.49,미 북한 관계개선 문제가 칠월의 한미 정상회담에서 주요의제의 하나로 다뤄질 것 같다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_01733.wav,4.08,죄송하지만 월요일에 만나기로 한 약속을 금요일로 변경해도 될까요.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02331.wav,5.07,나는 일관된 입장을 견지해 왔기 때문에 논리적 맥락은 노조원들도 이해하리라고 본다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02744.wav,7.74,백혈병을 앓는 생후 팔 개월 된 둘째아들 규의 치료비에 써 달라고 돈을 놓고간 은인을 찾아 감사의 말을 꼭 하고 싶다는 것이었다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02773.wav,2.07,상추를 많이 먹으면 졸음이 옵니다.,ketts-30m,m,surprised,ko
+ketts,test,/data2/sungjaecho/data_tts/KETTS/KETTS/wav/ketts-30m_surprised_02843.wav,2.4,지금 통화중이니까 오분 후에 다시 전화해.,ketts-30m,m,surprised,ko

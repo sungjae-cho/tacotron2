@@ -1,55 +1,55 @@
-split,speaker,emotion,wav_path,duration
-test,emovdb-m-josh,amused,61,195.18281179138327
-test,emovdb-m-josh,neutral,66,163.0532426303855
-test,emovdb-m-josh,sleepy,43,172.7118820861678
-test,emovdb-m-sam,amused,91,498.454149659864
-test,emovdb-m-sam,angry,91,265.98412698412704
-test,emovdb-m-sam,disgusted,106,548.0447165532879
-test,emovdb-m-sam,neutral,100,263.46412698412695
-test,emovdb-m-sam,sleepy,101,528.5444897959185
-test,emovdb-w-bea,amused,62,210.81251700680266
-test,emovdb-w-bea,angry,58,157.62249433106578
-test,emovdb-w-bea,disgusted,66,252.962947845805
-test,emovdb-w-bea,neutral,71,184.11292517006802
-test,emovdb-w-bea,sleepy,97,462.9645804988663
-test,emovdb-w-jenie,amused,42,181.29192743764176
-test,emovdb-w-jenie,angry,95,314.82435374149657
-test,emovdb-w-jenie,disgusted,32,122.37156462585031
-test,emovdb-w-jenie,neutral,93,258.24399092970526
-test,emovdb-w-jenie,sleepy,102,380.97442176870754
-train,emovdb-m-josh,amused,177,570.7579138321995
-train,emovdb-m-josh,neutral,194,464.6786394557823
-train,emovdb-m-josh,sleepy,170,624.9078911564625
-train,emovdb-m-sam,amused,329,1812.7645804988663
-train,emovdb-m-sam,angry,290,815.9827210884349
-train,emovdb-m-sam,disgusted,311,1604.0541950113375
-train,emovdb-m-sam,neutral,321,876.5839002267574
-train,emovdb-m-sam,sleepy,312,1579.454149659863
-train,emovdb-w-bea,amused,193,671.0186848072562
-train,emovdb-w-bea,angry,199,579.8190022675739
-train,emovdb-w-bea,disgusted,211,879.8792290249437
-train,emovdb-w-bea,neutral,219,612.9396825396822
-train,emovdb-w-bea,sleepy,324,1487.1153287981856
-train,emovdb-w-jenie,amused,156,670.7169160997731
-train,emovdb-w-jenie,angry,331,1129.365351473924
-train,emovdb-w-jenie,disgusted,119,449.91519274376435
-train,emovdb-w-jenie,neutral,254,724.3617233560093
-train,emovdb-w-jenie,sleepy,295,1136.472698412698
-val,emovdb-m-josh,amused,60,189.87238095238098
-val,emovdb-m-josh,neutral,42,101.85179138321998
-val,emovdb-m-josh,sleepy,46,168.7520181405896
-val,emovdb-m-sam,amused,81,455.2239909297052
-val,emovdb-m-sam,angry,87,238.0836281179138
-val,emovdb-m-sam,disgusted,79,412.77356009070286
-val,emovdb-m-sam,neutral,71,178.86290249433108
-val,emovdb-m-sam,sleepy,82,429.6336507936509
-val,emovdb-w-bea,amused,41,138.96185941043086
-val,emovdb-w-bea,angry,47,134.10208616780042
-val,emovdb-w-bea,disgusted,54,234.96226757369615
-val,emovdb-w-bea,neutral,66,175.4427664399093
-val,emovdb-w-bea,sleepy,75,351.1534240362812
-val,emovdb-w-jenie,amused,24,102.39111111111113
-val,emovdb-w-jenie,angry,70,242.58308390022668
-val,emovdb-w-jenie,disgusted,38,147.0916553287982
-val,emovdb-w-jenie,neutral,70,185.34335600907028
-val,emovdb-w-jenie,sleepy,69,268.38308390022684
+split,speaker,emotion,wav_path,duration,duration_hms
+test,emovdb-m-josh,amused,61,195.18281179138327,"(0, 3, 15)"
+test,emovdb-m-josh,neutral,66,163.0532426303855,"(0, 2, 43)"
+test,emovdb-m-josh,sleepy,43,172.7118820861678,"(0, 2, 53)"
+test,emovdb-m-sam,amused,91,498.454149659864,"(0, 8, 18)"
+test,emovdb-m-sam,angry,91,265.98412698412704,"(0, 4, 26)"
+test,emovdb-m-sam,disgusted,106,548.0447165532879,"(0, 9, 8)"
+test,emovdb-m-sam,neutral,100,263.46412698412695,"(0, 4, 23)"
+test,emovdb-m-sam,sleepy,101,528.5444897959185,"(0, 8, 49)"
+test,emovdb-w-bea,amused,62,210.81251700680266,"(0, 3, 31)"
+test,emovdb-w-bea,angry,58,157.62249433106578,"(0, 2, 38)"
+test,emovdb-w-bea,disgusted,66,252.962947845805,"(0, 4, 13)"
+test,emovdb-w-bea,neutral,71,184.11292517006802,"(0, 3, 4)"
+test,emovdb-w-bea,sleepy,97,462.9645804988663,"(0, 7, 43)"
+test,emovdb-w-jenie,amused,42,181.29192743764176,"(0, 3, 1)"
+test,emovdb-w-jenie,angry,95,314.82435374149657,"(0, 5, 15)"
+test,emovdb-w-jenie,disgusted,32,122.37156462585031,"(0, 2, 2)"
+test,emovdb-w-jenie,neutral,93,258.24399092970526,"(0, 4, 18)"
+test,emovdb-w-jenie,sleepy,102,380.97442176870754,"(0, 6, 21)"
+train,emovdb-m-josh,amused,177,570.7579138321995,"(0, 9, 31)"
+train,emovdb-m-josh,neutral,194,464.6786394557823,"(0, 7, 45)"
+train,emovdb-m-josh,sleepy,170,624.9078911564625,"(0, 10, 25)"
+train,emovdb-m-sam,amused,329,1812.7645804988663,"(0, 30, 13)"
+train,emovdb-m-sam,angry,290,815.9827210884349,"(0, 13, 36)"
+train,emovdb-m-sam,disgusted,311,1604.0541950113375,"(0, 26, 44)"
+train,emovdb-m-sam,neutral,321,876.5839002267574,"(0, 14, 37)"
+train,emovdb-m-sam,sleepy,312,1579.454149659863,"(0, 26, 19)"
+train,emovdb-w-bea,amused,193,671.0186848072562,"(0, 11, 11)"
+train,emovdb-w-bea,angry,199,579.8190022675739,"(0, 9, 40)"
+train,emovdb-w-bea,disgusted,211,879.8792290249437,"(0, 14, 40)"
+train,emovdb-w-bea,neutral,219,612.9396825396822,"(0, 10, 13)"
+train,emovdb-w-bea,sleepy,324,1487.1153287981856,"(0, 24, 47)"
+train,emovdb-w-jenie,amused,156,670.7169160997731,"(0, 11, 11)"
+train,emovdb-w-jenie,angry,331,1129.365351473924,"(0, 18, 49)"
+train,emovdb-w-jenie,disgusted,119,449.91519274376435,"(0, 7, 30)"
+train,emovdb-w-jenie,neutral,254,724.3617233560093,"(0, 12, 4)"
+train,emovdb-w-jenie,sleepy,295,1136.472698412698,"(0, 18, 56)"
+val,emovdb-m-josh,amused,60,189.87238095238098,"(0, 3, 10)"
+val,emovdb-m-josh,neutral,42,101.85179138321998,"(0, 1, 42)"
+val,emovdb-m-josh,sleepy,46,168.7520181405896,"(0, 2, 49)"
+val,emovdb-m-sam,amused,81,455.2239909297052,"(0, 7, 35)"
+val,emovdb-m-sam,angry,87,238.0836281179138,"(0, 3, 58)"
+val,emovdb-m-sam,disgusted,79,412.77356009070286,"(0, 6, 53)"
+val,emovdb-m-sam,neutral,71,178.86290249433108,"(0, 2, 59)"
+val,emovdb-m-sam,sleepy,82,429.6336507936509,"(0, 7, 10)"
+val,emovdb-w-bea,amused,41,138.96185941043086,"(0, 2, 19)"
+val,emovdb-w-bea,angry,47,134.10208616780042,"(0, 2, 14)"
+val,emovdb-w-bea,disgusted,54,234.96226757369615,"(0, 3, 55)"
+val,emovdb-w-bea,neutral,66,175.4427664399093,"(0, 2, 55)"
+val,emovdb-w-bea,sleepy,75,351.1534240362812,"(0, 5, 51)"
+val,emovdb-w-jenie,amused,24,102.39111111111113,"(0, 1, 42)"
+val,emovdb-w-jenie,angry,70,242.58308390022668,"(0, 4, 3)"
+val,emovdb-w-jenie,disgusted,38,147.0916553287982,"(0, 2, 27)"
+val,emovdb-w-jenie,neutral,70,185.34335600907028,"(0, 3, 5)"
+val,emovdb-w-jenie,sleepy,69,268.38308390022684,"(0, 4, 28)"

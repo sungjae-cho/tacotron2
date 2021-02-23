@@ -1,4 +1,4 @@
-split,speaker,emotion,wav_path,duration
-test,bc2013-w,neutral,400,1554.1279999999992
-train,bc2013-w,neutral,78456,328609.0529999944
-val,bc2013-w,neutral,100,398.67799999999994
+split,speaker,emotion,wav_path,duration,duration_hms
+test,bc2013-w,neutral,400,1554.1279999999992,"(0, 25, 54)"
+train,bc2013-w,neutral,78456,328609.0529999944,"(91, 16, 49)"
+val,bc2013-w,neutral,100,398.67799999999994,"(0, 6, 39)"
