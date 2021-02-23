@@ -80,8 +80,8 @@ def prepare_dataloaders(hparams):
     valsets = dict()
     all_valset = TextMelLoader(hparams, 'val')
     valsets[('all', 'all')] = all_valset
-    for speaker in all_valset.speaker_list:
-        for emotion in all_valset.emotion_list:
+    for speaker in hparams.speakers:
+        for emotion in hparams.emotions:
             valset = TextMelLoader(hparams, 'val', speaker, emotion)
             if len(valset) != 0:
                 valsets[(speaker, emotion)] = valset
