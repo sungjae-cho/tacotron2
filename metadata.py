@@ -324,8 +324,8 @@ class MetaData:
             self.df = self.df[['database','split','wav_path','duration','text','speaker','sex','emotion','lang']]
 
 
-    def set_split_labels(self, split_ratio, random_seed=3141):
-        self.df['split'] = ''
+    def set_split_labels(self, split_ratio, random_seed=3141, max_duration=10):
+        self.df['split'] = 'none'
         if self.use_nvidia_ljs_split and self.db == "ljspeech":
 
             split_types = ['train', 'val', 'test']
@@ -353,11 +353,13 @@ class MetaData:
             df_unique_classes = self.df[self.speech_classes].drop_duplicates(subset=self.speech_classes)
             n_unique_classes = df_unique_classes.shape[0]
 
+            df_temp = self.df[self.df.duration <= max_duration]
+
             # Split the dataset by (speaker, emotion) pairs.
             # If split_ratio['val'] and split_ratio['train'] are given as integers,
             # those numbers are sampled from each set of (speaker, emotion) pairs.
             for i, row in df_unique_classes.iterrows():
-                df_selected = self.df[(self.df.speaker == row.speaker) & (self.df.emotion == row.emotion)]
+                df_selected = df_temp[(df_temp.speaker == row.speaker) & (df_temp.emotion == row.emotion)]
 
                 df_selected_len = df_selected.shape[0]
 
