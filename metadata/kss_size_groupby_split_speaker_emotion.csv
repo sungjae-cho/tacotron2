@@ -1,0 +1,4 @@
+split,speaker,emotion,wav_path,duration,duration_hms
+test,kss-w,neutral,128,486.2000000000002,"(0, 8, 6)"
+train,kss-w,neutral,12598,45332.60000000004,"(12, 35, 33)"
+val,kss-w,neutral,128,474.0000000000003,"(0, 7, 54)"

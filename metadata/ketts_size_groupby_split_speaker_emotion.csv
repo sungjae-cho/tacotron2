@@ -1,43 +1,57 @@
-split,speaker,emotion,wav_path,duration
-test,ketts-30f,angry,10,42.21
-test,ketts-30f,disgusted,10,55.5
-test,ketts-30f,fearful,10,78.78
-test,ketts-30f,happy,10,75.39
-test,ketts-30f,neutral,10,63.6
-test,ketts-30f,sad,10,57.09
-test,ketts-30f,surprised,10,48.71999999999999
-test,ketts-30m,angry,10,68.812
-test,ketts-30m,disgusted,10,42.511
-test,ketts-30m,fearful,10,54.89
-test,ketts-30m,happy,10,74.208
-test,ketts-30m,neutral,10,46.644
-test,ketts-30m,sad,10,70.096
-test,ketts-30m,surprised,10,66.23400000000001
-train,ketts-30f,angry,2980,15572.93999999999
-train,ketts-30f,disgusted,2980,15424.979999999987
-train,ketts-30f,fearful,2980,17728.68000000004
-train,ketts-30f,happy,4067,23852.19000000007
-train,ketts-30f,neutral,2980,16267.589999999998
-train,ketts-30f,sad,2980,19861.20000000004
-train,ketts-30f,surprised,2980,16719.09000000001
-train,ketts-30m,angry,2979,15453.996000000012
-train,ketts-30m,disgusted,2980,15513.990999999987
-train,ketts-30m,fearful,2980,17880.742999999988
-train,ketts-30m,happy,2978,16465.248000000014
-train,ketts-30m,neutral,2978,15054.504999999986
-train,ketts-30m,sad,2980,19536.359000000077
-train,ketts-30m,surprised,2980,16096.187000000029
-val,ketts-30f,angry,10,35.63999999999999
-val,ketts-30f,disgusted,10,39.42
-val,ketts-30f,fearful,10,67.71000000000001
-val,ketts-30f,happy,10,72.03
-val,ketts-30f,neutral,10,46.47
-val,ketts-30f,sad,10,70.17
-val,ketts-30f,surprised,10,68.52
-val,ketts-30m,angry,10,50.282000000000004
-val,ketts-30m,disgusted,10,59.092
-val,ketts-30m,fearful,10,63.40999999999999
-val,ketts-30m,happy,10,61.962
-val,ketts-30m,neutral,10,40.633
-val,ketts-30m,sad,10,51.802
-val,ketts-30m,surprised,10,46.179
+split,speaker,emotion,wav_path,duration,duration_hms
+none,ketts-30f,angry,156,2029.3500000000006,"(0, 33, 49)"
+none,ketts-30f,disgusted,157,2038.5600000000006,"(0, 33, 59)"
+none,ketts-30f,fearful,213,2743.05,"(0, 45, 43)"
+none,ketts-30f,happy,356,4434.87,"(1, 13, 55)"
+none,ketts-30f,neutral,210,2696.579999999999,"(0, 44, 57)"
+none,ketts-30f,sad,374,4993.169999999995,"(1, 23, 13)"
+none,ketts-30f,surprised,207,2652.15,"(0, 44, 12)"
+none,ketts-30m,angry,73,1016.7600000000002,"(0, 16, 57)"
+none,ketts-30m,disgusted,67,941.4899999999999,"(0, 15, 41)"
+none,ketts-30m,fearful,184,2362.889999999999,"(0, 39, 23)"
+none,ketts-30m,happy,135,1754.5799999999995,"(0, 29, 15)"
+none,ketts-30m,neutral,84,1138.1700000000003,"(0, 18, 58)"
+none,ketts-30m,sad,242,3138.869999999999,"(0, 52, 19)"
+none,ketts-30m,surprised,87,1184.1000000000001,"(0, 19, 44)"
+test,ketts-30f,angry,10,47.849999999999994,"(0, 0, 48)"
+test,ketts-30f,disgusted,10,56.31,"(0, 0, 56)"
+test,ketts-30f,fearful,10,49.919999999999995,"(0, 0, 50)"
+test,ketts-30f,happy,10,70.52999999999999,"(0, 1, 11)"
+test,ketts-30f,neutral,10,47.78999999999999,"(0, 0, 48)"
+test,ketts-30f,sad,10,62.040000000000006,"(0, 1, 2)"
+test,ketts-30f,surprised,10,51.089999999999996,"(0, 0, 51)"
+test,ketts-30m,angry,10,32.339999999999996,"(0, 0, 32)"
+test,ketts-30m,disgusted,10,46.05,"(0, 0, 46)"
+test,ketts-30m,fearful,10,50.879999999999995,"(0, 0, 51)"
+test,ketts-30m,happy,10,43.379999999999995,"(0, 0, 43)"
+test,ketts-30m,neutral,10,38.25,"(0, 0, 38)"
+test,ketts-30m,sad,10,49.589999999999996,"(0, 0, 50)"
+test,ketts-30m,surprised,10,39.45,"(0, 0, 39)"
+train,ketts-30f,angry,2824,12438.209999999981,"(3, 27, 18)"
+train,ketts-30f,disgusted,2823,12650.130000000021,"(3, 30, 50)"
+train,ketts-30f,fearful,2767,13253.039999999992,"(3, 40, 53)"
+train,ketts-30f,happy,3711,18467.370000000006,"(5, 7, 47)"
+train,ketts-30f,neutral,2770,12660.86999999998,"(3, 31, 1)"
+train,ketts-30f,sad,2606,13488.239999999998,"(3, 44, 48)"
+train,ketts-30f,surprised,2773,12826.769999999979,"(3, 33, 47)"
+train,ketts-30m,angry,2906,11846.999999999935,"(3, 17, 27)"
+train,ketts-30m,disgusted,2913,11926.650000000005,"(3, 18, 47)"
+train,ketts-30m,fearful,2796,12638.999999999942,"(3, 30, 39)"
+train,ketts-30m,happy,2843,12600.68999999999,"(3, 30, 1)"
+train,ketts-30m,neutral,2894,12137.640000000016,"(3, 22, 18)"
+train,ketts-30m,sad,2738,13424.580000000004,"(3, 43, 45)"
+train,ketts-30m,surprised,2893,12238.620000000012,"(3, 23, 59)"
+val,ketts-30f,angry,10,45.06,"(0, 0, 45)"
+val,ketts-30f,disgusted,10,48.81,"(0, 0, 49)"
+val,ketts-30f,fearful,10,49.10999999999999,"(0, 0, 49)"
+val,ketts-30f,happy,10,51.72,"(0, 0, 52)"
+val,ketts-30f,neutral,10,45.87,"(0, 0, 46)"
+val,ketts-30f,sad,10,48.389999999999986,"(0, 0, 48)"
+val,ketts-30f,surprised,10,55.169999999999995,"(0, 0, 55)"
+val,ketts-30m,angry,10,32.85,"(0, 0, 33)"
+val,ketts-30m,disgusted,10,41.76,"(0, 0, 42)"
+val,ketts-30m,fearful,10,41.82,"(0, 0, 42)"
+val,ketts-30m,happy,10,38.43000000000001,"(0, 0, 38)"
+val,ketts-30m,neutral,10,48.65999999999999,"(0, 0, 49)"
+val,ketts-30m,sad,10,45.96,"(0, 0, 46)"
+val,ketts-30m,surprised,10,37.05,"(0, 0, 37)"
