@@ -192,9 +192,7 @@ class MetaData:
         if self.db == 'ketts':
             dir_txt = os.path.join(self.ketts_path, 'txt')
             dir_wav = os.path.join(self.ketts_path, 'wav')
-            txt_names = os.listdir(dir_txt)
-            wav_names = os.listdir(dir_wav)
-            txt_paths = [os.path.join(dir_txt, txt) for txt in txt_names]
+            wav_names = sorted(os.listdir(dir_wav))
             wav_paths = [os.path.join(dir_wav, wav) for wav in wav_names]
 
             duration_list = list()
@@ -203,7 +201,10 @@ class MetaData:
             speaker_list = list()
             emotion_list = list()
             sex_list = list()
-            for txt_name, txt_path, wav_name, wav_path in tqdm(zip(txt_names, txt_paths, wav_names, wav_paths),total=len(wav_names)):
+            for wav_name, wav_path in tqdm(zip(wav_names, wav_paths),total=len(wav_names)):
+                txt_name = os.path.splitext(wav_name)[0] + '.txt'
+                txt_path = os.path.join(dir_txt, txt_name)
+
                 str_id = os.path.splitext(wav_name)[0]
                 speaker, emotion, _ = str_id.split('_')
 
