@@ -70,6 +70,10 @@ def text_to_sequence(text, cleaner_names, txt_type='g', dictionary=None, p_arpab
     clean_text = _clean_text(text, cleaner_names)
     sequence = get_g2p_en_seq(clean_text, dictionary)
     return sequence
+  if txt_type == 'g_ko':
+   clean_text = _clean_text(text, cleaner_names)
+   sequence = _symbols_to_sequence(clean_text)
+   return sequence
 
   sequence = []
   space = _symbols_to_sequence(' ')
