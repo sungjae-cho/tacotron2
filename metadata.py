@@ -560,11 +560,15 @@ class MetaData:
             agg_dict = {'wav_path':'size'}
 
         df_agg = df.groupby(['split']).agg(agg_dict)
+        if 'duration' in df.columns:
+            df_agg['duration_hms'] = df_agg['duration'].apply(convert_sec)
         print(df_agg)
         csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split.csv'.format(self.db))
         df_agg.to_csv(csv_path)
 
         df_agg = df.groupby(['split', 'speaker', 'emotion']).agg(agg_dict)
+        if 'duration' in df.columns:
+            df_agg['duration_hms'] = df_agg['duration'].apply(convert_sec)
         print(df_agg)
         csv_path = os.path.join(self.metadata_path, '{}_size_groupby_split_speaker_emotion.csv'.format(self.db))
         df_agg.to_csv(csv_path)
