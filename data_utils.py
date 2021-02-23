@@ -43,7 +43,7 @@ class TextMelLoader(torch.utils.data.Dataset):
             hparams.n_mel_channels, hparams.sampling_rate, hparams.mel_fmin,
             hparams.mel_fmax)
 
-        if hparams.txt_type == 'g':
+        if hparams.txt_type in ['g', 'g_ko']:
             self.g2p_dictionary = None
         elif hparams.txt_type == 'p_cmudict':
             self.g2p_dictionary = cmudict.CMUDict(hparams.cmudict_path)
