@@ -700,10 +700,11 @@ def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
 
 
 def convert_sec(seconds):
-    hours = seconds // 3600
+    hours = int(seconds // 3600)
     seconds %= 3600
-    minutes = seconds // 60
+    minutes = int(seconds // 60)
     seconds %= 60
+    seconds = int(round(seconds, 0))
 
     return hours, minutes, seconds
 
