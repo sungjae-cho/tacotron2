@@ -688,6 +688,33 @@ def make_one_sample_rate(db, sample_rate=22050):
         if os.path.exists(src_wav) and os.path.exists(dst_wav):
             os.remove(src_wav)
 
+def make_one_sample_rate_in_dir(rDirectory, sample_rate):
+    wav_paths = list()
+    for root, dirnames, filenames in os.walk(rDirectory):
+            for filename in filenames:
+                if filename[-4:] == '.wav':
+                    rf = os.path.join(root, filename)
+                    wav_paths.append(rf)
+
+    for wav_path in tqdm(wav_paths, total=len(wav_paths)):
+        src_wav = wav_path + "_old"
+        dst_wav = wav_path
+        os.rename(
+            wav_path,
+            src_wav
+        )
+
+        change_sample_rate(src_wav, dst_wav, sample_rate)
+
+        if os.path.exists(src_wav) and (not os.path.exists(dst_wav)):
+            os.rename(
+                src_wav,
+                dst_wav
+            )
+        if os.path.exists(src_wav) and os.path.exists(dst_wav):
+            os.remove(src_wav)
+
+
 def change_sample_rate(src_wav, dst_wav, sample_rate=22050):
     '''
     1. change sample rate
