@@ -33,6 +33,7 @@ class TextMelLoader(torch.utils.data.Dataset):
         self.sex_list = sorted(loaded_tuple[2])
         self.emotion_list = sorted(loaded_tuple[3])
         self.lang_list = sorted(loaded_tuple[4])
+        self.use_soft_emovec = hparams.use_soft_emovec
         self.neutral_zero_vector = hparams.neutral_zero_vector
         self.text_cleaners = hparams.text_cleaners
         self.max_wav_value = hparams.max_wav_value
@@ -58,12 +59,17 @@ class TextMelLoader(torch.utils.data.Dataset):
         return (text, mel)
 
     def get_mel_text_etc_tuple(self, wavpath_text_speaker_sex_emotion_lang):
-        wavpath, text, speaker, sex, emotion, lang = wavpath_text_speaker_sex_emotion_lang
+        wavpath, text, speaker, sex, emotion, lang = wavpath_text_speaker_sex_emotion_lang[:6]
+        if self.use_soft_emovec:
+            emovec = wavpath_text_speaker_sex_emotion_lang[-1]
+            assert(isinstance(emovec, torch.Tensor))
+        else:
+            emovec = None
         text, text_raw = self.get_text(text)
         mel = self.get_mel(wavpath)
         speaker = self.get_speaker(speaker)
         sex = self.get_sex(sex)
-        emotion_input_vector = self.get_emotion_input(emotion)
+        emotion_input_vector = self.get_emotion_input(emotion, emovec)
         emotion_target = self.get_emotion_target(emotion)
         lang = self.get_lang(lang)
         return (text, mel, speaker, sex, emotion_input_vector, emotion_target,
@@ -112,8 +118,12 @@ class TextMelLoader(torch.utils.data.Dataset):
         sex_tensor = self.sex2int(sex)
         return sex_tensor
 
-    def get_emotion_input(self, emotion):
-        if self.neutral_zero_vector:
+    def get_emotion_input(self, emotion, emovec=None):
+        if self.use_soft_emovec and self.neutral_zero_vector and emovec is not None:
+            assert(isinstance(emovec, torch.Tensor))
+            emotion_tensor = emovec
+            print(emotion_tensor)
+        elif self.neutral_zero_vector:
             one_hot_vector_size = self.max_emotions - 1
             if emotion == 'neutral':
                 emotion_tensor = torch.zeros(one_hot_vector_size)

@@ -34,6 +34,9 @@ def create_hparams(hparams_string=None, verbose=False):
         val_fr_stop_pred2=False,
         # Free-running test text
         test_text = "This is a synthesized audio without teacher-forcing. Any question?",
+        # Use soft emotion vectors instead of one-hot ones
+        use_soft_emovec = False,
+        emovec_csv_path = 'metadata/emo_pred/results_210226/seed_1_step_1/pred_list_1_loss_2.csv',
 
         ################################
         # Data Parameters             #

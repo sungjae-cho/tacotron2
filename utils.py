@@ -5,8 +5,9 @@ import torch
 import pandas as pd
 import torch.nn.functional as F
 from os import listdir
-from os.path import isfile, join
+from os.path import isfile, join, split
 from yin import compute_yin
+from tqdm import tqdm
 
 def get_mask_from_lengths(lengths):
     max_len = torch.max(lengths).item()
@@ -136,6 +137,8 @@ def load_wavpath_text_speaker_sex_emotion_lang(hparams, split, speaker, emotion,
     # Make all rows as elements of a list.
     row_list = df.values.tolist()
     random.shuffle(row_list)
+    if hparams.use_soft_emovec:
+        add_emovec(hparams, row_list) # inplace operation.
 
     return row_list, speaker_list, sex_list, emotion_list, lang_list
 
@@ -582,3 +585,40 @@ def get_text_durations(alignment):
             x_chunks.append(xi_list)
 
     return text_durations, x_chunks, att_text_seq
+
+
+def add_emovec(hparams, row_list):
+    print("add_emovec")
+    convert_emo_str = {
+        'happiness':'happy',
+        'disgust':'disgusted',
+        'fear':'fearful',
+        'sadness':'sad',
+        'surprise':'surprised'
+    }
+
+    csv_path = hparams.emovec_csv_path
+    df = pd.read_csv(csv_path)
+
+    df = df.rename(columns=convert_emo_str)
+    df = df[['file_name', 'GT_label'] + sorted(df.columns[1:-1].tolist())]
+
+    def convert_file_name(file_name):
+        return file_name.replace('_crop_logmel.npy','.wav')
+
+    df['file_name'] = df.file_name.apply(convert_file_name)
+    df.set_index(['file_name'], inplace=True, drop=False)
+    len_emovec = len(df.columns[2:])
+
+    for i in tqdm(range(len(row_list))):
+        # row == [wavpath, text, speaker, sex, emotion, lang]
+        wav_path = row_list[i][0]
+        _, wav_name = split(wav_path)
+        np_emovec_tmp = df[df.file_name == wav_name].iloc[:,2:].to_numpy().squeeze()
+        np_emovec = np.zeros(len_emovec)
+        if np_emovec.shape == np_emovec_tmp.shape:
+            np_emovec = np_emovec_tmp
+        np_emovec = np_emovec.astype(np.float)
+        ts_emovec = torch.from_numpy(np_emovec)
+        row_list[i].append(ts_emovec)
+    print("add_emovec Done!")
