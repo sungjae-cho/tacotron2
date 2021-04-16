@@ -1250,7 +1250,7 @@ class Tacotron2(nn.Module):
         if self.hparams.reference_encoder in self.hparams.reference_encoders_taking_mels_at_inference:
             self.temp_prosody_ref, global_prosody_ref = self.reference_encoder(ref_mels, ref_mel_lengths)
         else:
-            global_prosody_ref = None
+            self.temp_prosody_ref, global_prosody_ref = None, None
 
         if self.hparams.style_to_encoder_output:
             styles = global_prosody_ref, speaker_embeddings, emotion_embeddings, residual_encoding
