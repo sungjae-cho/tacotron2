@@ -1360,7 +1360,8 @@ def train(output_directory, log_directory, checkpoint_path, pretrained_path,
 
         # End of the current epoch
         # Upsampling again
-        trainset.upsampling(epoch)
+        if hparams.resampling_trainset_at_each_epoch:
+            trainset.upsampling(epoch)
 
 
 if __name__ == '__main__':
