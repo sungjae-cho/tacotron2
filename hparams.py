@@ -57,18 +57,30 @@ def create_hparams(hparams_string=None, verbose=False):
         p_arpabet=1.0,
         cmudict_path='text/cmu_dictionary',
         # All DBs to be used in the project
-        all_dbs = ['ljspeech', 'emovdb'],
+        #all_dbs = ['ljspeech', 'emovdb'], # English DBs
+        all_dbs=['kss', 'ketts', 'ketts2', 'nc'], # Korean DBs
         # All speakers to be used in the project
-        all_speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
+        #all_speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'], # English speakers
+        all_speakers=['kss-w',
+            'ketts-30f', 'ketts-30m',
+            'ketts2-20m', 'ketts2-30f', 'ketts2-40m', 'ketts2-50f', 'ketts2-50m', 'ketts2-60f',
+            'nc-m', 'nc-f'], # Korean speakers
         # All emotions to be used in the project
-        all_emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
+        #all_emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'], # Emotions for EmoV-DB
+        all_emotions=['sad', 'happy', 'fearful', 'neutral', 'disgusted', 'angry', 'surprised'], # Emotions for Korean emotion DBs
         # DBs to use while this run
-        dbs = ['ljspeech', 'emovdb'],
+        #dbs=['ljspeech', 'emovdb'],
+        dbs=['kss', 'ketts', 'ketts2', 'nc'],
         # Emotions to use while this run
-        emotions = ['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
+        # emotions=['neutral', 'amused', 'angry', 'disgusted', 'sleepy'],
+        emotions=['sad', 'happy', 'fearful', 'neutral', 'disgusted', 'angry', 'surprised'],
         # Speakers to use while this run
-        speakers = ['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
-        text_cleaners=['english_cleaners'],
+        #speakers=['ljs-w', 'emovdb-w-bea', 'emovdb-w-jenie', 'emovdb-m-josh', 'emovdb-m-sam'],
+        speakers=['kss-w',
+            'ketts-30f', 'ketts-30m',
+            'ketts2-20m', 'ketts2-30f', 'ketts2-40m', 'ketts2-50f', 'ketts2-50m', 'ketts2-60f',
+            'nc-m', 'nc-f'],
+        text_cleaners=['korean_cleaners'],
 
         ################################
         # Audio Parameters             #
@@ -91,7 +103,7 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         n_symbols=len(symbols),
         symbols_embedding_dim=512,
-        txt_type='g', # ['g', 'p_cmudict', 'p_g2p']
+        txt_type='g_ko', # ['g', 'p_cmudict', 'p_g2p', 'g_ko']
 
         # With modules
         speaker_adversarial_training=False,
@@ -173,9 +185,9 @@ def create_hparams(hparams_string=None, verbose=False):
         gate_threshold=0.5,
         p_attention_dropout=0.1,
         p_decoder_dropout=0.1,
-        style_to_attention_rnn=False,
-        style_to_decoder_rnn=False,
-        style_to_decoder_linear=False,
+        style_to_attention_rnn=True,
+        style_to_decoder_rnn=True,
+        style_to_decoder_linear=True,
         style_to_encoder_output=False,
 
         # Attention parameters
@@ -217,7 +229,7 @@ def create_hparams(hparams_string=None, verbose=False):
         lr_scheduling_start_iter=50000,
         lr_min=1e-5,
         grad_clip_thresh=1.0, # gradient clipping L2-norm
-        batch_size=64,
+        batch_size=16,
         mask_padding=True,  # set model's padded outputs to padded values
         freeze_pretrained=False,
         freeze_except_for=['nothing'],
