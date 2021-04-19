@@ -26,6 +26,7 @@ class Tacotron2Logger():
         self.run_name = run_name
         self.wandb_run_id = resume
         self.waveglow = None
+        self.denoiser = None
         self.waveglow_path = hparams.waveglow_path
         self.init_training_epoch_variables()
 
@@ -33,21 +34,32 @@ class Tacotron2Logger():
 
     def load_waveglow(self, waveglow_path):
         waveglow = torch.load(waveglow_path)['model']
+        for k, m in waveglow.named_modules():
+            m._non_persistent_buffers_set = set()  # pytorch 1.6.0 compatability
+        waveglow = waveglow.remove_weightnorm(waveglow)
         waveglow.cuda().eval().half()
         for k in waveglow.convinv:
             k.float()
 
         return waveglow
 
-    def mel2wav(self, mel_outputs_postnet, with_denoiser=False):
+    def mel2wav(self, mel_outputs_postnet, wg_sigma=0.6,
+            with_denoiser=True, denoiser_strength=0.1):
         if self.waveglow is None:
             self.waveglow = self.load_waveglow(self.waveglow_path)
         with torch.no_grad():
-            audio = self.waveglow.infer(mel_outputs_postnet, sigma=0.666)
+            audio = self.waveglow.infer(mel_outputs_postnet, sigma=wg_sigma)
         if with_denoiser:
-            np_wav = denoiser(audio, strength=0.01)[:, 0].cpu().numpy()
+            if self.denoiser is None:
+                self.denoiser = Denoiser(self.waveglow).cuda()
+            np_wav = self.denoiser(audio, denoiser_strength).squeeze().cpu().numpy()
+
         else:
             np_wav = audio[0].detach().cpu().numpy()
+
+        maxv = 2 ** (16 - 1)
+        np_wav /= max(abs(np_wav.max()), abs(np_wav.min()))
+        np_wav = (np_wav * maxv * 0.95).astype(np.int16)
 
         return np_wav
 
