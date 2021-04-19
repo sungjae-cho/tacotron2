@@ -41,7 +41,7 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         # Data Parameters             #
         ################################
-        waveglow_path='/data2/sungjaecho/pretrained/waveglow_256channels_ljs_v2.pt',
+        waveglow_path='/data2/sungjaecho/pretrained/waveglow_pretrained_700000.pt',
         load_mel_from_disk=False,
         training_files='filelists/ljs_audio_text_train_filelist.txt',
         validation_files='filelists/ljs_audio_text_val_filelist.txt',
